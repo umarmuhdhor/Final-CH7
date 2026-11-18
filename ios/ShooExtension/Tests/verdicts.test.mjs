@@ -88,3 +88,14 @@ test("Retry-After: seconds or HTTP-date, clamped to 1 s … 5 min, default one w
     assert.equal(retryAfterMs("0", now), 1000);
     assert.equal(retryAfterMs("9999", now), 300_000);
 });
+
+test("#241: with a link the lookup is per link (?url=&domain=), cached apart from the domain", async () => {
+    const { verdicts, calls } = world([{ verdict: SAFE }, { verdict: null }]);
+    assert.equal((await verdicts.lookup("evil.test", { link: "https://evil.test/a" })).verdict.value, "safe");
+    assert.equal((await verdicts.lookup("evil.test", { link: "https://evil.test/b" })).verdict, null);
+    assert.equal((await verdicts.lookup("evil.test", { link: "https://evil.test/a" })).verdict.value, "safe"); // cached
+    assert.deepEqual(calls.map((c) => c.url), [
+        "https://api.test/verdicts?url=https%3A%2F%2Fevil.test%2Fa&domain=evil.test",
+        "https://api.test/verdicts?url=https%3A%2F%2Fevil.test%2Fb&domain=evil.test",
+    ]);
+});

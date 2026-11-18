@@ -33,7 +33,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
       { h: "Changes", items: [
         "We may update these terms. The date at the top shows the latest version; the app links here.",
       ] },
-      { h: "Privacy", items: ["What we store and for how long is in the privacy policy (/privacy)."] },
+      { h: "Privacy", items: [`What we store and for how long is in the <a href="/privacy?lang=en">privacy policy</a>.`] },
     ],
   },
   id: {
@@ -62,7 +62,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
       { h: "Perubahan", items: [
         "Kami bisa memperbarui syarat ini. Tanggal di atas menunjukkan versi terbaru; app menautkan ke halaman ini.",
       ] },
-      { h: "Privasi", items: ["Apa yang kami simpan dan berapa lama ada di kebijakan privasi (/privacy)."] },
+      { h: "Privasi", items: [`Apa yang kami simpan dan berapa lama ada di <a href="/privacy?lang=id">kebijakan privasi</a>.`] },
     ],
   },
 };

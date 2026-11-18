@@ -1,0 +1,217 @@
+-- Fase 28 hunter 5 (performance): volume seed for DB shoo_f28_perf ONLY (container supabase_db_shoo_hunt).
+-- Run: docker exec -i supabase_db_shoo_hunt psql -U postgres -d shoo_f28_perf -X -v ON_ERROR_STOP=1 < h5-seed.sql
+-- Shape: 6,000 devices (2,000 family guardians + 3,000 linked members + 500 solo guardians + 500 unlinked
+-- protected), 300,000 scans inside 14 days + 20,000 older (15-19 days) for the retention cron,
+-- skewed owners (a few heavy ones) and skewed domains. Triggers stay ON (admin.domain_intel + admin.scan_archive).
+-- No real names, tokens or URLs: everything is synthetic.
+\timing on
+select current_database() = 'shoo_f28_perf' as ok \gset
+\if :ok
+\else
+  \echo 'wrong database' \quit
+\endif
+
+-- Environment fix (perf DB only): production (Supabase) has pgcrypto in schema extensions; admin.owner_ref needs it.
+create schema if not exists extensions;
+create extension if not exists pgcrypto schema extensions;
+grant usage on schema extensions to shoo_api, shoo_admin, shoo_ai;
+-- rerun-safe: public data only (admin ref data stays)
+truncate devices, blocklist_entries, rate_limit_hits, storage_tombstones, ops_heartbeat, ops_jobs, admin.scan_archive, admin.domain_intel cascade;
+select setseed(0.28);
+
+-- ---------- devices ----------
+-- id = uuid text from md5. kind: g = family guardian, p = linked member, s = solo guardian, u = unlinked protected.
+create temp table seed_dev as
+select kind, i,
+       (md5(kind || i))::uuid::text as id
+from (
+  select 'g' as kind, generate_series(1, 2000) as i
+  union all select 'p', generate_series(1, 3000)
+  union all select 's', generate_series(1, 500)
+  union all select 'u', generate_series(1, 500)
+) x;
+
+insert into devices (id, name, mode, avatar_id, language, apns_token, token_hash, ext_last_seen_at, created_at, last_seen_at,
+                     device_model, os_version, weekly_summary, quiet_hours, time_zone, notify_protection_off)
+select id,
+       'Dev ' || kind || i,
+       (case when kind in ('g', 's') then 'guardian' else 'protected' end)::device_mode,
+       'avatar_' || lpad(((i % 12) + 1)::text, 2, '0'),
+       case when i % 3 = 0 then 'en' else 'id' end,
+       case when i % 10 < 8 then encode(sha256(('apns' || id)::bytea), 'hex') end,       -- 80 % have a push token
+       sha256(('tok' || id)::bytea),
+       case when kind in ('p', 'u') then now() - (random() * interval '40 hours')        -- ~40 % of members "extension off"
+            when i % 2 = 0 then now() - (random() * interval '3 hours') end,
+       now() - interval '20 days' - (random() * interval '70 days'),
+       -- 3 % never came back after registration (E7 K4), 2 % inactive > 90 days (E7 K1), the rest seen in the last 3 days
+       case when kind = 'u' and i % 6 = 0 then now() - interval '95 days'
+            when kind = 's' and i % 5 = 0 then now() - interval '120 days'
+            else now() - (random() * interval '3 days') end,
+       'iPhone 15', '26',
+       kind in ('g', 's') and i % 4 = 0,                                                 -- 25 % of guardians want the weekly summary
+       i % 5 <> 0,
+       (array['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'])[1 + i % 3],
+       true
+from seed_dev;
+-- registration-never-used rows need last_seen within 1 h of created_at
+update devices d set created_at = d.last_seen_at - interval '10 minutes'
+from seed_dev s where s.id = d.id and s.kind = 'u' and s.i % 6 = 0;
+update devices d set created_at = d.last_seen_at - interval '30 days'
+from seed_dev s where s.id = d.id and s.kind = 's' and s.i % 5 = 0;
+
+-- ---------- family links: 3,000 members over 2,000 guardians (1, 2 or 3 members; ~1,500 guardians have at least one) ----------
+insert into family_links (protected_id, guardian_id, created_at, notify, off_notified_at)
+select p.id, g.id, now() - (random() * interval '60 days'), p.i % 10 <> 0,
+       case when p.i % 7 = 0 then now() - interval '2 days' end
+from seed_dev p
+join seed_dev g on g.kind = 'g' and g.i = 1 + ((p.i - 1) % 1500) - (case when p.i > 2600 then 0 else 0 end)
+where p.kind = 'p';
+
+-- ---------- domains (20,000, zipf-like) ----------
+create temp table seed_dom as
+select n, 'site-' || n || (array['.site', '.xyz', '.co.id', '.com', '.my.id', '.top'])[1 + n % 6] as domain
+from generate_series(1, 20000) n;
+create index on seed_dom (n);
+
+-- ---------- owners weight: every device scans; ~1 % are heavy ----------
+create temp table seed_owner as
+select id, kind, i, row_number() over (order by md5(id)) as rn from seed_dev;
+create index on seed_owner (rn);
+
+-- ---------- scans ----------
+-- 320,000 rows. owner pick: 15 % of rows go to 60 heavy owners (~800 each), the rest spread over 6,000 (~45 each).
+-- domain pick: power law (popular scam domains are seen by many owners).
+-- age: 300,000 uniform in [0, 14 d), 20,000 in [14 d 1 h, 19 d).
+insert into scans (id, owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at, created_at,
+                   favicon_path, favicon_ready_at, replica_path, replica_bytes, replica_ready_at, screenshot_path,
+                   thresholds_version, fragments_bytes, rdap_registered_at)
+select sid, o.id,
+       'https://' || case when x.n % 4 = 0 then 'login.' else '' end || d.domain || '/p/' || (x.n % 7) || case when x.n % 3 = 0 then '?ref=wa' || x.n else '' end,
+       d.domain,
+       case when x.n % 5 <> 0 then 'KlikBCA - Verifikasi Akun ' || (x.n % 100) end,
+       case when x.n % 3 <> 0 then 'https://' || d.domain || '/favicon.ico' end,
+       sc,
+       (case when sc >= 80 then 'blocked' else 'warning' end)::scan_status,
+       jsonb_build_array(
+         jsonb_build_object('id', 'new_domain', 'layer', 3, 'weight', 30,
+           'label', jsonb_build_object('en', 'Domain age 3 days', 'id', 'Umur domain 3 hari'),
+           'labelSimple', jsonb_build_object('en', 'This site was made 3 days ago', 'id', 'Situs ini baru dibuat 3 hari lalu')),
+         jsonb_build_object('id', 'asks_pin', 'layer', 3, 'weight', 25,
+           'label', jsonb_build_object('en', 'Form asks for m-banking PIN', 'id', 'Form meminta PIN m-banking'),
+           'labelSimple', jsonb_build_object('en', 'Asks for your bank PIN — banks never do this', 'id', 'Meminta PIN bank kamu — bank tidak pernah meminta ini'),
+           'evidence', 'pin'),
+         jsonb_build_object('id', 'unreasonable_request', 'layer', 4, 'weight', 22,
+           'label', jsonb_build_object('en', 'Verification page asks for PIN + OTP', 'id', 'Halaman verifikasi meminta PIN + OTP'),
+           'labelSimple', jsonb_build_object('en', 'A real bank page would not ask this', 'id', 'Halaman bank asli tidak akan meminta ini')),
+         jsonb_build_object('id', 'brand_plus_keyword', 'layer', 2, 'weight', 15,
+           'label', jsonb_build_object('en', 'Brand name + extra word: bca + verifikasi', 'id', 'Nama brand + kata tambahan: bca + verifikasi'),
+           'labelSimple', jsonb_build_object('en', 'Uses the BCA name but isn''t BCA', 'id', 'Memakai nama BCA, tapi bukan BCA'))),
+       ts, ts + interval '2 seconds',
+       case when x.n % 100 < 15 then o.id || '/' || sid || '-icon.png' end,
+       case when x.n % 100 < 15 then ts + interval '4 seconds' end,
+       case when x.n % 100 >= 90 then o.id || '/' || sid || '-replica.html.gz' end,
+       case when x.n % 100 >= 90 then 20000 + (x.n % 200000) end,
+       case when x.n % 100 >= 90 then ts + interval '5 seconds' end,
+       case when x.n % 100 between 50 and 52 then o.id || '/' || sid || '.jpg' end,
+       0,
+       case when x.n % 100 >= 88 then 5000 + (x.n % 50000) end,
+       case when x.n % 4 = 0 then date '2026-10-01' end
+from (
+  select n,
+         (md5('scan' || n))::uuid::text as sid,
+         case when r1 < 0.15 then 1 + floor(r2 * 60)::int else 1 + floor(r2 * 6000)::int end as owner_rn,
+         1 + floor(20000 * power(r3, 3))::int as dom_n,
+         30 + floor(r4 * 71)::int as sc,
+         case when n <= 300000 then now() - (r5 * interval '14 days') + interval '1 minute'
+              else now() - interval '14 days 1 hour' - (r5 * interval '5 days') end as ts
+  from (select n, random() r1, random() r2, random() r3, random() r4, random() r5 from generate_series(1, 320000) n) g
+) x
+join seed_owner o on o.rn = x.owner_rn
+join seed_dom d on d.n = least(x.dom_n, 20000);
+
+-- lifetime counters as recordScan keeps them
+update devices d set blocked_total = c.b, warning_total = c.w
+from (select owner_id, count(*) filter (where status = 'blocked') b, count(*) filter (where status = 'warning') w from scans group by 1) c
+where c.owner_id = d.id;
+
+-- ---------- verdicts: ~5 % of member scans + 1 % of own scans; 30 % with a note; 1/3 decided > 14 days ago ----------
+insert into verdicts (owner_id, url, domain, value, notes, scan_id, by_device_id, by_name, decided_at, global_eligible)
+select distinct on (s.owner_id, public.verdict_link(s.url))
+       s.owner_id, public.verdict_link(s.url), s.domain,
+       (case when abs(hashtext(s.id)) % 3 = 0 then 'safe' else 'not_safe' end)::verdict_value,
+       case when abs(hashtext(s.id)) % 10 < 3 then 'Catatan wali untuk tautan ini' end,
+       s.id, coalesce(l.guardian_id, s.owner_id), 'Wali',
+       least(now(), s.created_at + interval '3 hours'),
+       l.guardian_id is not null and abs(hashtext(s.id)) % 3 <> 0 and abs(hashtext(s.id)) % 4 = 1
+from scans s left join family_links l on l.protected_id = s.owner_id
+where (l.guardian_id is not null and abs(hashtext(s.id)) % 20 = 0)
+   or (l.guardian_id is null and abs(hashtext(s.id)) % 100 = 0)
+order by s.owner_id, public.verdict_link(s.url), s.created_at desc;
+
+-- ---------- push_log: one row per ~5th scan to the owner, + guardian; 14 days + older ----------
+insert into push_log (to_device_id, scan_id, result, created_at)
+select s.owner_id, s.id, case when abs(hashtext(s.id)) % 20 = 0 then 'failed:410 Unregistered' else 'sent' end, s.created_at + interval '1 second'
+from scans s where abs(hashtext(s.id)) % 5 = 0;
+insert into push_log (to_device_id, scan_id, result, created_at)
+select l.guardian_id, s.id, 'sent', s.created_at + interval '1 second'
+from scans s join family_links l on l.protected_id = s.owner_id where abs(hashtext(s.id)) % 5 = 1;
+
+-- ---------- rate_limit_hits: what the DB counters write (edge limiters write none) ----------
+-- scans_create per device + scans_create_all, 1 row each per POST /scans (2 rows per scan), 2 days kept by a daily cron.
+insert into rate_limit_hits (bucket, key_hash, hit_at)
+select 'scans_create', sha256(('scans_create:' || s.owner_id)::bytea), s.created_at
+from scans s where s.created_at > now() - interval '2 days';
+insert into rate_limit_hits (bucket, key_hash, hit_at)
+select 'scans_create_all', sha256('scans_create_all:all'::bytea), s.created_at
+from scans s where s.created_at > now() - interval '2 days';
+-- repeat visits of a known link also pass the two counters (no new row in scans): x3
+insert into rate_limit_hits (bucket, key_hash, hit_at)
+select b, case when b = 'scans_create' then sha256(('scans_create:' || s.owner_id)::bytea) else sha256('scans_create_all:all'::bytea) end,
+       s.created_at + (k * interval '7 minutes')
+from scans s, generate_series(1, 3) k, (values ('scans_create'), ('scans_create_all')) v(b)
+where s.created_at > now() - interval '2 days' and s.created_at + (k * interval '7 minutes') < now();
+insert into rate_limit_hits (bucket, key_hash, hit_at)
+select 'verdicts_create', sha256(('verdicts_create:' || by_device_id)::bytea), decided_at from verdicts where decided_at > now() - interval '2 days';
+insert into rate_limit_hits (bucket, key_hash, hit_at)
+select 'family_code', sha256(('family_code:' || id)::bytea), now() - (random() * interval '2 days') from seed_dev where kind = 'g' and i % 4 = 0;
+
+-- ---------- family codes, join attempts ----------
+insert into family_codes (code, guardian_id, expires_at, created_at)
+select lpad(i::text, 6, '0'), id,
+       case when i % 3 = 0 then now() + interval '20 minutes' else now() - (random() * interval '5 hours') end,
+       now() - interval '10 minutes'
+from seed_dev where kind = 'g' and i <= 900;
+insert into join_attempts (device_id, success, attempted_at, ip_hash)
+select id, i % 4 <> 0, now() - (random() * interval '2 days'), sha256(('ip' || (i % 800))::bytea)
+from seed_dev where kind in ('p', 'u');
+
+-- ---------- tombstones: stored objects of the last hour (not due), a due backlog, and stuck ones ----------
+insert into storage_tombstones (path, created_at)
+select coalesce(replica_path, favicon_path, screenshot_path), created_at from scans
+where coalesce(replica_path, favicon_path, screenshot_path) is not null and created_at > now() - interval '3 days'
+on conflict do nothing;
+insert into storage_tombstones (path, created_at, attempts, last_try_at)
+select (md5('gone' || n))::uuid::text || '/' || (md5('g2' || n))::uuid::text || (array['-replica.html.gz', '-icon.png', '.jpg'])[1 + n % 3],
+       now() - interval '3 days', n % 3, case when n % 3 > 0 then now() - interval '1 day' end
+from generate_series(1, 1500) n;
+
+-- ---------- blocklist ----------
+insert into blocklist_entries (domain, families, first_seen_at, approved_at, approved_by, removed_at)
+select 'blocked-' || n || '.site', 1 + n % 5, now() - interval '30 days', now() - (n * interval '10 minutes'), 'seed',
+       case when n % 25 = 0 then now() - (n * interval '5 minutes') end
+from generate_series(1, 1500) n;
+insert into blocklist_entries (domain, families, first_seen_at)
+select 'queued-' || n || '.site', 1 + n % 3, now() - (n * interval '1 hour') from generate_series(1, 300) n;
+
+insert into ops_heartbeat (source, at) values ('cron', now() - interval '5 hours'), ('healthz', now() - interval '10 minutes')
+on conflict (source) do update set at = excluded.at;
+insert into ops_jobs (job, started_at, finished_at, ok_at, failed, backlog)
+values ('retention', now() - interval '5 hours', now() - interval '5 hours', now() - interval '5 hours', 0, false),
+       ('notifications', now() - interval '20 minutes', now() - interval '20 minutes', now() - interval '20 minutes', 0, false)
+on conflict (job) do nothing;
+
+vacuum (analyze);
+select relname, n_live_tup, pg_size_pretty(pg_total_relation_size(relid)) total, pg_size_pretty(pg_relation_size(relid)) heap,
+       pg_size_pretty(pg_indexes_size(relid)) idx
+from pg_stat_user_tables where schemaname in ('public', 'admin') and n_live_tup > 0 order by pg_total_relation_size(relid) desc;
+select pg_size_pretty(pg_database_size(current_database())) as db_size;

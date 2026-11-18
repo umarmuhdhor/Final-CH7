@@ -7,13 +7,16 @@ final class GuardianUITests: XCTestCase {
     }
 
     @MainActor
-    private func launch(familyMode: Bool?, extra: [String] = []) -> XCUIApplication {
+    private func launch(familyMode: Bool?, language: String = "en", extra: [String] = []) -> XCUIApplication {
         var arguments = [
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", "guardian",
-            "-settings.language", "en",
+            "-settings.language", language,
             "-UITestExtensionActive", "YES",
         ] + extra
+        if language != "en" {
+            arguments += ["-AppleLanguages", "(\(language))", "-AppleLocale", language == "id" ? "id_ID" : "en_US"]
+        }
         if let familyMode {
             arguments += ["-settings.familyModeOn", familyMode ? "YES" : "NO"]
         }
@@ -27,7 +30,8 @@ final class GuardianUITests: XCTestCase {
         // Guardian Home (GD-01): hero status, no "Protected by" row.
         XCTAssertTrue(app.descendants(matching: .any)["home.status.active"].waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertFalse(app.descendants(matching: .any)["shield.guardian"].exists)
-        app.descendants(matching: .any)["familyModeToggle"].firstMatch.tap()
+        // The first time, "To be guardian" (Figma 1229:1904) comes before Family mode.
+        app.becomeGuardian()
         // Family Home (Figma 435:20373): the fixture's sites are older than a day, so no card waits.
         XCTAssertTrue(app.descendants(matching: .any)["home.family.protected"].waitForExistence(timeout: 5), app.debugDescription)
 
@@ -37,6 +41,23 @@ final class GuardianUITests: XCTestCase {
         // Leave it off for the next run.
         app.descendants(matching: .any)["familyModeToggle"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["home.status.active"].waitForExistence(timeout: 5))
+    }
+
+    /// U-01 (fase 28a, K2): while Family Home's first load runs, the hero never says "Family protected!".
+    /// Red on main on iPhone 17 and SE, ID, default text size: `home.family.protected` "Keluarga Terlindungi!" over the
+    /// skeleton rows (matrix cell A `home-g-loading`, y 308.3 to 342 on iPhone 17).
+    @MainActor
+    func testFamilyHomeIsNeutralWhileItLoads() {
+        let app = launch(familyMode: true, language: "id", extra: [
+            "-mock.scenario", "figma",
+            "-mock.latency", "9000",
+            "-UITestNotifications", "granted",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryL",
+        ])
+        let skeleton = app.descendants(matching: .any)["Memuat"]
+        XCTAssertTrue(skeleton.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["home.family.protected"].exists, app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["home.family.checking"].exists, app.debugDescription)
     }
 
     @MainActor

@@ -1,8 +1,9 @@
 {
   "images" : [
     {
-      "filename" : "HeroGradientTeal.png",
-      "idiom" : "universal"
+      "filename" : "HeroGradientTeal.jpg",
+      "idiom" : "universal",
+      "scale" : "3x"
     }
   ],
   "info" : {

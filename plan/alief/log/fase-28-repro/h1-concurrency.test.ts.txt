@@ -1,0 +1,120 @@
+// Fase 28 hunt, hunter 1 (backend). Repro + truth tests. NOT part of the suite.
+// Run: copy to backend/api/test/h1-<name>.test.ts, then
+//   cd backend/api && db_guard && npx vitest run test/h1-<name>.test.ts
+//   db_guard + SHOO_TEST_DB_URL + SHOO_TEST_ADMIN_DB_URL (both to a separate DB, never 54322): plan/alief/log/fase-28.md "Cara menunjuk vitest ke DB terpisah"
+// Tests named "BUG B-xx" assert the CORRECT behaviour and FAIL on main 9e5403ba.
+import { env } from "cloudflare:workers";
+import { beforeEach, describe, expect, it } from "vitest";
+import { runRetention } from "../src/cron/retention";
+import { runNotifications } from "../src/cron/notifications";
+import { adminSql, resetDb, testSql, withoutTriggers } from "./helpers/resetDb";
+import { call, callWithEnv, createDevice, type Created } from "./helpers/seed";
+
+const sql = testSql();
+const admin = adminSql();
+beforeEach(() => resetDb(sql));
+
+const APNS = "a".repeat(64);
+const now = () => new Date().toISOString();
+const scanBody = (url: string, domain: string, score: number, status: "warning" | "blocked", extra: Record<string, unknown> = {}) => ({
+  url, domain, score, status, signals: [], detectedAt: now(), ...extra,
+});
+/** POST /scans and wait for the waitUntil work (push_log rows). */
+const post = (d: Created, json: unknown) =>
+  callWithEnv({}, "/scans", { method: "POST", token: d.token, headers: { "content-type": "application/json" }, body: JSON.stringify(json) });
+const postId = async (d: Created, json: unknown) => {
+  const res = await post(d, json);
+  expect(res.status, await res.clone().text()).toBe(201);
+  return (await res.json()) as { id: string; notified: { name: string } | null };
+};
+const patch = (d: Created, json: unknown) => call("/devices/me", { method: "PATCH", token: d.token, json });
+async function pair(g: Created, p: Created) {
+  const { code } = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
+  const res = await call("/family/join", { method: "POST", token: p.token, json: { code } });
+  expect(res.status).toBe(200);
+  return code;
+}
+const pushes = async (to: Created) =>
+  (await sql<{ n: number }[]>`select count(*)::int as n from push_log where to_device_id = ${to.deviceId}`)[0]!.n;
+const verdict = (g: Created, scanId: string, value: string, notes?: string) =>
+  call("/verdicts", { method: "POST", token: g.token, json: { scanId, value, ...(notes ? { notes } : {}) } });
+const getVerdict = async (d: Created, url: string, domain: string) => {
+  const res = await call(`/verdicts?url=${encodeURIComponent(url)}&domain=${encodeURIComponent(domain)}`, { token: d.token });
+  return { status: res.status, body: (await res.json()) as { verdict: { value: string; url: string; lockedUntil?: string } | null } };
+};
+type Item = { id: string; url: string; score: number; status: string; ownerDeviceId: string; ownerName: string; detectedAt: string; verdict: { value: string } | null };
+const list = async (d: Created, q = "") => {
+  const res = await call(`/scans${q}`, { token: d.token });
+  return (await res.json()) as { items: Item[]; nextCursor: string | null };
+};
+
+describe("7. concurrency", () => {
+  it("safe and not_safe at the same moment on one scan: answers and the stored verdict agree", async () => {
+    for (let round = 0; round < 5; round++) {
+      await resetDb(sql);
+      const g = await createDevice("Gita", "guardian");
+      const p = await createDevice("Ibu");
+      await pair(g, p);
+      const { id } = await postId(p, scanBody("https://toko.example/a", "toko.example", 90, "blocked"));
+      const [s, n] = await Promise.all([verdict(g, id, "safe"), verdict(g, id, "not_safe")]);
+      const stored = (await sql`select value from verdicts`)[0]!.value;
+      const seen = (await getVerdict(p, "https://toko.example/a", "toko.example")).body.verdict?.value;
+      // safe never fails; not_safe is either first (200, then replaced) or second (409 locked). Either way: safe.
+      expect([s.status, [200, 409].includes(n.status), stored, seen]).toEqual([200, true, "safe", "safe"]);
+    }
+  });
+
+  it("disconnect and a verdict at the same moment: no verdict row survives the link", async () => {
+    for (let round = 0; round < 5; round++) {
+      await resetDb(sql);
+      const g = await createDevice("Gita", "guardian");
+      const p = await createDevice("Ibu");
+      await pair(g, p);
+      const { id } = await postId(p, scanBody("https://toko.example/a", "toko.example", 90, "blocked"));
+      const [v, d] = await Promise.all([verdict(g, id, "not_safe"), call(`/family/members/${p.deviceId}`, { method: "DELETE", token: g.token })]);
+      expect(d.status).toBe(200);
+      expect([200, 403]).toContain(v.status);
+      expect((await sql`select 1 from verdicts`).length).toBe(0);
+      expect((await admin`select 1 from blocklist_entries`).length).toBe(0);
+      expect((await getVerdict(p, "https://toko.example/a", "toko.example")).body.verdict).toBeNull();
+    }
+  });
+
+  it("join and code refresh at the same moment: joined with the old code, or code_invalid; never a link through a dead code afterwards", async () => {
+    for (let round = 0; round < 5; round++) {
+      await resetDb(sql);
+      const g = await createDevice("Gita", "guardian");
+      const p = await createDevice("Ibu");
+      const q = await createDevice("Bapak");
+      const { code } = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
+      const [j, r] = await Promise.all([
+        call("/family/join", { method: "POST", token: p.token, json: { code } }),
+        call("/family/code", { method: "POST", token: g.token, json: { refresh: true } }),
+      ]);
+      expect(r.status).toBe(200);
+      expect([200, 404]).toContain(j.status);
+      const after = await call("/family/join", { method: "POST", token: q.token, json: { code } });
+      expect(after.status).toBe(404);
+    }
+  });
+
+  it("account delete while a scan is posted: no scan, push_log or verdict row is left for the deleted device", async () => {
+    for (let round = 0; round < 5; round++) {
+      await resetDb(sql);
+      const g = await createDevice("Gita", "guardian");
+      const p = await createDevice("Ibu");
+      await patch(g, { apnsToken: APNS, notifications: { quietHours: false } });
+      await pair(g, p);
+      const [s, d] = await Promise.all([
+        post(p, scanBody("https://toko.example/a", "toko.example", 90, "blocked")),
+        callWithEnv({}, "/devices/me", { method: "DELETE", token: p.token }),
+      ]);
+      expect(d.status).toBe(200);
+      expect([201, 401, 404, 500]).toContain(s.status);
+      console.log("H1 delete-during-scan", s.status);
+      expect((await sql`select 1 from scans`).length).toBe(0);
+      expect((await sql`select 1 from push_log where scan_id is not null`).length).toBe(0);
+      expect(((await (await call("/family/members", { token: g.token })).json()) as { members: unknown[] }).members).toHaveLength(0);
+    }
+  });
+});

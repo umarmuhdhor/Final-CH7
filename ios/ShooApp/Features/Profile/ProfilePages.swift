@@ -13,7 +13,6 @@ struct ProfilePageView: View {
                 switch page {
                 case .mode: ModePage(model: model)
                 case .editProfile: ManageProfilePage(model: model)
-                case .editName: NamePage(model: model)
                 case .connection: ConnectionPage(model: model)
                 case .notifications: NotificationsPage(model: model)
                 case .language: LanguagePage(model: model)
@@ -26,17 +25,24 @@ struct ProfilePageView: View {
                 ProfileStyle.background.ignoresSafeArea()
             }
         }
+        // Also before the model exists (the first frame of the push): without these the system bar and its
+        // back chevron showed over the page's own back button while it slid in.
+        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
+        .navigationBarBackButtonHidden(true)
+        // A new name or avatar saved (the Kelola profil sheets close on success).
+        .sensoryFeedback(.success, trigger: model?.profileSaves ?? 0)
+        // Member and Guardian names: covered in the app-switcher snapshot, as on Profile (BH-33, SECURITY §3 P13).
+        .privacyCover()
         .task {
             if model == nil {
                 let model = ProfileModel(repository: env.repository, settings: env.settings, notifications: env.notifications)
-                model.onSessionEnd = { [env, router = env.router] in
-                    env.leaveDemo()
-                    router.reset()
-                    DeliveredPushes.clear()
+                model.onSessionEnd = { [env] in
+                    env.returnToOnboardingAfterDelete()
                 }
                 self.model = model
             }
-            if [.mode, .editProfile, .editName, .connection, .notifications, .language].contains(page) { await model?.load() }
+            if [.mode, .editProfile, .connection, .notifications, .language].contains(page) { await model?.load() }
         }
     }
 }
@@ -57,7 +63,26 @@ struct ProfileRadio: View {
             }
         }
         .frame(width: 24, height: 24)
+        // Ring ↔ fill: a 0.2 s cross-fade, gentle enough for Reduce Motion.
+        .animation(.easeInOut(duration: 0.2), value: isOn)
         .accessibilityHidden(true)
+    }
+}
+
+/// A choice in a Profile list eases into its chosen look and taps once (pattern: the onboarding avatars).
+/// Reduce Motion: a 0.2 s ease. `movesLayout`: the choice changes its size, so Reduce Motion snaps it instead.
+private struct ProfileSelectionMotion: ViewModifier {
+    let isSelected: Bool
+    var movesLayout = false
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .animation(
+                reduceMotion ? (movesLayout ? nil : .easeInOut(duration: 0.2)) : .snappy(duration: 0.2),
+                value: isSelected
+            )
+            .sensoryFeedback(.selection, trigger: isSelected) { _, now in now }
     }
 }
 
@@ -86,11 +111,12 @@ private struct RadioRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .modifier(ProfileSelectionMotion(isSelected: isSelected))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
-/// Grey label above a value, with a chevron (Figma "Info pribadi" rows).
+/// Grey label above a value, with a chevron (Figma "Info pribadi" rows, 1278:12077: 62 pt, 10 pt padding).
 private struct LabeledRow: View {
     let label: Text
     let value: String
@@ -99,8 +125,8 @@ private struct LabeledRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                label.profileFont(13).foregroundStyle(ProfileStyle.secondary)
-                Text(verbatim: value).profileFont(17, tracking: -0.17).foregroundStyle(ProfileStyle.ink)
+                label.profileCaption().foregroundStyle(ProfileStyle.secondary)
+                Text(verbatim: value).profileBody().foregroundStyle(ProfileStyle.ink)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if showsChevron {
@@ -112,7 +138,7 @@ private struct LabeledRow: View {
         }
         .padding(.horizontal, 17)
         .padding(.vertical, 10)
-        .frame(minHeight: 58)
+        .frame(minHeight: 62)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
@@ -160,10 +186,16 @@ private struct ModePage: View {
     @Environment(\.locale) private var locale
     @State private var selected: ProfileModel.Variant?
     @State private var isJoinPresented = false
-    @State private var showsMembersFirst = false
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
-    private var current: ProfileModel.Variant { model.variant }
+    /// A protected iPhone without a guardian works like Pribadi (QA 2026-11-10 #4: no card was marked). It can't
+    /// become a Guardian: the device mode never changes on the server.
+    private var current: ProfileModel.Variant { model.variant == .protected ? .personal : model.variant }
+    private var isProtected: Bool { model.variant == .protected }
     private var choice: ProfileModel.Variant { selected ?? current }
+    /// A guardian who still protects someone, or a protected person with a guardian, can't join another family.
+    /// Only once the profile and family have loaded: no lock without the server's answer (the join answers then).
+    private var isLocked: Bool { model.state == .loaded && !model.membersFailed && !model.canJoinAnotherFamily }
 
     var body: some View {
         ProfileScreen(title: "Account mode") {
@@ -195,6 +227,8 @@ private struct ModePage: View {
                 ) {
                     AvatarStack(members: model.members)
                 } action: { selected = .guardian }
+                    .disabled(isProtected)
+                    .opacity(isProtected ? 0.45 : 1)
                     .accessibilityIdentifier("mode.guardian")
             }
             .padding(.horizontal, ProfileStyle.margin)
@@ -202,7 +236,12 @@ private struct ModePage: View {
 
             ProfileCard {
                 Button {
-                    if model.canJoinAnotherFamily { isJoinPresented = true } else { showsMembersFirst = true }
+                    if isProtected {
+                        // Already protected: a plain join with the code (POST /family/join), as on Home.
+                        env.router.showConnect()
+                    } else {
+                        isJoinPresented = true
+                    }
                 } label: {
                     ProfileRow(
                         symbol: ProfileStyle.extensionSymbol, title: Text("Have an invite code?"),
@@ -210,14 +249,26 @@ private struct ModePage: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .disabled(isLocked)
                 .accessibilityIdentifier("mode.joinFamily")
             }
+            // Figma "Mode akun · Terkunci" (1619:7207): the row fades and says why right under it.
+            .opacity(isLocked ? 0.45 : 1)
             .padding(.horizontal, ProfileStyle.margin)
             .padding(.top, 28)
+            .animation(StateMotion.enter(reduceMotion: reduceMotion), value: isLocked)
+            if isLocked {
+                PageNote(text: isProtected
+                    ? Text("Only your guardian can disconnect you. Ask them first, then join another family.")
+                    : Text("Disconnect the people you protect first. Then you can join another family."))
+                    .padding(.horizontal, -16)
+                    .transition(.opacity)
+                    .accessibilityIdentifier("mode.locked")
+            }
 
             if choice != current {
                 Button {
-                    model.setFamilyMode(choice == .guardian)
+                    if choice == .guardian { env.requestFamilyMode() } else { model.setFamilyMode(false) }
                     selected = nil
                     AccessibilityNotification.Announcement(L10n.string(
                         choice == .guardian ? "Switched to Guardian" : "Switched to Personal", language: AppLanguage(locale: locale)
@@ -233,17 +284,14 @@ private struct ModePage: View {
                 .padding(.top, 28)
                 .accessibilityIdentifier("mode.switch")
             }
-            PageNote(text: Text("Your protection stays on. You can switch back to Personal at any time."), alignment: .center)
-                .padding(.top, choice != current ? 0 : 18)
+            if !isLocked {
+                PageNote(text: Text("Your protection stays on. You can switch back to Personal at any time."), alignment: .center)
+                    .padding(.top, choice != current ? 0 : 18)
+            }
         }
         .sheet(isPresented: $isJoinPresented) {
             JoinAnotherFamilySheet(name: model.profile?.name ?? "")
                 .environment(\.locale, locale)
-        }
-        .alert(Text("You still protect someone"), isPresented: $showsMembersFirst) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Disconnect the people you protect first. Then you can join another family.")
         }
     }
 }
@@ -303,6 +351,7 @@ private struct ModeCard<Icon: View>: View {
             .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .buttonStyle(.plain)
+        .modifier(ProfileSelectionMotion(isSelected: isSelected))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
@@ -314,18 +363,16 @@ private enum ModeCardColor {
     static let selectedDivider = Color.dynamic(0xD6E6F7, dark: 0x27405E)
 }
 
-/// Three overlapping initials ("S B R"): the members, or placeholders without any.
+/// Three overlapping avatars: the members', or three neutral person placeholders without any.
 private struct AvatarStack: View {
     let members: [FamilyMember]
 
     var body: some View {
-        let people: [(String, String)] = members.isEmpty
-            ? [("S", "avatar_01"), ("B", "avatar_02"), ("R", "avatar_03")]
-            : members.prefix(3).map { ($0.name, $0.avatarId) }
+        // "" is no avatar: `AvatarView` draws the neutral person.
+        let ids = members.isEmpty ? ["", "", ""] : members.prefix(3).map(\.avatarId)
         HStack(spacing: -10) {
-            ForEach(Array(people.enumerated()), id: \.offset) { _, person in
-                InitialsAvatar(name: person.0, avatarId: person.1, size: 28)
-                    .overlay(Circle().stroke(ProfileStyle.card, lineWidth: 1.5))
+            ForEach(Array(ids.enumerated()), id: \.offset) { _, id in
+                AvatarView(id: id, size: 28, ring: .init(color: ProfileStyle.card, width: 1.5))
             }
         }
         .frame(width: 64, alignment: .leading)
@@ -333,27 +380,42 @@ private struct AvatarStack: View {
     }
 }
 
-/// "Punya kode undangan?": the Connect screen, joining as protected (a new device on the server).
-private struct JoinAnotherFamilySheet: View {
+/// "Punya kode undangan?", Home Pribadi "Mode Terawasi" and an invite link (PR-03): the Connect screen, joining
+/// as protected (a new device on the server). An empty `name` is read from the server first. A link's code is
+/// filled in, so the only step left is the Hubungkan tap (T11); "Nanti saja" then closes it.
+struct JoinAnotherFamilySheet: View {
     let name: String
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State private var model: ConnectModel?
+    @State private var cameFromLink = false
 
     var body: some View {
         Group {
             if let model {
-                ConnectView(model: model, onBack: { dismiss() }, onFinish: {
+                ConnectView(model: model, onBack: { dismiss() }, onSkip: cameFromLink ? { dismiss() } : nil, onFinish: {
                     dismiss()
                     env.router.reset()
                 })
+            } else {
+                // An empty Group never appears, so `onAppear` below would never run.
+                Color(.systemBackground)
             }
         }
         .onAppear {
             guard model == nil else { return }
-            model = ConnectModel(repository: env.repository) { [env, name] code in
-                try await env.becomeProtected(code: code, name: name)
+            let code = env.router.takePendingJoinCode()
+            cameFromLink = code != nil
+            model = ConnectModel(repository: env.repository, code: code) { [env, name] code in
+                let name = name.isEmpty ? try await env.repository.me().name : name
+                return try await env.becomeProtected(code: code, name: name)
             }
+        }
+        // A second link while this is open: the new code replaces the old one.
+        .onChange(of: env.router.pendingJoinCode) { _, code in
+            guard code != nil, let pending = env.router.takePendingJoinCode() else { return }
+            cameFromLink = true
+            model?.prefill(pending)
         }
         // Once joined the old device is gone: no swipe back to a screen that no longer exists.
         .interactiveDismissDisabled(isJoined)
@@ -372,6 +434,7 @@ private struct ManageProfilePage: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
     @State private var isAvatarPickerPresented = false
+    @State private var isNamePresented = false
     @State private var isDeleteConfirming = false
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
@@ -384,44 +447,55 @@ private struct ManageProfilePage: View {
         }
     }
 
+    /// Figma "Pengaturan/Kelola profil" (416:12854): avatar with an edit badge, "Ubah avatar", Info pribadi
+    /// (name, status), the people this guardian protects, and "Hapus akun". No phone number row.
     private var guardianBody: some View {
         ProfileScreen(title: "Manage profile") {
-            VStack(spacing: 12) {
-                AvatarView(id: model.profile?.avatarId ?? "", size: 95)
-                    .padding(4.5)
-                    .background(ProfileStyle.card, in: Circle())
-                    // Figma "Avatar": #1A1C2E 12 %, y 6, blur 16.
-                    .shadow(color: ProfileStyle.cardShadow, radius: 8, y: 6)
-                    .accessibilityHidden(true)
+            VStack(spacing: 1) {
+                avatar
                 Button { isAvatarPickerPresented = true } label: {
-                    Text("Change photo")
-                        .profileFont(15, .medium)
-                        .foregroundStyle(ProfileStyle.link)
+                    Text("Change avatar")
+                        .profileBody()
+                        .foregroundStyle(ProfileStyle.accent)
                         .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .accessibilityIdentifier("profile.changePhoto")
             }
+            // Figma: the avatar 20 pt under the back button.
             .padding(.top, 4)
 
-            ProfileSection(title: "Personal info") {
-                Button { env.router.show(.profilePage(.editName)) } label: {
+            // Figma: 20 pt under "Ubah avatar"; its 44 pt tap area already adds 11.
+            ProfileSection(title: "Personal info", top: 9) {
+                Button {
+                    model.nameDraft = model.profile?.name ?? ""
+                    isNamePresented = true
+                } label: {
                     LabeledRow(label: Text("Display name"), value: model.profile?.name ?? "")
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("profile.displayName")
                 ProfileDivider(leading: 17)
-                // Made from the name (Profile card handle): shown, not editable on its own.
-                LabeledRow(label: Text("Username"), value: model.username, showsChevron: false)
-                    .accessibilityIdentifier("profile.username")
+                LabeledRow(label: Text("Status"), value: L10n.string(model.statusTitle, language: language), showsChevron: false)
+                    .accessibilityIdentifier("profile.status")
             }
-            .padding(.top, -8)
 
-            ProfileCard {
+            if model.variant == .guardian, !model.members.isEmpty {
+                ProfileSection(title: "Connected with", top: 32) {
+                    ForEach(Array(model.members.enumerated()), id: \.element.id) { index, member in
+                        if index > 0 { ProfileDivider() }
+                        connectedRow(member)
+                    }
+                }
+            }
+
+            ProfileSection(title: "Account", top: 32) {
                 Button { isDeleteConfirming = true } label: {
                     ProfileRow(
                         symbol: "xmark", title: Text("Delete account"),
                         subtitle: Text("All data and history will be deleted for good"),
-                        titleColor: ProfileStyle.red, titleWeight: .medium,
+                        titleColor: ProfileStyle.red,
                         iconTint: ProfileStyle.red, iconFill: ProfileStyle.redIconFill,
                         style: .settings
                     )
@@ -430,17 +504,78 @@ private struct ManageProfilePage: View {
                 .disabled(model.isWorking)
                 .accessibilityIdentifier("profile.manage.delete")
             }
-            .padding(.horizontal, ProfileStyle.margin)
-            .padding(.top, 28)
         }
         .sheet(isPresented: $isAvatarPickerPresented) {
-            AvatarPickerSheet(current: model.profile?.avatarId ?? "") { id in
+            AvatarPickerSheet(current: model.profile?.avatarId ?? "", isWorking: model.isWorking) { id in
                 Task { if await model.chooseAvatar(id) { isAvatarPickerPresented = false } }
             }
             .environment(\.locale, locale)
         }
+        .sheet(isPresented: $isNamePresented) {
+            NameSheet(model: model, subtitle: nameSubtitle)
+                .environment(\.locale, locale)
+        }
         .deleteAccountSheet(model: model, isPresented: $isDeleteConfirming)
         .modifier(ActionErrorAlert(model: model))
+    }
+
+    /// Figma "Avatar" (104 pt: a 100 pt photo in a 2 pt white ring, card shadow) and "Badge edit avatar".
+    private var avatar: some View {
+        AvatarView(id: model.profile?.avatarId ?? "", size: 100)
+            .overlay(Circle().strokeBorder(ProfileStyle.card, lineWidth: 2.5))
+            .padding(2)
+            .background(ProfileStyle.card, in: Circle())
+            .shadow(color: ProfileStyle.cardShadow, radius: 8, y: 6)
+            .overlay(alignment: .bottomTrailing) {
+                Image("ProfileEditBadge")
+                    .resizable()
+                    .frame(width: 32, height: 32)
+                    .offset(x: 2, y: -2)
+            }
+            .onTapGesture { isAvatarPickerPresented = true }
+            // "Ubah avatar" right under it does the same for VoiceOver and Voice Control.
+            .accessibilityHidden(true)
+    }
+
+    /// Figma "Terhubung · Virellia" (1278:12105): avatar, name, "dilindungi sejak 12 Okt 2026", chevron.
+    private func connectedRow(_ member: FamilyMember) -> some View {
+        Button { env.router.show(.member(deviceId: member.deviceId)) } label: {
+            HStack(spacing: 12) {
+                AvatarView(id: member.avatarId, size: 36)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: member.name)
+                        .profileBody()
+                        .foregroundStyle(ProfileStyle.ink)
+                    if let since = member.connectedAt {
+                        Text("Protected since \(since.formatted(.dateTime.day().month(.abbreviated).year().locale(language.locale)))")
+                            .profileCaption()
+                            .foregroundStyle(ProfileStyle.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ProfileStyle.chevron)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 17)
+            .padding(.vertical, 12)
+            .frame(minHeight: 66)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text("Shows this person's protection"))
+        .accessibilityIdentifier("profile.connected.\(member.deviceId)")
+    }
+
+    /// Figma "Nama ini terlihat di app Virellia.": the one person this guardian protects, else the family.
+    private var nameSubtitle: Text {
+        if model.variant == .guardian, model.members.count == 1, let member = model.members.first {
+            return Text("This name shows in \(member.name)'s app.")
+        }
+        return Text("Your family sees this name.")
     }
 }
 
@@ -471,22 +606,23 @@ private struct ProtectedManageProfilePage: View {
                 }
                 .profileFont(22, .medium, tracking: -0.22)
                 .foregroundStyle(ProfileStyle.secondary)
-                .padding(.horizontal, 21)
-                .padding(.vertical, 5)
+                // Figma 242 × 39: 5.2 / 20.7 inside, plus its 1.3 pt ring drawn outside.
+                .padding(.horizontal, 22)
+                .padding(.vertical, 6.5)
                 .overlay(Capsule().stroke(ProfileStyle.card.opacity(0.9), lineWidth: 1.3))
                 .padding(.top, 12)
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("profile.activeSince")
             }
 
-            ProfileSection(title: "Personal info", top: 69) {
+            ProfileSection(title: "Personal info", top: 72) {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Name").profileFont(13).foregroundStyle(ProfileStyle.secondary)
+                        Text("Name").profileCaption().foregroundStyle(ProfileStyle.secondary)
                             .accessibilityHidden(true)
                         // Same word as the label, so Voice Control "Tap Name" works (WCAG 2.5.3).
                         TextField(text: $model.nameDraft) { Text("Name") }
-                            .profileFont(17, tracking: -0.17)
+                            .profileBody()
                             .foregroundStyle(ProfileStyle.ink)
                             .textContentType(.givenName)
                             .submitLabel(.done)
@@ -506,8 +642,9 @@ private struct ProtectedManageProfilePage: View {
                     .padding(.trailing, -14)
                 }
                 .padding(.horizontal, 17)
-                .padding(.vertical, 5)
-                .frame(minHeight: 58)
+                // Figma "Row/Adhella": 62 pt, the label and name 10 pt from its edges.
+                .padding(.vertical, 9)
+                .frame(minHeight: 62)
                 ProfileDivider(leading: 17)
             }
 
@@ -526,7 +663,7 @@ private struct ProtectedManageProfilePage: View {
                     ProfileRow(
                         symbol: "xmark", title: Text("Delete account"),
                         subtitle: Text("All data and history will be deleted for good"),
-                        titleColor: ProfileStyle.red, titleWeight: .medium,
+                        titleColor: ProfileStyle.red,
                         iconTint: ProfileStyle.red, iconFill: ProfileStyle.redIconFill,
                         style: .settings
                     )
@@ -536,8 +673,8 @@ private struct ProtectedManageProfilePage: View {
                 .accessibilityIdentifier("profile.manage.delete")
             }
             .padding(.horizontal, ProfileStyle.margin)
-            // Figma keeps "Hapus akun" near the bottom of the screen.
-            .padding(.top, 301)
+            // Figma keeps "Hapus akun" near the bottom of the screen: its card starts at y 738.
+            .padding(.top, 293)
         }
         .onChange(of: isNameFocused) { _, focused in
             // Leaving the field keeps a valid edit, like Return does.
@@ -571,166 +708,13 @@ private struct ProtectedManageProfilePage: View {
     }
 }
 
-/// "Ubah foto": the four onboarding memoji (ON-02).
-private struct AvatarPickerSheet: View {
-    let current: String
-    let onPick: (String) -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(spacing: 24) {
-            Capsule().fill(ProfileStyle.grabber).frame(width: 36, height: 5)
-                .padding(.top, 10)
-                .accessibilityHidden(true)
-            Text("Change photo")
-                .profileFont(22, .semibold, tracking: -0.44)
-                .foregroundStyle(ProfileStyle.nameInk)
-                .accessibilityAddTraits(.isHeader)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
-                ForEach(Array(OnboardingAvatar.ids.enumerated()), id: \.element) { index, id in
-                    Button { onPick(id) } label: {
-                        AvatarView(id: id, size: 72)
-                            .overlay {
-                                Circle().strokeBorder(OnboardingTheme.avatarRing, lineWidth: 3).opacity(id == current ? 1 : 0)
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text("Avatar \(index + 1)"))
-                    .accessibilityAddTraits(id == current ? [.isButton, .isSelected] : .isButton)
-                    .accessibilityIdentifier("avatar.\(id)")
-                }
-            }
-            Button { dismiss() } label: {
-                Text("Cancel")
-                    .profileFont(17, .semibold, tracking: -0.17)
-                    .foregroundStyle(ProfileStyle.ink)
-                    .frame(maxWidth: .infinity, minHeight: 56)
-                    .background(ProfileStyle.iconFill, in: Capsule())
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 16)
-        .presentationDetents([.height(330)])
-        .presentationBackground(ProfileStyle.card)
-    }
-}
-
-extension View {
-    /// "Hapus akun?" confirm sheet (Profile and Kelola profil).
-    func deleteAccountSheet(model: ProfileModel, isPresented: Binding<Bool>) -> some View {
-        modifier(DeleteAccountSheet(model: model, isPresented: isPresented))
-    }
-}
-
-private struct DeleteAccountSheet: ViewModifier {
-    let model: ProfileModel
-    @Binding var isPresented: Bool
-    @Environment(\.locale) private var locale
-
-    func body(content: Content) -> some View {
-        let language = AppLanguage(locale: locale)
-        content.sheet(isPresented: $isPresented) {
-            ProfileConfirmSheet(
-                title: L10n.string("Delete account?", language: language),
-                message: model.deleteMessage(language: language),
-                confirmTitle: L10n.string("Delete account", language: language),
-                confirmIdentifier: "profile.delete.confirm",
-                isWorking: model.isWorking
-            ) {
-                AvatarView(id: model.profile?.avatarId ?? "", size: 64)
-            } onConfirm: {
-                Task {
-                    if await model.deleteMyData() { isPresented = false }
-                }
-            }
-            .environment(\.locale, locale)
-        }
-    }
-}
-
-// MARK: Nama tampilan
-
-private struct NamePage: View {
-    @Bindable var model: ProfileModel
-    @Environment(\.locale) private var locale
-    @FocusState private var isNameFocused: Bool
-
-    private var language: AppLanguage { AppLanguage(locale: locale) }
-
-    var body: some View {
-        ProfileScreen(title: "Display name") {
-            ProfileSection(title: "Name") {
-                // Same word as the section title, so Voice Control "Tap Name" works (WCAG 2.5.3).
-                TextField(text: $model.nameDraft) { Text("Name") }
-                    .profileFont(17, tracking: -0.17)
-                    .foregroundStyle(ProfileStyle.ink)
-                    .textContentType(.givenName)
-                    .submitLabel(.done)
-                    .focused($isNameFocused)
-                    .onSubmit { Task { await save() } }
-                    .padding(.horizontal, 17)
-                    .frame(minHeight: 52)
-                    .accessibilityHint(Text("1 to 20 characters"))
-                    .accessibilityIdentifier("profile.name")
-            }
-            .padding(.top, -12)
-            VStack(alignment: .leading, spacing: 4) {
-                switch model.nameProblem {
-                case .empty: Text("Enter a name.")
-                case .tooLong: Text("Use 20 characters or fewer.")
-                case nil: Text("1–20 characters. Your family sees this name.")
-                }
-                if let message = model.nameError {
-                    Text(verbatim: L10n.string(message, language: language))
-                        .foregroundStyle(Color.readableRed)
-                        .accessibilityIdentifier("profile.error")
-                }
-            }
-            .profileFont(13)
-            .foregroundStyle(ProfileStyle.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, ProfileStyle.margin + 16)
-            .padding(.top, 10)
-
-            Button { Task { await save() } } label: {
-                Text("Save name")
-                    .profileFont(17, .semibold, tracking: -0.17)
-                    .foregroundStyle(saveDisabled ? ProfileStyle.secondary : ProfileStyle.primaryText)
-                    .frame(maxWidth: .infinity, minHeight: 56)
-                    .background(saveDisabled ? ProfileStyle.disabledFill : ProfileStyle.primaryFill, in: Capsule())
-            }
-            .disabled(saveDisabled)
-            .padding(.horizontal, ProfileStyle.margin)
-            .padding(.top, 24)
-            .accessibilityIdentifier("profile.saveName")
-        }
-        .onChange(of: model.nameError) { _, message in
-            if let message { announce(message) }
-        }
-    }
-
-    private var saveDisabled: Bool {
-        model.nameDraft == model.profile?.name || model.nameProblem != nil || model.isWorking
-    }
-
-    private func save() async {
-        if await model.saveName() {
-            isNameFocused = false
-            announce("Name saved")
-        }
-    }
-
-    private func announce(_ message: String.LocalizationValue) {
-        AccessibilityNotification.Announcement(L10n.string(message, language: language)).post()
-    }
-}
-
 // MARK: Akun Tertaut (Protected)
 
 /// Figma "Pengaturan/Mode akun" of the protected user ("Akun Tertaut"): who this iPhone is linked to,
 /// what the guardian gets, and "Putuskan koneksi" locked — only the guardian can disconnect.
 private struct ConnectionPage: View {
     let model: ProfileModel
+    @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
@@ -740,26 +724,85 @@ private struct ConnectionPage: View {
             if let guardian = model.profile?.guardian {
                 linked(guardian)
             } else if model.state == .loaded {
-                Text("Not connected to a guardian yet")
-                    .profileFont(17, .semibold)
-                    .foregroundStyle(ProfileStyle.ink)
-                    .frame(maxWidth: .infinity, minHeight: 200)
-                    .accessibilityIdentifier("profile.guardian.none")
+                notLinked
             } else {
                 ShieldPulseLoader().frame(maxWidth: .infinity, minHeight: 200)
+            }
+        }
+        // Figma 2023:11179: the way back sits at the foot of the screen, like "Kembali" on member detail.
+        .safeAreaInset(edge: .bottom) {
+            if model.profile?.guardian == nil && model.state == .loaded {
+                Button("Enter the invite code") { env.router.showConnect() }
+                    .buttonStyle(OnboardingCapsuleButtonStyle())
+                    .padding(.horizontal, ProfileStyle.margin)
+                    .padding(.bottom, 8)
+                    .accessibilityIdentifier("profile.guardian.connect")
             }
         }
         .task { model.linked.refresh() }
     }
 
+    /// QA 2026-11-10 #6: the guardian disconnected this iPhone or deleted their account. Figma
+    /// "Akun Tertaut · Belum terhubung ke Guardian" (2023:11179): the linked layout with the guardian's seat
+    /// empty, how to connect again, and that Shoo keeps protecting in the meantime.
+    @ViewBuilder private var notLinked: some View {
+        Text("This account isn't linked to a guardian yet.")
+            .profileValue()
+            .foregroundStyle(ProfileStyle.secondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 40)
+            .padding(.top, 24)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier("profile.guardian.none")
+
+        HStack(alignment: .top, spacing: 17) {
+            person(name: Text("You")) {
+                AvatarView(id: model.profile?.avatarId ?? "", size: 84)
+                    .padding(3.66)
+                    .background(ProfileStyle.card, in: Circle())
+                    .shadow(color: Color(hex: 0x1F78BF, opacity: 0.18), radius: 11, y: 7)
+            }
+            LinkDots(muted: true).padding(.top, 54)
+            person(name: Text(verbatim: "Guardian"), nameColor: ProfileStyle.secondary) {
+                Image(systemName: "person.crop.circle")
+                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                    .foregroundStyle(ProfileStyle.secondary.opacity(0.7))
+                    .frame(width: 92, height: 92)
+                    .background(ProfileStyle.iconFill, in: Circle())
+                    .overlay(Circle().strokeBorder(ProfileStyle.chevron, style: StrokeStyle(lineWidth: 2, dash: [6, 6])))
+            }
+        }
+        .accessibilityHidden(true)
+        .padding(.top, 38)
+
+        ProfileSection(title: "How to connect", top: 24) {
+            ConnectStep(number: 1, title: Text("Ask your guardian to open Shoo"), subtitle: Text("On your guardian's iPhone"))
+            ProfileDivider()
+            ConnectStep(number: 2, title: Text("Your guardian taps Invite family"), subtitle: Text("A QR code and an invite code appear"))
+            ProfileDivider()
+            ConnectStep(number: 3, title: Text("Scan the QR or enter the code"), subtitle: Text("Tap the button below"))
+        }
+        .accessibilityIdentifier("profile.guardian.steps")
+
+        Text("Shoo keeps protecting you in the meantime. Scam sites stay blocked on this iPhone.")
+            .profileFont(15)
+            .foregroundStyle(ProfileStyle.secondary)
+            .multilineTextAlignment(.center)
+            .lineSpacing(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 40)
+            .padding(.top, 20)
+    }
+
     @ViewBuilder private func linked(_ guardian: GuardianInfo) -> some View {
         @Bindable var linked = model.linked
 
+        // Figma 455:9520: SF Pro Rounded 17, line height 140 %.
         Text("This account is linked to another account.")
-            .profileFont(15, tracking: -0.15)
+            .profileValue()
             .foregroundStyle(ProfileStyle.secondary)
             .multilineTextAlignment(.center)
-            .lineSpacing(6)
             .padding(.horizontal, 40)
             .padding(.top, 24)
 
@@ -770,7 +813,8 @@ private struct ConnectionPage: View {
                     .background(ProfileStyle.card, in: Circle())
                     .shadow(color: Color(hex: 0x1F78BF, opacity: 0.18), radius: 11, y: 7)
             }
-            LinkDots().padding(.top, 39)
+            // Figma 1618872250: the dots start 53.8 pt under the avatars' top.
+            LinkDots().padding(.top, 54)
             person(name: Text(verbatim: guardian.name)) {
                 AvatarView(id: guardian.avatarId, size: 85)
                     .padding(3.5)
@@ -804,7 +848,8 @@ private struct ConnectionPage: View {
             }
         }
         .padding(.horizontal, ProfileStyle.margin)
-        .padding(.top, 29)
+        // Figma: the card starts at y 340, 27 pt under the names.
+        .padding(.top, 25)
 
         (Text(verbatim: guardian.name).fontWeight(.semibold) + Text(" ") + Text("can always see the blocked history"))
             .profileFont(15)
@@ -819,23 +864,27 @@ private struct ConnectionPage: View {
             ProfileRow(
                 symbol: "lock.fill", title: Text("Disconnect"),
                 subtitle: Text("Must use \(guardian.name)'s account"),
-                accessory: .none, titleColor: ProfileStyle.secondary, titleWeight: .medium,
+                accessory: .none, titleColor: ProfileStyle.secondary,
                 iconTint: Color.dynamic(0x727272, dark: 0x9EA6B4), iconFill: Color.dynamic(0xEDEDED, dark: 0x2A303A)
             )
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("profile.disconnect.locked")
         }
         .padding(.horizontal, ProfileStyle.margin)
-        // Figma keeps the locked row near the bottom of the screen.
-        .padding(.top, 205)
+        // Figma keeps the row near the bottom of the screen: its card starts at y 736.
+        .padding(.top, 226)
     }
 
-    private func person<Avatar: View>(name: Text, @ViewBuilder avatar: () -> Avatar) -> some View {
+    private func person<Avatar: View>(
+        name: Text, nameColor: Color = ProfileStyle.ink, @ViewBuilder avatar: () -> Avatar
+    ) -> some View {
         VStack(spacing: 8) {
             avatar()
+            // Figma "You" / "Adhella": SF Pro Display Semibold 17, line height 22.
             name
-                .profileFont(17, .bold, tracking: -0.17)
-                .foregroundStyle(ProfileStyle.ink)
+                .profileFont(17, .semibold)
+                .figmaLineHeight(22, relativeTo: .body)
+                .foregroundStyle(nameColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
@@ -844,19 +893,80 @@ private struct ConnectionPage: View {
 }
 
 /// The five blue dots between the two avatars, largest in the middle (Figma "Frame 1618872250").
+/// A soft pulse runs from "You" to the guardian, so the link reads as live. Reduce Motion (Shoo's
+/// setting or iOS's) keeps the Figma frame still.
 private struct LinkDots: View {
     private static let dots: [(size: CGFloat, opacity: Double)] = [(9.16, 0.56), (11, 0.77), (14, 1), (11, 0.77), (9.16, 0.56)]
+    /// One pass takes 1.4 s, then the dots rest for 0.6 s.
+    private static let pass = 1.4, rest = 0.6
+
+    /// Grey and still: no guardian on the other end yet (Figma 2023:11179).
+    var muted = false
+
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: 9.5) {
-            ForEach(Array(Self.dots.enumerated()), id: \.offset) { _, dot in
-                Circle()
-                    .fill(Color(hex: 0x0088FF, opacity: dot.opacity))
-                    .frame(width: dot.size, height: dot.size)
+        TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion || muted)) { context in
+            let phase = reduceMotion || muted ? nil : Self.phase(at: context.date)
+            HStack(spacing: 9.5) {
+                ForEach(Array(Self.dots.enumerated()), id: \.offset) { index, dot in
+                    let lift = phase.map { Self.lift(index: index, phase: $0) } ?? 0
+                    Circle()
+                        .fill(muted
+                            ? ProfileStyle.chevron.opacity(dot.opacity)
+                            : Color(hex: 0x0088FF, opacity: dot.opacity + (1 - dot.opacity) * lift))
+                        .frame(width: dot.size, height: dot.size)
+                        .scaleEffect(1 + 0.3 * lift)
+                }
             }
         }
         .frame(height: 14)
         .accessibilityHidden(true)
+    }
+
+    /// Where the pulse is: 0 before the first dot, 1 past the last, nil while resting.
+    private static func phase(at date: Date) -> Double? {
+        let t = date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: pass + rest)
+        return t < pass ? t / pass : nil
+    }
+
+    /// 0…1: how close the pulse is to this dot (a smooth bump about 1.5 dots wide).
+    private static func lift(index: Int, phase: Double) -> Double {
+        let centre = -1 + phase * Double(dots.count + 1)
+        let distance = abs(Double(index) - centre)
+        guard distance < 1.5 else { return 0 }
+        return 0.5 * (1 + cos(.pi * distance / 1.5))
+    }
+}
+
+/// One numbered step of "Cara menghubungkan" (Figma 2023:11179): a blue number in a round tile, title and hint.
+private struct ConnectStep: View {
+    let number: Int
+    let title: Text
+    let subtitle: Text
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(verbatim: "\(number)")
+                .profileFont(17, .semibold)
+                .foregroundStyle(ProfileStyle.link)
+                .frame(width: 36, height: 36)
+                .background(Color.dynamic(0xDEECFB, dark: 0x1E3A55), in: Circle())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                title
+                    .profileBody()
+                    .foregroundStyle(ProfileStyle.ink)
+                subtitle
+                    .profileFont(15)
+                    .foregroundStyle(ProfileStyle.secondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 17)
+        .padding(.vertical, 12)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -1023,10 +1133,18 @@ private struct QuietHoursSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                DatePicker(selection: $start, displayedComponents: .hourAndMinute) { Text("Starts") }
-                    .accessibilityIdentifier("quiet.start")
-                DatePicker(selection: $end, displayedComponents: .hourAndMinute) { Text("Ends") }
-                    .accessibilityIdentifier("quiet.end")
+                Section {
+                    DatePicker(selection: $start, displayedComponents: .hourAndMinute) { Text("Starts") }
+                        .accessibilityIdentifier("quiet.start")
+                    DatePicker(selection: $end, displayedComponents: .hourAndMinute) { Text("Ends") }
+                        .accessibilityIdentifier("quiet.end")
+                } footer: {
+                    // Start = end would silence warnings all day (fase 27i, F-N6).
+                    if !canSave {
+                        Text("Start and end can't be the same time.")
+                            .accessibilityIdentifier("quiet.sameTime")
+                    }
+                }
             }
             .environment(\.timeZone, TimeZone(identifier: "UTC")!)
             .navigationTitle(Text("Quiet hours"))
@@ -1040,12 +1158,15 @@ private struct QuietHoursSheet: View {
                         onSave(Self.clock(start), Self.clock(end))
                         dismiss()
                     } label: { Text("Save") }
+                    .disabled(!canSave)
                     .accessibilityIdentifier("quiet.save")
                 }
             }
         }
         .presentationDetents([.medium])
     }
+
+    private var canSave: Bool { ProfileModel.canSaveQuietHours(start: Self.clock(start), end: Self.clock(end)) }
 
     /// "22:00" as a time on 1 Jan 1970 UTC, so pickers and formatters never shift it.
     static func date(_ clock: String) -> Date? {
@@ -1084,6 +1205,8 @@ private struct LanguagePage: View {
             .padding(.top, -20)
             PageNote(text: Text("Warnings in Safari and notifications use this language too."))
         }
+        // A save the server missed says so here, where it was chosen (Profile's own alert sits under this page).
+        .modifier(ActionErrorAlert(model: model))
     }
 
     /// The language's own name, read by VoiceOver in that language.
@@ -1162,6 +1285,8 @@ private struct ThemeOption: View {
                         RoundedRectangle(cornerRadius: 21, style: .continuous)
                             .strokeBorder(ProfileStyle.link, lineWidth: 2)
                             .opacity(isSelected ? 1 : 0)
+                            // The ring still fades with Reduce Motion, when the 4 pt move snaps.
+                            .animation(.easeInOut(duration: 0.2), value: isSelected)
                     )
                 title
                     .profileFont(15, isSelected ? .medium : .regular, tracking: -0.15)
@@ -1171,6 +1296,8 @@ private struct ThemeOption: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The 5 ↔ 3 pt inset moves the name and radio 4 pt: eased, or snapped with Reduce Motion.
+        .modifier(ProfileSelectionMotion(isSelected: isSelected, movesLayout: true))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
@@ -1255,6 +1382,7 @@ private struct AccessibilityPage: View {
 private struct TextSizeSlider: View {
     @Binding var level: TextSizeLevel
     @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     private let levels = TextSizeLevel.allCases
 
@@ -1282,6 +1410,8 @@ private struct TextSizeSlider: View {
                         .frame(width: 28, height: 28)
                         .offset(x: x(level.rawValue) - 14)
                 }
+                // The thumb and the blue rail glide to the next stop; Reduce Motion: they jump.
+                .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: level)
                 .frame(maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance: 0).onChanged { value in
@@ -1292,6 +1422,7 @@ private struct TextSizeSlider: View {
             .frame(height: 28)
             Text(verbatim: "A").font(FigmaFont.font(size: 22, weight: .medium)).foregroundStyle(ProfileStyle.ink)
         }
+        .sensoryFeedback(.selection, trigger: level)
         .accessibilityElement()
         .accessibilityLabel(Text("Text size"))
         .accessibilityValue(Text(verbatim: L10n.string(level.title, language: AppLanguage(locale: locale))))
@@ -1353,6 +1484,24 @@ private struct AboutPage: View {
             // Figma: the icon starts 28 pt under the back button; the header leaves 16.
             .padding(.top, 12)
 
+            // Apple 5.1.1(ii), 5.1.2(i): the online check can be taken back at any time. It lives here, not on
+            // Profile, next to the privacy policy that explains it.
+            ProfileCard {
+                ProfileToggleRow(
+                    symbol: nil,
+                    title: Text("Online check"),
+                    subtitle: Text("Sends pages to Shoo's server and suspicious-page summaries to DeepSeek"),
+                    style: .settings,
+                    isOn: Binding(
+                        get: { env.settings.dataConsent == .granted },
+                        set: { env.setDataConsent($0 ? .granted : .declined) }
+                    )
+                )
+                .accessibilityIdentifier("about.onlineCheck")
+            }
+            .padding(.horizontal, ProfileStyle.margin)
+            .padding(.top, 32)
+
             ProfileCard {
                 linkRow(Text("Privacy policy"), id: "about.privacy") { openURL(page("privacy")) }
                 ProfileDivider(leading: 17)
@@ -1361,7 +1510,7 @@ private struct AboutPage: View {
                 linkRow(Text("Third-party licenses"), id: "about.licenses", isLink: false) { env.router.show(.profilePage(.licenses)) }
             }
             .padding(.horizontal, ProfileStyle.margin)
-            .padding(.top, 32)
+            .padding(.top, 20)
 
             ProfileCard {
                 linkRow(Text("Rate on the App Store"), id: "about.rate") { rate() }

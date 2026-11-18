@@ -136,8 +136,16 @@ test("marks stop at 24 and at 3 per signal", () => {
 
 test("a page blocked again from memory (#231) is not reported again: one push per site", () => {
     const seen = new Map();
-    assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true, remembered: true }, seen), false);
+    assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true, remembered: true, recordId: "scn_1" }, seen), false);
     assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true }, seen), true);
+});
+
+test("a page remembered after a report that never arrived (no record id) is reported this time", () => {
+    const seen = new Map();
+    assert.equal(shouldReport({ scanId: 10, status: "blocked", done: true, remembered: true, recordId: null }, seen), true);
+    assert.equal(shouldReport({ scanId: 11, status: "blocked", done: true, remembered: true }, seen), true);
+    seen.set(10, "blocked");
+    assert.equal(shouldReport({ scanId: 10, status: "blocked", done: true, remembered: true, recordId: null }, seen), false);
 });
 
 test("the record id joins what the page shows now, never an older state or another page", () => {
@@ -160,4 +168,10 @@ test("#270: scanBody carries the RDAP date only when known", () => {
     const page = { title: "", faviconUrl: null, now: "2026-10-21T10:00:00.000Z" };
     assert.equal(scanBody({ ...state, rdapRegisteredAt: "2026-10-30" }, page).rdapRegisteredAt, "2026-10-30");
     for (const v of [undefined, null]) assert.ok(!("rdapRegisteredAt" in scanBody({ ...state, rdapRegisteredAt: v }, page)), String(v));
+});
+
+test("#370: a block that only comes from a Guardian's not_safe sends no new report", () => {
+    const seen = new Map([[1, "warning"]]);
+    assert.equal(shouldReport({ scanId: 1, status: "blocked", done: true, verdict: { value: "not_safe" } }, seen), false);
+    assert.equal(shouldReport({ scanId: 1, status: "blocked", done: true, verdict: null }, seen), true);
 });

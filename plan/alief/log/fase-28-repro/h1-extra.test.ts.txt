@@ -1,0 +1,181 @@
+// Fase 28 hunt, hunter 1: blocklist / config truth, remaining edge cells, push truth variants.
+// Run: copy to backend/api/test/h1-extra.test.ts, then
+//   cd backend/api && db_guard && npx vitest run test/h1-extra.test.ts
+//   db_guard + SHOO_TEST_DB_URL + SHOO_TEST_ADMIN_DB_URL (both to a separate DB, never 54322): plan/alief/log/fase-28.md "Cara menunjuk vitest ke DB terpisah"
+// Tests named "BUG B-xx" assert the CORRECT behaviour and FAIL on main 9e5403ba.
+import { beforeEach, describe, expect, it } from "vitest";
+import { adminSql, resetDb, testSql } from "./helpers/resetDb";
+import { call, callWithEnv, createDevice, type Created } from "./helpers/seed";
+
+const sql = testSql();
+const admin = adminSql();
+beforeEach(() => resetDb(sql));
+const APNS = "a".repeat(64);
+const scanBody = (url: string, domain: string, score: number, status: "warning" | "blocked") => ({ url, domain, score, status, signals: [], detectedAt: new Date().toISOString() });
+const post = (d: Created, json: unknown, over = {}) =>
+  callWithEnv(over, "/scans", { method: "POST", token: d.token, headers: { "content-type": "application/json" }, body: JSON.stringify(json) });
+async function pair(g: Created, p: Created) {
+  const { code } = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
+  expect((await call("/family/join", { method: "POST", token: p.token, json: { code } })).status).toBe(200);
+}
+const pushes = async (to: Created) => (await sql<{ result: string }[]>`select result from push_log where to_device_id = ${to.deviceId} order by id`).map((r) => r.result);
+const noEdge = { VERDICTS_GET_LIMITER: undefined };
+
+describe("B-01 variants: the site's one push is spent while nobody could receive it", () => {
+  it("BUG B-01b: blocked site while the Guardian has no APNs token yet; token arrives; member opens the site again", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await pair(g, p);
+    const first = (await (await post(p, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked"))).json()) as { notified: unknown };
+    expect(first.notified).toBeNull();
+    await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: APNS, notifications: { quietHours: false } } });
+    const again = (await (await post(p, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked"))).json()) as { notified: unknown };
+    const otherPage = (await (await post(p, scanBody("https://hadiah.example/login", "hadiah.example", 95, "blocked"))).json()) as { notified: unknown };
+    console.log("H1 B-01b", JSON.stringify({ again: again.notified, otherPage: otherPage.notified, pushes: await pushes(g) }));
+    expect((await pushes(g)).length).toBeGreaterThanOrEqual(1);
+  });
+  it("BUG B-01c: 'Kabari saya' off for the member, then on: the next visit of the same scam site tells the Guardian", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: APNS, notifications: { quietHours: false } } });
+    await pair(g, p);
+    await call(`/family/members/${p.deviceId}`, { method: "PATCH", token: g.token, json: { notify: false } });
+    await post(p, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked"));
+    await call(`/family/members/${p.deviceId}`, { method: "PATCH", token: g.token, json: { notify: true } });
+    await post(p, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked"));
+    console.log("H1 B-01c pushes", JSON.stringify(await pushes(g)));
+    expect((await pushes(g)).length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("B-05 `notified` is answered before the push result is known", () => {
+  it("BUG B-05: APNs refuses the push (broken config) but POST /scans names the Guardian", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: APNS, notifications: { quietHours: false } } });
+    await pair(g, p);
+    const brokenApns = { APNS_KEY_P8_B64: "eA==", APNS_KEY_ID: "KEY0000001", APNS_TEAM_ID: "TEAM123456", APNS_TOPIC: "com.example.shoo", APNS_ENV: "sandbox" };
+    const res = (await (await post(p, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked"), brokenApns)).json()) as { notified: { name: string } | null };
+    const log = await pushes(g);
+    console.log("H1 B-05", JSON.stringify({ notified: res.notified, push_log: log }));
+    expect(log).toEqual(["failed:config"]);
+    expect(res.notified).toBeNull(); // contract #377: "{ name } of the Guardian who got this scan's push, or null when nobody did"
+  });
+});
+
+describe("edge cells the matrix could not reach (edge rate limiter off)", () => {
+  it.each([
+    ["trimmed + upper + www + dot", "%20WWW.Toko.Example.%20", 200], ["empty", "", 422], ["unicode IDN", "b%C3%BCcher.example", 422], ["punycode", "xn--bcher-kva.example", 200],
+    ["single label", "localhost", 422], ["IPv4", "203.0.113.9", 200], ["with port", "toko.example:8443", 422], ["with path", "toko.example/a", 422],
+    ["with scheme", "https://toko.example", 422], ["underscore", "a_b.example", 422], ["script", "%3Cscript%3E", 422], ["nul", "a%00b.example", 422],
+    ["double dot", "toko..example", 422], ["leading dash", "-toko.example", 422], ["public suffix only", "co.id", 200],
+  ])("GET /verdicts?domain= %s → %d", async (_n, v, status) => {
+    const p = await createDevice("Ibu");
+    const res = await callWithEnv(noEdge, `/verdicts?domain=${v}`, { token: p.token });
+    console.log(`H1X verdict-domain | ${_n} | ${res.status}`);
+    expect(res.status).toBe(status);
+  });
+
+  it("BUG B-06: GET /verdicts with a URL over 2048 characters answers 422, not 500", async () => {
+    const p = await createDevice("Ibu");
+    const long = `https://toko.example/${"a".repeat(2100)}`;
+    const res = await callWithEnv(noEdge, `/verdicts?domain=toko.example&url=${encodeURIComponent(long)}`, { token: p.token });
+    const ok = await callWithEnv(noEdge, `/verdicts?domain=toko.example&url=${encodeURIComponent(long.slice(0, 2048))}`, { token: p.token });
+    const scan = await post(p, scanBody(long, "toko.example", 90, "blocked"));
+    console.log("H1 B-06", JSON.stringify({ over: res.status, at2048: ok.status, postScansOver: scan.status }));
+    expect(ok.status).toBe(200);
+    expect(res.status).toBe(422);
+  });
+
+  it.each([["DELETE", "/family/members/a%00b"], ["PATCH", "/family/members/a%00b"], ["POST", "/family/members/a%00b/remind"], ["GET", "/scans?owner=a%00b"]])("BUG B-07: %s %s (NUL in an id) answers 404, not 500", async (method, path) => {
+    const g = await createDevice("Gita", "guardian");
+    const res = await call(path, { method, token: g.token, ...(method === "PATCH" ? { json: { notify: true } } : {}) });
+    console.log(`H1 B-07 | ${method} ${path} | ${res.status}`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("blocklist truth and paging", () => {
+  const get = async (d: Created, since?: string | null) =>
+    (await (await call(`/blocklist${since ? `?since=${encodeURIComponent(since)}` : ""}`, { token: d.token })).json()) as { domains: { domain: string; addedAt: string }[]; removed?: { domain: string; removedAt: string }[]; nextSince: string | null };
+
+  it("empty list: nextSince null; with since: echoes it", async () => {
+    const p = await createDevice("Ibu");
+    expect(await get(p)).toEqual({ domains: [], nextSince: null });
+    expect(await get(p, "2026-01-01T00:00:00.000000Z")).toEqual({ domains: [], removed: [], nextSince: "2026-01-01T00:00:00.000000Z" });
+  });
+
+  it("queued, rejected and removed domains are never served as blocked; a removed one is told to clients with a cursor", async () => {
+    const p = await createDevice("Ibu");
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by, removed_at, rejected_at, rejected_by) values
+      ('queued.example', null, null, null, null, null),
+      ('rejected.example', null, null, null, '2026-11-01T00:00:00Z', 'alief'),
+      ('live.example', '2026-11-01T00:00:00Z', 'alief', null, null, null),
+      ('removed.example', '2026-11-01T00:00:01Z', 'alief', '2026-11-02T00:00:00Z', null, null)`;
+    const full = await get(p);
+    expect(full.domains.map((d) => d.domain)).toEqual(["live.example"]);
+    expect(full.nextSince).toBe("2026-11-01T00:00:00.000000Z");
+    const inc = await get(p, full.nextSince);
+    expect(inc.domains).toEqual([]);
+    expect(inc.removed!.map((d) => d.domain)).toEqual(["removed.example"]);
+    // Boundary: `since` equal to an event time is exclusive; 1 µs earlier includes it.
+    expect((await get(p, "2026-11-02T00:00:00.000000Z")).removed).toEqual([]);
+    expect((await get(p, "2026-11-01T23:59:59.999999Z")).removed).toHaveLength(1);
+    // Re-approved after removal: back in domains with a new time, out of removed.
+    await admin`update blocklist_entries set removed_at = null where domain = 'removed.example'`;
+    const again = await get(p, inc.nextSince);
+    expect([again.domains.map((d) => d.domain), again.removed]).toEqual([["removed.example"], []]);
+  });
+
+  it.each([[999, 1], [1000, 1], [1001, 1], [2500, 400], [2500, 1]])("%d approved entries, ties of %d: a client that follows nextSince gets every domain exactly once", async (n, tie) => {
+    const p = await createDevice("Ibu");
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by)
+      select 'd' || lpad(i::text, 5, '0') || '.example', timestamptz '2026-11-01T00:00:00Z' + make_interval(secs => (i / ${tie})), 'alief'
+      from generate_series(1, ${n}) i`;
+    const seen: string[] = [];
+    let since: string | null = null, pages = 0;
+    for (;;) {
+      const page = await get(p, since);
+      pages++;
+      if (page.domains.length === 0 && (page.removed ?? []).length === 0) break;
+      seen.push(...page.domains.map((d) => d.domain));
+      since = page.nextSince;
+      if (pages > 20) break;
+    }
+    expect(seen.length).toBe(n);
+    expect(new Set(seen).size).toBe(n);
+  });
+});
+
+describe("config, code and join page truth", () => {
+  it("GET /config/public equals admin.public_config; POST /family/code expiry is 30 min and the invite link carries the code", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const cfg = (await (await call("/config/public", { token: g.token })).json()) as { warnAt: number; blockAt: number; version: number };
+    const row = (await admin`select warn_at, block_at, version from admin.public_config`)[0]!;
+    expect([cfg.warnAt, cfg.blockAt, cfg.version]).toEqual([row.warn_at, row.block_at, row.version]);
+    const c = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string; expiresAt: string; inviteUrl: string };
+    const db = (await sql`select code, extract(epoch from expires_at - created_at)::int as ttl from family_codes`)[0]!;
+    expect([c.code, db.ttl, c.inviteUrl.endsWith(`/j/${c.code}`)]).toEqual([db.code, 1800, true]);
+    expect(Math.abs(Date.parse(c.expiresAt) - Date.now() - 1800_000)).toBeLessThan(5000);
+  });
+
+  it("GET /j/<code>: a browser navigation tells a live code from a dead one (bounded by the IP budget), markup never reflects the path", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const c = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
+    const nav = { "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" };
+    const live = await (await call(`/j/${c.code}`, { headers: nav, ip: "203.0.113.50" })).text();
+    const dead = await (await call(`/j/${c.code === "000001" ? "000002" : "000001"}`, { headers: nav, ip: "203.0.113.50" })).text();
+    expect([live.includes(`shoo://join?code=${c.code}`), dead.includes("shoo://join")]).toEqual([true, false]);
+    let told = 0;
+    for (let i = 0; i < 25; i++) {
+      const code = String(100000 + i);
+      if (code === c.code) continue;
+      const html = await (await call(`/j/${code}`, { headers: nav, ip: "203.0.113.51" })).text();
+      if (!html.includes("shoo://join")) told++;
+    }
+    console.log("H1X join-page oracle answers before the IP budget ends:", told);
+    expect(told).toBe(20);
+    const xss = await (await call(`/j/%3Cscript%3Ealert(1)%3C%2Fscript%3E`, { headers: nav })).text();
+    expect(xss).not.toContain("alert(1)");
+  });
+});

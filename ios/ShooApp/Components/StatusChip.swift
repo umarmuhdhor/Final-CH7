@@ -7,12 +7,13 @@ enum ScanBadge: Equatable, Sendable {
     case verifiedScam
     case markedSafe
 
-    /// A guardian's verdict wins over the detection status.
+    /// A guardian's verdict wins over the detection status. A verdict or status this build does not know (#493)
+    /// reads as no verdict / a warning: never safer than a warning.
     init(scan: ScanResult) {
         switch scan.verdict?.value {
         case .notSafe: self = .verifiedScam
         case .safe: self = .markedSafe
-        case nil: self = scan.status == .blocked ? .blocked : .warning
+        case nil, .unknown: self = scan.status == .blocked ? .blocked : .warning
         }
     }
 

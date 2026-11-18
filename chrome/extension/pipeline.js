@@ -5,6 +5,10 @@
 (() => {
     const CHURN_WINDOW_MS = 10_000;
     const CHURN_CHANGES = 3; // more new addresses than this in the window
+    // A page can change its address just slower than the window above (every 3.4 s) and still cut every scan
+    // before /analyze answers (up to 8 s): new addresses that cut an unfinished scan count over a longer window.
+    const CUT_WINDOW_MS = 30_000;
+    const CHURN_CUTS = 3; // more cut scans than this in CUT_WINDOW_MS, like CHURN_CHANGES
     const THRESHOLD = { firstWarning: 30, secondWarning: 50, blocked: 80 };
     const DB_MATCH = "db_match";
 
@@ -66,7 +70,7 @@
      * @param {(snapshot) => Promise<Signal[]>} deps.analyzeLocal    layer 1–2
      * @param {(snapshot, localSignals) => Promise<{signals: Signal[], rdapRegisteredAt?: string|null}|null>} deps.analyzeRemote
      *   layer 3–4, resolves with no signals on failure. `rdapRegisteredAt` (#270) is kept on the state for report.js
-     * @param {(domain, options?: {fresh: boolean}) => Promise<{value: "safe"|"not_safe"}|null>} deps.lookupVerdict
+     * @param {(domain, options?: {fresh?: boolean, url?: string}) => Promise<{value: "safe"|"not_safe"}|null>} deps.lookupVerdict  per link when `url` is given (#241)
      * @param {(url) => Promise<{score, signals, recordId}|null>} [deps.recallBlock]  block memory (#231): a site
      *   blocked before is asked for its verdict once and, without a `safe`, blocked again with no layer run
      *   (no /analyze, so no LLM call) and `remembered: true` (report.js sends nothing again)
@@ -89,6 +93,9 @@
             verdict: null,
             done: false,
             rdapRegisteredAt: previous?.rdapRegisteredAt ?? null,
+            // #379: false once /analyze was skipped or failed (offline, no session, server down). A low score
+            // then only means "nothing found on the phone", and the UI must not call it low risk.
+            onlineChecked: previous?.onlineChecked ?? null,
         };
         let verdictChecked = false;
 
@@ -108,7 +115,7 @@
             verdictChecked = true;
             let verdict = null;
             try {
-                verdict = await lookupVerdict(state.domain);
+                verdict = await lookupVerdict(state.domain, { url: state.url });
             } catch {
                 verdict = null; // server down → keep detecting (PRD §5)
             }
@@ -139,7 +146,7 @@
                 verdictChecked = true;
                 let verdict = null;
                 try {
-                    verdict = await lookupVerdict(state.domain, { fresh: true });
+                    verdict = await lookupVerdict(state.domain, { fresh: true, url: state.url });
                 } catch {
                     verdict = null;
                 }
@@ -186,17 +193,40 @@
         // Layer 3–4
         let remote = [];
         try {
-            const reply = await analyzeRemote(snapshot, local);
+            // #379: the phone's own asks_* (layer 2C) stay here. /analyze finds the form itself (layer 3), and
+            // counting both there would push its LLM gate with the same field twice.
+            const reply = await analyzeRemote(snapshot, local.filter((s) => !s.id.startsWith("asks_")));
             remote = validSignals(reply?.signals, [3, 4]);
             state.rdapRegisteredAt = reply?.rdapRegisteredAt ?? state.rdapRegisteredAt;
+            // #490: signals that all fail the filter are no answer; `signals: []` is a real "nothing found".
+            const allDropped = Array.isArray(reply?.signals) && reply.signals.length > 0 && remote.length === 0;
+            state.onlineChecked = Boolean(reply) && !reply.skipped && !allDropped;
         } catch {
             remote = [];
+            state.onlineChecked = false;
         }
         if (!isCurrent()) return;
         if (!localAdds && !addsToKept(remote, kept)) return; // re-check found nothing new
         Object.assign(state, settle(mergeSignals(kept, local, remote)), { layersDone: [1, 2, 3, 4] });
         if (await applyVerdict()) return;
         emit({ done: true });
+    }
+
+    /**
+     * #370: a Guardian's verdict that arrives while a warning (30–79) is open. `not_safe` → the block screen,
+     * `safe` → the warning goes away (#369). null when there is nothing to change.
+     */
+    function withVerdict(state, verdict) {
+        if (verdict?.value === "not_safe") return { ...state, verdict, score: 100, status: "blocked", done: true };
+        if (verdict?.value === "safe") return { ...state, verdict, signals: [], score: 0, status: "normal", done: true };
+        return null;
+    }
+
+    /** #370: how often an open warning asks for a verdict, the same schedule as the block screen (#350). */
+    function verdictPollMs(openForMs) {
+        if (openForMs < 2 * 60 * 1000) return 2000;
+        if (openForMs < 10 * 60 * 1000) return 5000;
+        return 15000;
     }
 
     // Tiny pub/sub so UI scripts (EX-03/04/05/06) can listen without knowing about content.js.
@@ -218,14 +248,18 @@
     /**
      * Tells a page that keeps changing its address from one being browsed. Without it a page could
      * call replaceState faster than a scan takes and restart the scan for ever, staying at score 0.
-     * @returns {(now: number) => boolean} call on every new page address; true while it is churning
+     * `cut`: the new address arrives before the last scan finished (its server layers never answer).
+     * @returns {(now: number, cut?: boolean) => boolean} call on every new page address; true while it is churning
      */
     function urlChurn() {
         let changes = [];
-        return (now) => {
+        let cuts = [];
+        return (now, cut = false) => {
             changes = changes.filter((at) => now - at < CHURN_WINDOW_MS);
             changes.push(now);
-            return changes.length > CHURN_CHANGES;
+            cuts = cuts.filter((at) => now - at < CUT_WINDOW_MS);
+            if (cut) cuts.push(now);
+            return changes.length > CHURN_CHANGES || cuts.length > CHURN_CUTS;
         };
     }
 
@@ -236,6 +270,8 @@
         validSignals,
         mergeSignals,
         runScan,
+        withVerdict,
+        verdictPollMs,
         urlChurn,
         subscribe,
         notify,

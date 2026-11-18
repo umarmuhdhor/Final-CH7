@@ -31,15 +31,25 @@ enum MockScenarios {
         case .allSafe: allSafe(now: now)
         case .allBlocked: allBlocked(now: now)
         case .corpus: corpus(now: now, bundle: bundle)
+        case .addressMarks: addressMarks(now: now)
+        case .homePribadi, .homePribadiAlone, .protectedQuiet, .protectedBlocked, .protectedBlockedScam, .protectedBlockedSafe,
+             .protectedWarning, .protectedWarningScam, .protectedWarningSafe, .protectedAlone:
+            home(scenario, now: now)
         }
     }
 
-    /// Figma "Kartu/Scam Terbaru" 955:10323.
-    static let scamCases = [
-        ScamCase(id: "figma-case-1", title: "Situs palsu BCA minta PIN m-banking", detail: "Hari ini · lewat link SMS"),
-        ScamCase(id: "figma-case-2", title: "Undian palsu Shopee lewat WhatsApp", detail: "Kemarin · lewat WhatsApp"),
-        ScamCase(id: "figma-case-3", title: "Bansos palsu minta foto KTP", detail: "2 hari lalu · lewat Facebook"),
-    ]
+    /// Figma "Scam Terbaru Pengguna Shoo" cards (Pribadi/Home 1115:13601, protected/Home 1115:17238); the third
+    /// one scrolls in. The titles stand in for admin category labels; the server's are shorter.
+    static func scamCases(now: Date) -> [ScamCase] {
+        [
+            ScamCase(id: "phishing_bank", title: LocalizedText(en: "Asks for m-banking PIN", id: "Minta PIN m-banking"),
+                     lastSeenAt: now),
+            ScamCase(id: "undian_palsu", title: LocalizedText(en: "Fake Shopee prize draw", id: "Undian palsu Shopee"),
+                     lastSeenAt: now),
+            ScamCase(id: "bansos_palsu", title: LocalizedText(en: "Fake aid asks for ID photo", id: "Bansos palsu minta foto KTP"),
+                     lastSeenAt: now.addingTimeInterval(-2 * 86_400)),
+        ]
+    }
 
     // MARK: Figma (416:8768, 416:8541, 416:9255, 416:10447, 455:10275)
 
@@ -116,6 +126,48 @@ enum MockScenarios {
         ]
     }
 
+    // MARK: Home (Pribadi 435:20058 / 1382:10567, protected/Home 1115:17162 … 1373:12752)
+
+    /// One Figma HOME frame each. The list under the card is always Waspada, Diblokir, Diblokir. Pribadi and
+    /// "no recent" have them yesterday: today they would turn the hero orange (Pribadi) or take the card (protected).
+    static func home(_ scenario: MockRepository.Scenario, now: Date) -> MockDataset {
+        var data = figma(now: now)
+        let at = today(10, 42, now)
+        let yesterday = at.addingTimeInterval(-86_400)
+        let verdict = { (value: Verdict.Value) in
+            Verdict(value: value, byDeviceId: virellia.deviceId, byName: virellia.name, decidedAt: at.addingTimeInterval(40))
+        }
+        let list = { (owner: Owner, base: Date) in
+            [
+                scan("home-\(owner.deviceId)-1", .bcaWarning, owner: owner, at: base.addingTimeInterval(20)),
+                scan("home-\(owner.deviceId)-2", .shopee, owner: owner, at: base.addingTimeInterval(10)),
+                scan("home-\(owner.deviceId)-3", .bansos, owner: owner, at: base),
+            ]
+        }
+        let maria = owner(mariaId, "Maria")
+        let card = { (site: Site, value: Verdict.Value?) in
+            scan("home-card", site, owner: maria, at: at.addingTimeInterval(30), verdict: value.map(verdict))
+        }
+        switch scenario {
+        case .homePribadi, .homePribadiAlone:
+            data.scans = list(owner(meId, "Adhella"), yesterday)
+            if scenario == .homePribadiAlone { data.members = [] }
+        case .protectedQuiet:
+            data.scans = list(maria, yesterday)
+        case .protectedBlocked: data.scans = [card(.bcaBlocked, nil)] + list(maria, at)
+        case .protectedBlockedScam: data.scans = [card(.bcaBlocked, .notSafe)] + list(maria, at)
+        case .protectedBlockedSafe: data.scans = [card(.bcaBlocked, .safe)] + list(maria, at)
+        case .protectedWarning: data.scans = [card(.bcaWarning70, nil)] + list(maria, at)
+        case .protectedWarningScam: data.scans = [card(.bcaWarning70, .notSafe)] + list(maria, at)
+        case .protectedWarningSafe: data.scans = [card(.bcaWarning70, .safe)] + list(maria, at)
+        case .protectedAlone:
+            data.scans = [card(.bcaWarning70, nil)] + list(maria, at)
+            data.protected.guardian = nil
+        default: break
+        }
+        return data
+    }
+
     // MARK: Variants
 
     /// Every verdict state on warning and blocked: none, safe, not safe (Activity 450:8734/8739/8744).
@@ -166,12 +218,22 @@ enum MockScenarios {
         data.members[2].osVersion = nil
         data.members[2].lastSeenAt = nil
         let long = "verifikasi-akun-nasabah-prioritas-bca-mobile-banking-indonesia-resmi.secure-login.site"
+        let longRegistrable = "verifikasi-akun-nasabah-prioritas-bca-mobile-banking-resmi.site"
         var scans = [
             ScanResult(
                 id: "edge-long", url: URL(string: "https://\(long)/login/verifikasi/pin/ulang?ref=wa&campaign=promo-akhir-tahun")!,
                 domain: long, pageTitle: nil, faviconUrl: nil, score: 100, status: .blocked,
                 signals: Site.bcaBlocked.signals + Site.bansos.signals, screenshotUrl: nil, pageReplicaUrl: nil,
                 ownerDeviceId: "dev_syahnaz", ownerName: data.members[0].name, detectedAt: now.addingTimeInterval(-60), verdict: nil
+            ),
+            // U-05: the backend stores the `domain` the extension sends (the registrable domain here; the full
+            // host only on a shared platform such as sites.google.com, #495), so a long one is what a real row shows.
+            ScanResult(
+                id: "edge-long-registrable",
+                url: URL(string: "https://login.\(longRegistrable)/login/verifikasi/pin?ref=wa")!,
+                domain: longRegistrable, pageTitle: nil, faviconUrl: nil, score: 92, status: .blocked,
+                signals: Site.bcaBlocked.signals, screenshotUrl: nil, pageReplicaUrl: nil,
+                ownerDeviceId: "dev_syahnaz", ownerName: data.members[0].name, detectedAt: now.addingTimeInterval(-90), verdict: nil
             ),
             ScanResult(
                 id: "edge-one-signal", url: URL(string: "https://xn--bc-xja.site/")!, domain: "xn--bc-xja.site",
@@ -216,6 +278,30 @@ enum MockScenarios {
         return data
     }
 
+    /// DT-04 (#497): the address card with the detector's `host`. `brand_plus_keyword` marks "bca" and
+    /// "verifikasi" and names the real address, `cheap_tld` marks ".site", `new_domain` has no `host` (whole domain).
+    /// Open with `-debug.detail address-marks`.
+    static func addressMarks(now: Date) -> MockDataset {
+        var data = figma(now: now)
+        let syahnaz = owner("dev_syahnaz", "Syahnaz")
+        var brand = signal("brand_plus_keyword", 2, 40, "BCA name with extra words", "Nama BCA dengan kata tambahan",
+                           "The address uses the BCA name", "Alamatnya memakai nama BCA", evidence: "bca · level 2 · verifikasi")
+        brand.host = Signal.Host(marks: ["bca", "verifikasi"], official: "bca.co.id")
+        var ending = signal("cheap_tld", 1, 18, "Cheap .site ending", "Akhiran .site murah", "Scam sites often use .site",
+                            "Situs penipuan sering memakai .site")
+        ending.host = Signal.Host(marks: [".site"])
+        var result = scan("address-marks", .bcaBlocked, owner: syahnaz, at: today(10, 42, now))
+        result.signals = [
+            brand,
+            signal("new_domain", 3, 32, "Domain age 3 days", "Umur domain 3 hari", "This site was made 3 days ago",
+                   "Situs ini baru dibuat 3 hari lalu"),
+            ending,
+        ]
+        result.score = 90
+        data.scans = [result] + data.scans.filter { $0.ownerDeviceId == meId || $0.ownerDeviceId == mariaId }
+        return data
+    }
+
     // MARK: Building blocks
 
     struct Owner {
@@ -233,10 +319,12 @@ enum MockScenarios {
     /// The four sites Figma draws, with the reasons of its evidence cards.
     enum Site {
         case bcaBlocked, bcaWarning, shopee, bansos
+        /// The 70/100 warning of protected/Home/warning 1363:12167: two reasons.
+        case bcaWarning70
 
         var domain: String {
             switch self {
-            case .bcaBlocked, .bcaWarning: "bca-verifikasi.site"
+            case .bcaBlocked, .bcaWarning, .bcaWarning70: "bca-verifikasi.site"
             case .shopee: "promo-shopee88.xyz"
             case .bansos: "bansos-2026.site"
             }
@@ -244,7 +332,7 @@ enum MockScenarios {
 
         var url: URL {
             switch self {
-            case .bcaBlocked, .bcaWarning: URL(string: "https://bca-verifikasi.site/login")!
+            case .bcaBlocked, .bcaWarning, .bcaWarning70: URL(string: "https://bca-verifikasi.site/login")!
             case .shopee: URL(string: "https://promo-shopee88.xyz/klaim")!
             case .bansos: URL(string: "https://bansos-2026.site/cek")!
             }
@@ -252,7 +340,7 @@ enum MockScenarios {
 
         var title: String {
             switch self {
-            case .bcaBlocked, .bcaWarning: "BCA m-Banking - Verifikasi Akun"
+            case .bcaBlocked, .bcaWarning, .bcaWarning70: "BCA m-Banking - Verifikasi Akun"
             case .shopee: "Klaim Hadiah Shopee"
             case .bansos: "Cek Penerima Bansos 2026"
             }
@@ -262,6 +350,7 @@ enum MockScenarios {
             switch self {
             case .bcaBlocked: 92
             case .bcaWarning: 72
+            case .bcaWarning70: 70
             case .shopee: 88
             case .bansos: 85
             }
@@ -281,6 +370,10 @@ enum MockScenarios {
                     signal("asks_pin", 3, 32, "Sensitive form", "Formulir sensitif", "Asks for m-banking PIN", "Meminta PIN m-banking", evidence: "pin"),
                     signal("brand_logo_offsite", 2, 25, "Copied logo", "Logo tiruan", "Copies the BCA logo", "Meniru logo BCA"),
                     signal("new_domain", 3, 15, "Domain age 3 days", "Umur domain 3 hari", "This site was made 3 days ago", "Situs ini baru dibuat 3 hari lalu"),
+                ]
+            case .bcaWarning70: [
+                    signal("asks_pin", 3, 35, "Sensitive form", "Formulir sensitif", "Asks for m-banking PIN", "Meminta PIN m-banking", evidence: "pin"),
+                    signal("brand_logo_offsite", 2, 35, "Copied logo", "Logo tiruan", "Copies the BCA logo", "Meniru logo BCA"),
                 ]
             case .shopee: [
                     signal("lookalike_domain", 1, 40, "Looks like shopee.co.id", "Mirip shopee.co.id", "The address imitates Shopee", "Alamatnya meniru Shopee"),

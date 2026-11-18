@@ -1,44 +1,89 @@
 import SwiftUI
+import UIKit
 
 /// Figma "Footer" of Detail (416:9255 / 416:9362 / 480:5768): the guardian's question with Aman / Bahaya
-/// (GD-07, warning and blocked alike), or the card saying who verified it. "Ubah" on a safe verdict
+/// (GD-07, warning and blocked alike), or the card saying who verified it. "Ubah" on either verdict
 /// brings the buttons back; a new choice replaces the old one. No confirmation dialog.
 struct DetailFooter: View {
     let verdict: Verdict?
     let viewerDeviceId: String?
     let canValidate: Bool
-    let failed: Bool
+    /// Why the last verdict was not saved (BH-27); nil when it was, or none was sent.
+    let failure: DetailModel.VerdictError?
     /// The person who opened the site, when it isn't the viewer (the note under a safe verdict).
     let ownerName: String?
+    /// Blocked sites ask "Apakah situs ini berbahaya?", warnings "Apakah situs ini benar penipuan?".
+    var isBlocked = false
+    /// "Ubah" pressed: the buttons are back. Owned by Detail, so it survives the footer moving between the bottom
+    /// and the page (U-07); a footer of its own keeps it here.
+    var changing: Binding<Bool>?
     let onDecide: (Verdict.Value) -> Void
 
     @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @State private var isChanging = false
-    /// Home indicator area under the footer; Figma's 34 pt bottom padding includes it.
-    @State private var bottomInset: CGFloat = 0
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var ownChanging = false
+    private var isChanging: Bool {
+        get { changing?.wrappedValue ?? ownChanging }
+        nonmutating set { if let changing { changing.wrappedValue = newValue } else { ownChanging = newValue } }
+    }
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
-    private var showsButtons: Bool { canValidate && (verdict == nil || isChanging) }
+    static func message(_ failure: DetailModel.VerdictError) -> LocalizedStringKey {
+        switch failure {
+        case .connection: "Couldn't save. Check your connection and try again."
+        case .notAllowed: "You're no longer this person's guardian, so you can't mark this site."
+        case .tooMany: "Too many changes in a minute. Wait a moment, then try again."
+        case .locked: "This site stays safe until Shoo's weekly review. You can change it after that."
+        }
+    }
+
+    /// Space above the question (or the verified card). Figma: 28 pt.
+    static let topPadding: CGFloat = 28
+    /// Height of the transparent-to-solid fade at the footer's top edge. Shorter than `topPadding`, so the fade
+    /// ends 4 pt above the content (U-17).
+    static let fadeHeight: CGFloat = 24
+
+    /// #493: a verdict this build can't read counts as none: no "Verified safe" card, and a guardian gets the
+    /// buttons to decide again (an upsert).
+    private var shownVerdict: Verdict? { verdict?.known }
+    var showsButtons: Bool { canValidate && (shownVerdict == nil || isChanging) }
+    private var lockedUntil: Date? { shownVerdict.flatMap { VerdictLock.lockedUntil($0, now: Date()) } }
+
+    /// The window's home indicator inset (34 on Face ID iPhones, 0 with a Home button). Read from the window,
+    /// never from this footer's own geometry: that safe area moves while the tab bar hides, and feeding it
+    /// back into the padding re-ran the layout inside `UITabBarController` forever (QA 2026-11-10 #1,
+    /// 100 % CPU after a push tap).
+    private static var homeIndicatorInset: CGFloat {
+        let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
+        return (windows.first(where: \.isKeyWindow) ?? windows.first)?.safeAreaInsets.bottom ?? 0
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if showsButtons {
-                Text("Is this site really a scam?")
-                    .activityFont(15, tracking: -0.15)
+                Text(isBlocked ? "Is this site dangerous?" : "Is this site really a scam?")
+                    // Figma "Pertanyaan": SF Pro Rounded 17, 140 %.
+                    .activityFont(17, rounded: true)
+                    .figmaLineHeight(23.8, relativeTo: .body)
                     .foregroundStyle(DetailStyle.secondary)
                     .frame(maxWidth: .infinity)
                     .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("detail.verdictQuestion")
                 buttons
-            } else if let verdict {
+            } else if let verdict = shownVerdict {
                 VerifiedCard(
                     verdict: verdict,
                     viewerDeviceId: viewerDeviceId,
-                    canChange: canValidate && verdict.value == .safe,
+                    // Either verdict can be changed (R4: Safe ⇄ NotSafe, an upsert), so a mis-tapped
+                    // Danger can be undone and the buttons' "You can change it later" holds (QA 2026-11-11 #5).
+                    // An "Aman" waits for the weekly AI review (VerdictLock); "Bahaya" can always change.
+                    canChange: canValidate && lockedUntil == nil,
                     onChange: { isChanging = true }
                 )
                 if verdict.value == .safe, let ownerName {
-                    Text("\(ownerName) still sees Shoo's warning when opening this site.")
+                    // #369: "Aman" vouches for this link on both phones: no block, card or sheet while it stands.
+                    Text("Shoo no longer blocks or warns \(ownerName) on this link.")
                         .activityFont(13, rounded: true)
                         .foregroundStyle(DetailStyle.secondary)
                         // Figma: centred, 140 % line height.
@@ -46,10 +91,21 @@ struct DetailFooter: View {
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                         .fixedSize(horizontal: false, vertical: true)
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 4)))
+                }
+                if canValidate, let lockedUntil {
+                    let day = lockedUntil.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(locale))
+                    Label("You can change this after Shoo's weekly review, \(day).", systemImage: "lock.fill")
+                        .activityFont(13, rounded: true)
+                        .foregroundStyle(DetailStyle.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("detail.verdictLocked")
                 }
             }
-            if failed {
-                Label("Couldn't save. Check your connection and try again.", systemImage: "exclamationmark.triangle.fill")
+            if let failure {
+                Label(Self.message(failure), systemImage: "exclamationmark.triangle.fill")
                     .activityFont(13)
                     .foregroundStyle(DetailStyle.title)
                     .frame(maxWidth: .infinity)
@@ -58,24 +114,31 @@ struct DetailFooter: View {
             }
         }
         .padding(.horizontal, 24)
-        .padding(.top, 28)
+        .padding(.top, Self.topPadding)
         // Figma: 34 pt from the screen's bottom edge, i.e. right on the home indicator area.
-        .padding(.bottom, max(0, 34 - bottomInset))
+        .padding(.bottom, max(0, 34 - Self.homeIndicatorInset))
         .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(
-                stops: [
-                    .init(color: DetailStyle.footer.opacity(0), location: 0),
-                    .init(color: DetailStyle.footer.opacity(0.96), location: 0.3),
-                    .init(color: DetailStyle.footer, location: 1),
-                ],
-                startPoint: .top, endPoint: .bottom
-            )
+        .background {
+            // U-17: the fade lives only in the empty space above the question (`fadeHeight` < `topPadding`),
+            // so the question and buttons always sit on a solid band. A fade as a share of the footer's height
+            // reached the question at ~0.75 alpha and let the content behind print through.
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [DetailStyle.footer.opacity(0), DetailStyle.footer],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: Self.fadeHeight)
+                DetailStyle.footer
+            }
             .ignoresSafeArea(edges: .bottom)
-        )
-        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomInset = $0 }
+        }
         // A saved choice from the server closes "Ubah".
         .onChange(of: verdict) { _, _ in isChanging = false }
+        // Safe / Danger saved: the buttons hand over to the verified card and its note with a short ease. Keyed
+        // on the verdict only, never on this footer's geometry (GD-06).
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25), value: verdict?.value)
+        // "Couldn't save" is felt too, not only read. Haptic only: the animation above stays keyed on the verdict.
+        .sensoryFeedback(.error, trigger: failure != nil) { _, now in now }
     }
 
     /// Side by side; stacked at accessibility sizes so the words never wrap per letter.

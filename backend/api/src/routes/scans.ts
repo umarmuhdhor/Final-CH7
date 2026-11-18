@@ -8,7 +8,7 @@ import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
 import { clientIp, hit, hitLight, limits } from "../http/rateLimit";
 import { maxRequestBytes } from "../http/bodyLimit";
-import { DOMAIN, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
+import { DOMAIN, DOMAIN_MESSAGE, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 import { deliverPush } from "../services/push/deliver";
 import { guardianPush, ownPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
@@ -34,23 +34,52 @@ const httpUrl = (s: string) => {
 
 // Text from the detector is stored and shown as plain text; control and bidi characters are removed.
 const text = (max: number) => z.string().max(max).transform(stripUnsafe);
+/** The characters a scan's `domain` (DOMAIN) is made of, lowercase: what a `signals[].host.marks` entry may hold. */
+const HOST_CHARS = /^[a-z0-9.:[\]-]+$/;
+const HOST_CHARS_MESSAGE = "must be part of the domain: lowercase letters, digits, '.', '-', ':', '[' or ']'";
 const localized = z.strictObject({ en: text(500).pipe(z.string().min(1)), id: text(500).pipe(z.string().min(1)) });
 // contracts/scan-result.schema.json $defs.Signal. Unknown keys are dropped.
 const signal = z.object({
   id: text(64).pipe(z.string().min(1)),
-  layer: z.number().int().min(1).max(5),
+  // Schema enum [1,2,3,4,6]: layer 5 is Guardian feedback and emits no Signal; 6 is hoax (phase 2).
+  layer: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(6)]),
   weight: z.number().int().min(0).max(100),
   label: localized,
   labelSimple: localized,
   evidence: text(500).optional(),
+  // DT-04 (#497, $defs.SignalHost): which part of `domain` the address card marks, and the brand's real domain.
+  // The app shows `official` as "Real: X" next to a checkmark seal, so it must be a domain (DOMAIN, as the scan's
+  // `domain`), not any text a device holding a token sends. `marks` are substrings of that domain: host characters
+  // only. Both are checked as sent (no cleaning first); unknown keys inside are dropped; stored (jsonb) as sent.
+  host: z
+    .object({
+      marks: z.array(z.string().min(1).max(253).regex(HOST_CHARS, HOST_CHARS_MESSAGE)).min(1).max(4).optional(),
+      official: z.string().min(1).max(253).regex(DOMAIN, DOMAIN_MESSAGE).optional(),
+    })
+    .optional(),
 });
 
 // ScanResult without id/verdict/screenshotUrl/pageReplicaUrl (contracts/api.md). ownerDeviceId/ownerName are
 // accepted and ignored: the owner is always the token's device (R3 §4).
 const scanBody = z
   .object({
-    url: z.string().max(2048).refine((s) => httpUrl(s) !== undefined, "must be an http(s) URL"),
-    domain: z.string().max(253).regex(DOMAIN, "must be a lowercase registrable domain without www."),
+    // B-04, A-09 (fase 28 K12): the URL is stored in its normal form, new URL(url).href, the form GET /verdicts
+    // reads, public.verdict_link() expects and Foundation decodes (no dot segment, empty port, backslash, raw
+    // non-ASCII or edge space). Percent-encoding can make href longer than the raw string, so the 2048 limit is
+    // checked again on href (verdict_link() is null above it, and the scan would lose its row and verdict).
+    url: z
+      .string()
+      .max(2048)
+      .transform((s, ctx) => {
+        const u = httpUrl(s);
+        if (!u) {
+          ctx.addIssue({ code: "custom", message: "must be an http(s) URL" });
+          return z.NEVER;
+        }
+        return u.href;
+      })
+      .pipe(z.string().max(2048, "must be at most 2048 characters once normalized")),
+    domain: z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE),
     pageTitle: z.string().nullish(),
     faviconUrl: z.unknown().optional(),
     score: z.number().int().min(30).max(100),
@@ -79,7 +108,8 @@ const scanBody = z
   })
   .refine(
     (b) => {
-      const host = httpUrl(b.url)?.hostname;
+      // A trailing dot (`bca-verifikasi.site.`) is the same host in every browser; GET /verdicts drops it too.
+      const host = httpUrl(b.url)?.hostname.replace(/\.$/, "");
       return host === b.domain || (host?.endsWith(`.${b.domain}`) ?? false);
     },
     { message: "url host must be the domain or a subdomain of it", path: ["domain"] },
@@ -156,7 +186,7 @@ scans.post("/scans", async (c) => {
   if (body.screenshotBase64) console.log(JSON.stringify({ event: "screenshot_ignored" }));
 
   const iconUrl = favicon(body.faviconUrl);
-  const { id, created, escalated } = await recordScan(sql, {
+  const { id, created, push } = await recordScan(sql, {
     ownerId: principal.deviceId,
     url: body.url,
     domain: body.domain,
@@ -169,9 +199,9 @@ scans.post("/scans", async (c) => {
     thresholdsVersion: body.thresholdsVersion ?? null,
     rdapRegisteredAt: rdapDate(body.rdapRegisteredAt),
   });
-  // The site already has its Activity row: no second row, push or evidence for a repeat visit,
-  // except the push when a warned site is now blocked. Its evidence stays the first visit's.
-  if (!created && !escalated) return c.json({ id }, 201);
+  // One row per link, one push per site (#241): a repeat visit of a link keeps its row and evidence,
+  // and only the first visit to the site, or its first block, pushes.
+  if (!created && !push) return c.json({ id, notified: null }, 201);
   // PR-05: the Worker downloads the favicon once, after the response (a slow scam host never delays
   // or fails the scan), so the app never contacts the scam host (SECURITY P9).
   if (created && iconUrl) {
@@ -186,24 +216,31 @@ scans.post("/scans", async (c) => {
   // locally with wrangler dev; cloud check in fase 11 LANGKAH MANUAL step 6).
   // A push problem never fails a stored scan (a retry would duplicate it).
   const deliveries: Promise<unknown>[] = [];
-  try {
-    const scan = { id, status: body.status, score: body.score };
-    // PF-01: the guardian's push, then the device's own ("Situs berbahaya" / "Situs diblokir").
-    const pushes = [await guardianPush(sql, principal, scan), await ownPush(sql, principal, scan)];
-    const sender = pushSender(c.env);
-    for (const push of pushes) {
-      if (!push) continue;
-      const delivery = deliverPush(sql, sender, push).catch((err) =>
-        // Name only: a DB error can quote values (D-alief-40).
-        console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
-      );
-      deliveries.push(delivery);
-      c.executionCtx.waitUntil(delivery);
+  // #377: the Guardian whose push this scan queued, or null. The block page says "Link sent to
+  // <name>" only from this, so a Guardian who left, turned the push off or is capped is never named.
+  let notified: { name: string } | null = null;
+  if (push) {
+    try {
+      const scan = { id, status: body.status, score: body.score };
+      // PF-01: the guardian's push, then the device's own ("Situs berbahaya" / "Situs diblokir").
+      const guardian = await guardianPush(sql, principal, scan);
+      const messages = [guardian, await ownPush(sql, principal, scan)];
+      const sender = pushSender(c.env);
+      for (const message of messages) {
+        if (!message) continue;
+        if (message === guardian) notified = { name: guardian.guardianName };
+        const delivery = deliverPush(sql, sender, message).catch((err) =>
+          // Name only: a DB error can quote values (D-alief-40).
+          console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
+        );
+        deliveries.push(delivery);
+        c.executionCtx.waitUntil(delivery);
+      }
+    } catch (err) {
+      console.error(JSON.stringify({ event: "push_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
     }
-  } catch (err) {
-    console.error(JSON.stringify({ event: "push_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
   }
-  if (!created) return c.json({ id }, 201);
+  if (!created) return c.json({ id, notified }, 201);
   // EX-07 (K2, D-alief-C22 a): the replica only after the pushes went out. Inflating up to 3 MB costs
   // CPU; if the invocation is killed for it, the scan and the Guardian's push are already done.
   // Outside the try above: a failed push lookup does not drop the replica.
@@ -228,7 +265,7 @@ scans.post("/scans", async (c) => {
         .catch((err) => console.error(JSON.stringify({ event: "fragments_dropped", reason: "error", error: errorInfo(err) }))),
     );
   }
-  return c.json({ id }, 201);
+  return c.json({ id, notified }, 201);
 });
 
 /** PR-05, GD-05. Owners are resolved from family_links at request time (SECURITY T1, T12). */

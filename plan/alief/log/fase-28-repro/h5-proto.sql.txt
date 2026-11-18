@@ -1,0 +1,42 @@
+-- Fase 28 hunter 5: prototypes for "expected after" numbers. Read-only (or rolled back). Run with ./pa.sh < h5-proto.sql
+-- Nothing here is applied to product code; it only shows what the same answer costs when written differently.
+select l.guardian_id as guardian from family_links l join scans s on s.owner_id = l.protected_id group by 1 order by count(*) desc limit 1 \gset
+select string_agg(quote_literal(id), ',') as fam_ids from (select :'guardian'::text as id union select protected_id from family_links where guardian_id = :'guardian') f \gset
+select owner_id as heavy from scans group by 1 order by count(*) desc limit 1 \gset
+\set X 'explain (analyze, buffers, costs off, timing on, summary on)'
+\set COLS 's.id, s.owner_id, d.name, s.url, s.domain, s.page_title, s.score, s.status, s.signals, s.detected_at, case when v.owner_id is not null then jsonb_build_object(''value'', v.value, ''url'', v.url) end as verdict'
+\set VERDICT 'left join lateral (select v.* from verdicts v where v.owner_id = s.owner_id and (v.url = k.link or (v.domain = s.domain and v.value = ''not_safe'' and not public.verdict_shared(k.link, s.domain))) order by (v.url = k.link) desc, v.decided_at desc limit 1) v on true'
+\echo ===== P1 family list, page of scans picked first (limit inside), link computed once per row (offset 0), then verdict lookup for 21 rows only
+:X select :COLS from (
+     select s.* from scans s where s.owner_id in (:fam_ids) order by s.detected_at desc, s.id desc limit 21) s
+   join devices d on d.id = s.owner_id
+   cross join lateral (select public.verdict_link(s.url) as link offset 0) k
+   :VERDICT
+   order by s.detected_at desc, s.id desc;
+\echo ===== P2 as P1, plus per-owner top-N so the page comes from scans_owner_time (no fetch of every family row)
+:X select :COLS from (
+     select t.* from unnest(array[:fam_ids]) o(id)
+     cross join lateral (select * from scans s where s.owner_id = o.id order by s.detected_at desc, s.id desc limit 21) t
+     order by t.detected_at desc, t.id desc limit 21) s
+   join devices d on d.id = s.owner_id
+   cross join lateral (select public.verdict_link(s.url) as link offset 0) k
+   :VERDICT
+   order by s.detected_at desc, s.id desc;
+\echo ===== P3 heavy single owner, limit 51: link computed once per row (offset 0) only
+:X select :COLS from scans s join devices d on d.id = s.owner_id
+   cross join lateral (select public.verdict_link(s.url) as link offset 0) k
+   :VERDICT
+   where s.owner_id in (:'heavy') order by s.detected_at desc, s.id desc limit 51;
+\echo ===== P4 weekly summary counts for 40 guardians: owners as a list (index scans_owner_time), not `owner_id = d.id or owner_id in (...)`
+select string_agg(id, ',') as sum_ids from (select id from devices where weekly_summary and mode = 'guardian' and apns_token is not null order by (select count(*) from family_links where guardian_id = devices.id) desc, id limit 40) x \gset
+:X select d.id,
+     (select count(*) filter (where s.status = 'blocked')::int from scans s
+       where s.owner_id in (select d.id union all select protected_id from family_links where guardian_id = d.id) and s.detected_at > now() - interval '7 days') as blocked,
+     (select count(*) filter (where s.status = 'warning')::int from scans s
+       where s.owner_id in (select d.id union all select protected_id from family_links where guardian_id = d.id) and s.detected_at > now() - interval '7 days') as warnings
+   from devices d join unnest(string_to_array(:'sum_ids', ',')) v(id) on v.id = d.id;
+\echo ===== P5 rate_limit_hits retention chunk through the hit_at index (order by hit_at) instead of an unordered LIMIT + hash join over the table
+begin; :X delete from rate_limit_hits where id in (select id from rate_limit_hits where hit_at < now() - interval '1 day' order by hit_at limit 20000); rollback;
+\echo ===== P6 cost of public.verdict_link alone (10 000 calls)
+:X select count(public.verdict_link(url)) from (select url from scans limit 10000) s;
+\echo ===== P7 median family, current statement (for the before number): see h5-explain.sql S18 with the median guardian

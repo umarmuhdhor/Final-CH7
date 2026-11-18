@@ -22,6 +22,7 @@ final class LivePairingUITests: XCTestCase {
         app.launchArguments += [
             "-settings.dataConsent", "granted",
             "-UITestReset", "YES",
+            "-UITestSkipSplash", "YES",
             "-settings.language", "en",
             "-UITestNotifications", "denied",
             "-UITestExtensionActive", "YES",
@@ -36,22 +37,14 @@ final class LivePairingUITests: XCTestCase {
         try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: directory).appendingPathComponent("\(name).png"))
     }
 
+    /// ON (Figma 1205:4696): onboarding always ends as Pribadi; ticking the consent box is the real POST /devices.
     @MainActor
-    private func register(_ app: XCUIApplication, name: String, mode: String) {
+    private func registerPersonal(_ app: XCUIApplication, name: String) {
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
-        app.buttons["splash.skip"].tap()
-        let field = app.textFields["name.field"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap()
-        field.typeText(name)
-        app.buttons["name.continue"].tap()
-        app.buttons["mode.\(mode)"].tap()
-        app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.staticTexts["Hi, \(name)!"].waitForExistence(timeout: 15), app.debugDescription)
-        if mode == "guardian" {
-            XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
-            app.buttons["invite.skip"].tap()
-        }
+        app.onboardPersonal(name)
+        XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 15), app.debugDescription)
+        // GD-01: notifications are not allowed on this simulator, so Home opens with the reminder popup.
+        app.dismissNotificationsReminder()
     }
 
     private func read(_ name: String) -> String? {
@@ -76,10 +69,9 @@ final class LivePairingUITests: XCTestCase {
     @MainActor
     func testGuardianShowsTheFamilyCode() {
         let app = launch()
-        register(app, name: "Rina", mode: "guardian")
-        if app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5) { app.buttons["safariDefault.alreadyUsing"].tap() }
-        if app.buttons["extensionOn.continue"].waitForExistence(timeout: 5) { app.buttons["extensionOn.continue"].tap() }
-        XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 10), app.debugDescription)
+        registerPersonal(app, name: "Rina")
+        // GD-02: Family mode on (with the "To be guardian" intro) makes the Guardian.
+        app.becomeGuardian()
         app.buttons["profileButton"].tap()
         let open = app.buttons["profile.invite"]
         XCTAssertTrue(open.waitForExistence(timeout: 10), app.debugDescription)
@@ -101,12 +93,13 @@ final class LivePairingUITests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.5)
         }
         XCTAssertNotNil(read("done"), "Protected run never finished")
-        // Members are re-read every 5 s while the code is on screen.
-        let members = app.descendants(matching: .any)["familyCode.members"].firstMatch
-        let predicate = NSPredicate(format: "label CONTAINS '2 of 3'")
-        let found = expectation(for: predicate, evaluatedWith: members)
-        wait(for: [found], timeout: 15)
-        XCTAssertTrue(app.staticTexts["Mom"].exists && app.staticTexts["Dad"].exists, app.debugDescription)
+        // The invite sheet has no member list (FamilyCodeView is gone). Members show on the Family Shield
+        // (GD-03); Family mode is already on.
+        let done = app.buttons["invite.done"].exists ? app.buttons["invite.done"] : app.buttons["invite.close"]
+        done.tap()
+        app.buttons["profile.back"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Mom"].firstMatch.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Dad"].firstMatch.exists, app.debugDescription)
         shot(app, "pair-guardian-2-two-connected")
     }
 
@@ -114,9 +107,10 @@ final class LivePairingUITests: XCTestCase {
     @MainActor
     func testProtectedJoinsByCodeThenByLink() throws {
         var app = launch()
-        register(app, name: "Mom", mode: "protected")
+        registerPersonal(app, name: "Mom")
+        // Terawasi from Home: the "Mode Terawasi" card opens Connect (Figma 1205:4696).
+        app.openSupervisedConnect()
         let field = app.textFields["connect.code"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5), app.debugDescription)
         let typed = try XCTUnwrap(waitFor("code.txt", timeout: 120), "Guardian never showed a code")
         field.tap()
         field.typeText(typed)
@@ -129,14 +123,16 @@ final class LivePairingUITests: XCTestCase {
         app.terminate()
 
         app = launch()
-        register(app, name: "Dad", mode: "protected")
-        let linkField = app.textFields["connect.code"]
-        XCTAssertTrue(linkField.waitForExistence(timeout: 5), app.debugDescription)
+        // An invite link before onboarding: after the name, onboarding goes to Connect (Figma 1205:4696).
+        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
         write("link-ready", "1")
         // The host opens shoo://join?code=… now; iOS asks "Open in “Shoo”?" first.
         let open = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Open"]
-        XCTAssertTrue(open.waitForExistence(timeout: 60), "Host never opened the link")
-        open.tap()
+        // The prompt shows only the first time on a simulator; iOS remembers the answer after that.
+        if open.waitForExistence(timeout: 20) { open.tap() }
+        app.onboardName("Dad")
+        let linkField = app.textFields["connect.code"]
+        XCTAssertTrue(linkField.waitForExistence(timeout: 10), app.debugDescription)
         // T11: the code is filled, nothing joins on its own.
         let filled = NSPredicate(format: "value MATCHES '[0-9]{6}'")
         wait(for: [expectation(for: filled, evaluatedWith: linkField)], timeout: 60)

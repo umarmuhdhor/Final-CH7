@@ -51,6 +51,20 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
     expect((await sql`select 1 from push_log where scan_id = 's_old'`).length).toBe(0);
   });
 
+  it("clears verdict notes older than 14 days and keeps the decision (#241)", async () => {
+    await device("dev_p");
+    await device("dev_g", "guardian");
+    await sql`insert into verdicts (owner_id, url, domain, value, notes, by_device_id, by_name, decided_at) values
+      ('dev_p', 'https://x.example/old', 'x.example', 'not_safe', 'lama', 'dev_g', 'G', now() - interval '15 days'),
+      ('dev_p', 'https://x.example/new', 'x.example', 'not_safe', 'baru', 'dev_g', 'G', now() - interval '13 days')`;
+    const r = await runRetention(sql, env);
+    expect(r.verdictNotes).toBe(1);
+    expect(await sql`select url, value, notes from verdicts order by url`).toEqual([
+      { url: "https://x.example/new", value: "not_safe", notes: "baru" },
+      { url: "https://x.example/old", value: "not_safe", notes: null },
+    ]);
+  });
+
   it("keeps an object still used by a younger scan (dedupe); deletes a path shared only inside the batch once", async () => {
     await device("dev_p");
     // Unique names: the kept object stays in local Storage after the test.

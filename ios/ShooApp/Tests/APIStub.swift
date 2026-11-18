@@ -8,8 +8,11 @@ final class HostStubProtocol: URLProtocol {
         var status: Int
         var body: Data
         var failure: URLError?
+        var headers: [String: String]?
 
-        static func json(_ status: Int, _ text: String) -> Reply { Reply(status: status, body: Data(text.utf8)) }
+        static func json(_ status: Int, _ text: String, headers: [String: String]? = nil) -> Reply {
+            Reply(status: status, body: Data(text.utf8), headers: headers)
+        }
         static func offline() -> Reply { Reply(status: 0, body: Data(), failure: URLError(.notConnectedToInternet)) }
     }
 
@@ -67,7 +70,7 @@ final class HostStubProtocol: URLProtocol {
             client?.urlProtocol(self, didFailWithError: failure)
             return
         }
-        let response = HTTPURLResponse(url: url, statusCode: reply.status, httpVersion: nil, headerFields: nil)!
+        let response = HTTPURLResponse(url: url, statusCode: reply.status, httpVersion: nil, headerFields: reply.headers)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: reply.body)
         client?.urlProtocolDidFinishLoading(self)
@@ -142,4 +145,46 @@ final class StubServer: @unchecked Sendable {
     func repository() -> ApiRepository { ApiRepository(client: client(), session: session) }
 
     private func countUnauthorized() { lock.withLock { _unauthorizedCount += 1 } }
+}
+
+/// Holds one stubbed reply until the test lets it go (fase 27h: no sleeps). The handler calls `hold()` on the
+/// URL loading thread; the test awaits `arrival()`, does what happens "meanwhile", then calls `open()`.
+final class ReplyGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var arrived = false
+    private var waiter: CheckedContinuation<Void, Never>?
+    private var opened = false
+    private let release = DispatchSemaphore(value: 0)
+
+    /// From the stub handler: tells the test the request is in, then blocks until `open()`.
+    func hold() {
+        let waiter = lock.withLock { () -> CheckedContinuation<Void, Never>? in
+            arrived = true
+            defer { self.waiter = nil }
+            return self.waiter
+        }
+        waiter?.resume()
+        release.wait()
+    }
+
+    /// Returns once the held request has reached the stub.
+    func arrival() async {
+        await withCheckedContinuation { continuation in
+            let already = lock.withLock { () -> Bool in
+                if arrived { return true }
+                waiter = continuation
+                return false
+            }
+            if already { continuation.resume() }
+        }
+    }
+
+    /// Lets the held reply go. Safe to call more than once (a test can `defer` it as a safety net).
+    func open() {
+        let first = lock.withLock { () -> Bool in
+            defer { opened = true }
+            return !opened
+        }
+        if first { release.signal() }
+    }
 }

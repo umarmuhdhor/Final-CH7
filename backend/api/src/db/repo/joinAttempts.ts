@@ -1,4 +1,5 @@
 import type { TransactionSql } from "postgres";
+import { LOCK } from "../locks";
 
 export const JOIN_MAX_FAILURES_DEVICE = 5;
 /** Higher than per device: mobile carriers put many households behind one CGNAT IP (D-alief-B06). */
@@ -11,8 +12,21 @@ export const JOIN_WINDOW_SECONDS = 600;
  * nobody holds an IP lock while waiting for a device lock, so no deadlock.
  */
 export async function lockAttempts(tx: TransactionSql, deviceId: string, ipHash: Uint8Array): Promise<void> {
-  await tx`select pg_advisory_xact_lock(1, hashtext(${deviceId}))`;
-  await tx`select pg_advisory_xact_lock(2, hashtext(encode(${ipHash}::bytea, 'hex')))`;
+  await tx`select pg_advisory_xact_lock(${LOCK.joinDevice}, hashtext(${deviceId}))`;
+  await tx`select pg_advisory_xact_lock(${LOCK.joinIp}, hashtext(encode(${ipHash}::bytea, 'hex')))`;
+}
+
+/** IP lock only, for GET /j/<code> (no device). Same lock as lockAttempts' second step. */
+export async function lockIpAttempts(tx: TransactionSql, ipHash: Uint8Array): Promise<void> {
+  await tx`select pg_advisory_xact_lock(${LOCK.joinIp}, hashtext(encode(${ipHash}::bytea, 'hex')))`;
+}
+
+/** True when this IP has used up its failure budget (JOIN_MAX_FAILURES_IP in the window). */
+export async function ipAttemptsExhausted(tx: TransactionSql, ipHash: Uint8Array): Promise<boolean> {
+  const [row] = await tx<{ n: number }[]>`
+    select count(*)::int as n from join_attempts
+    where not success and attempted_at > now() - make_interval(secs => ${JOIN_WINDOW_SECONDS}) and ip_hash = ${ipHash}`;
+  return row!.n >= JOIN_MAX_FAILURES_IP;
 }
 
 /** Seconds until the oldest failure leaves the window, or null when under the limit (R3 §5). */
@@ -39,7 +53,8 @@ export async function attemptsRetryAfter(
 
 export async function recordAttempt(
   sql: TransactionSql,
-  deviceId: string,
+  /** null: a lookup by GET /j/<code>, which has no device. It still counts for the IP. */
+  deviceId: string | null,
   ipHash: Uint8Array,
   success: boolean,
 ): Promise<void> {

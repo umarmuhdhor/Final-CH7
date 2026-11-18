@@ -3,18 +3,19 @@ import SwiftUI
 /// Shield / Activity tabs with the profile button top right (PRD §7).
 struct MainTabView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var router = env.router
         TabView(selection: $router.selectedTab) {
             NavigationStack(path: $router.shieldPath) {
-                // Every Home draws its own top bar over the hero (Figma HOME: ⇆ and the profile initial).
+                // Every Home draws its own top bar over the hero (Figma HOME: ⇆ and the profile avatar).
                 shieldRoot
                     .id(screenIdentity)
                     .navigationDestination(for: Route.self, destination: destination)
             }
             // Figma tab bar: "Shield" bolt-shield and "Activity" list circle.
-            .tabItem { Label("Shield", systemImage: "checkmark.shield.fill") }
+            .tabItem { Label("Shield", systemImage: "bolt.shield.fill") }
             .tag(AppTab.shield)
 
             NavigationStack(path: $router.activityPath) {
@@ -32,8 +33,33 @@ struct MainTabView: View {
         .overlay(alignment: .top) {
             if env.settings.demoMode, router.shieldPath.isEmpty, router.activityPath.isEmpty { DemoBanner() }
         }
-        .sheet(isPresented: $router.isConnectPresented) {
+        // PR-03: an invite link opened after onboarding. Waits for the launch splash, like Connect below.
+        .overlay(alignment: .top) {
+            if let notice = router.inviteNotice, env.launchSplash == .done {
+                InviteNoticeBanner(notice: notice, router: router)
+                    .padding(.top, 8)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: router.inviteNotice)
+        // PR-03: an invite link opened before or during onboarding opens its join sheet now the tabs are here.
+        .onAppear { env.presentInviteAfterOnboarding() }
+        // An invite link that started the app (PR-03): Connect comes up once the launch splash (ON-01) is gone.
+        .sheet(isPresented: Binding(
+            get: { router.isConnectPresented && env.launchSplash == .done },
+            set: { router.isConnectPresented = $0 }
+        )) {
             ConnectSheet()
+                .environment(\.locale, env.settings.language.locale)
+        }
+        // Pribadi "Mode Terawasi" → Hubungkan (Figma 1253:8630).
+        .sheet(isPresented: $router.isJoinFamilyPresented) {
+            JoinAnotherFamilySheet(name: "")
+                .environment(\.locale, env.settings.language.locale)
+        }
+        // Figma "To be guardian" (1229:1904).
+        .fullScreenCover(isPresented: $router.isGuardianIntroPresented) {
+            GuardianIntroView(onBack: { router.isGuardianIntroPresented = false }, onStart: env.startGuardian)
                 .environment(\.locale, env.settings.language.locale)
         }
     }
@@ -51,24 +77,39 @@ struct MainTabView: View {
     @ViewBuilder
     private var activityRoot: some View {
         if env.settings.mode == .guardian && env.settings.familyModeOn {
-            ActivityView(repository: env.repository, owner: .family, ownDeviceId: env.session?.deviceId)
+            ActivityView(repository: env.repository, owner: .family, ownDeviceId: env.session?.deviceId, verdictSaves: verdictSaves)
         } else {
-            ActivityView(repository: env.repository, owner: .me)
+            ActivityView(repository: env.repository, owner: .me, verdictSaves: verdictSaves)
         }
     }
 
-    /// A new repository (mode switch, later a new session) or the Family toggle starts fresh screen models.
+    /// A new repository (mode switch), a new device session, or the Family toggle starts fresh screen models.
     /// Protected screens ignore the toggle, so it never resets them.
     private var screenIdentity: String {
-        let familyMode = env.settings.mode == .guardian && env.settings.familyModeOn
-        return "\(ObjectIdentifier(env.repository).hashValue)-\(familyMode)"
+        // `session` is `@ObservationIgnored`: this is read again because `settings.mode` changes in the same switch
+        // (Pribadi → Protected keeps the repository but deletes the old device, F-A6).
+        Self.identity(
+            repository: env.repository,
+            familyMode: env.settings.mode == .guardian && env.settings.familyModeOn,
+            deviceId: env.session?.deviceId
+        )
+    }
+
+    static func identity(repository: any ShooRepository, familyMode: Bool, deviceId: String?) -> String {
+        "\(ObjectIdentifier(repository).hashValue)-\(familyMode)-\(deviceId ?? "-")"
+    }
+
+    /// Activity reloads on its next appearance when this changes (K8): a saved verdict, or a member disconnected
+    /// (their rows and name must not stay in Family Activity).
+    private var verdictSaves: @MainActor () -> Int {
+        { [env] in env.verdictSaves + env.familyChanges }
     }
 
     @ViewBuilder
     private func destination(_ route: Route) -> some View {
         switch route {
         case .detail(let scanId):
-            DetailView(scanId: scanId, repository: env.repository)
+            DetailView(scanId: scanId, repository: env.repository, onVerdictSaved: { [env] in env.verdictSaves += 1 })
                 .id(scanId)
         case .profile:
             ProfileView(repository: env.repository, settings: env.settings, notifications: env.notifications)
@@ -78,7 +119,9 @@ struct MainTabView: View {
             MemberDetailView(deviceId: deviceId, repository: env.repository)
                 .id(deviceId)
         case .memberActivity(let deviceId):
-            ActivityView(repository: env.repository, owner: .device(deviceId))
+            ActivityView(repository: env.repository, owner: .device(deviceId), verdictSaves: verdictSaves) { [env] in
+                env.router.pop()
+            }
                 .id(deviceId)
         }
     }
@@ -94,7 +137,7 @@ private struct FamilyModeToggle: ToolbarContent {
             ToolbarItem(placement: .topBarLeading) {
                 let isOn = env.settings.familyModeOn
                 Button {
-                    env.settings.familyModeOn.toggle()
+                    if isOn { env.settings.familyModeOn = false } else { env.requestFamilyMode() }
                     AccessibilityNotification.Announcement(
                         L10n.string(isOn ? "Family mode off. Showing your Shield." : "Family mode on. Showing your family.",
                                     language: env.settings.language)

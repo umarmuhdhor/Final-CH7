@@ -2,7 +2,7 @@
 // network call: content scripts run under the page's origin, so cross-origin fetches belong here.
 
 import { PSL_RULES } from "./psl.js";
-import { parseRules, registrableDomain, naiveDomain, shareableUrl } from "./domain.js";
+import { parseRules, registrableDomain, naiveDomain, pageDomain, shareableUrl, isPrivateHost } from "./domain.js";
 import { buildFragments, buildReplica, webIO } from "./replica-build.js";
 import { createLists } from "./lists.js";
 import { createVerdicts } from "./verdicts.js";
@@ -32,6 +32,28 @@ function domainFor(hostname) {
     }
 }
 
+/**
+ * The `domain` every request carries (#487, #495, domain.js `pageDomain`): the registrable domain, but the full
+ * host on a host_path platform (sites.google.com) and for a host without one (`router`, `www.co.id`).
+ * Layer-1 list matching keeps `domainFor`: a list entry for google.com must still cover sites.google.com.
+ */
+const pageDomainFor = (hostname) => pageDomain(hostname, domainFor);
+
+/**
+ * #375: the `domain` of a page URL, worked out here where the PSL rules live. content.js falls back
+ * to the full host when this background page is asleep, and that would file one site under two names
+ * (one scan row, block memory entry and verdict per name). `fallback` only when the URL can't be parsed.
+ */
+function domainOfUrl(url, fallback) {
+    try {
+        const { hostname } = new URL(url);
+        if (hostname) return pageDomainFor(hostname);
+    } catch {
+        // not a URL → keep what the page sent
+    }
+    return fallback;
+}
+
 // A deleted account leaves nothing behind here either: what is stored belongs to the device that stored it.
 const deviceData = createDeviceData({
     storage: browser.storage.local,
@@ -46,8 +68,9 @@ const deviceData = createDeviceData({
 
 let sessionCache = { value: null, at: 0 };
 /** @returns {Promise<object|null>} getSession reply, or null if the app isn't onboarded / unreachable */
-async function getSession() {
-    if (Date.now() - sessionCache.at < SESSION_TTL_MS) return sessionCache.value;
+/** `fresh`: skip the 30 s cache, for a line that must not be stale (the block page's "sent to", #377). */
+async function getSession({ fresh = false } = {}) {
+    if (!fresh && Date.now() - sessionCache.at < SESSION_TTL_MS) return sessionCache.value;
     let reply = null;
     try {
         reply = await browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "getSession" });
@@ -90,8 +113,21 @@ function endpoint(base, path) {
     return base.replace(/\/+$/, "") + path;
 }
 
+const isPlainObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+
+const hostOf = (url) => {
+    try {
+        return new URL(url).hostname;
+    } catch {
+        return "";
+    }
+};
+
 /** Layer 3–4. Never rejects: server down or slow → no signals (PRD §5). */
 async function analyze(snapshot, localSignals) {
+    // A page on this phone or its own network (a router at 192.168.1.1) is never sent: its text can hold the
+    // network and device names, sometimes the Wi-Fi key.
+    if (isPrivateHost(hostOf(snapshot?.url))) return { ok: true, signals: [], skipped: "private_host" };
     const session = await getSession();
     if (!session?.aiBaseURL) return { ok: true, signals: [], skipped: "no_ai_url" };
     try {
@@ -101,7 +137,9 @@ async function analyze(snapshot, localSignals) {
             timeoutMs: ANALYZE_TIMEOUT_MS,
             body: JSON.stringify({ snapshot: { ...snapshot, url: shareableUrl(snapshot.url) }, localSignals }),
         });
-        return { ok: true, signals: Array.isArray(body?.signals) ? body.signals : [], rdapRegisteredAt: body?.rdapRegisteredAt ?? null };
+        // #490: a 200 with no usable answer ({}, null, an error object, signals not a list) was not a check.
+        if (!isPlainObject(body) || !Array.isArray(body.signals)) return { ok: true, signals: [], skipped: "bad_body" };
+        return { ok: true, signals: body.signals, rdapRegisteredAt: body.rdapRegisteredAt ?? null };
     } catch (error) {
         console.warn("[Shoo] /analyze failed", error);
         return { ok: true, signals: [], skipped: "error" };
@@ -113,16 +151,22 @@ const verdicts = createVerdicts({ getSession, fetchJSON: (url, init) => fetchJSO
 // #231: sites blocked on this phone stay blocked without /analyze until a `safe` verdict clears them.
 const blockMemory = createBlockMemory({ storage: browser.storage.local, registrableDomain: domainFor });
 
-/** GET /verdicts; a `safe` verdict also clears the block memory of that domain before anyone reopens it. */
-async function lookupVerdict(domain, fresh) {
-    const reply = await verdicts.lookup(domain, { fresh });
-    if (reply?.verdict?.value === "safe") await blockMemory.forgetDomain(domain);
+/**
+ * GET /verdicts. With the page URL the lookup is per link (#241): a `safe` opens that link only and leaves the
+ * rest of the site in block memory (recall asks again for each page). The old per-domain lookup (no URL) still
+ * clears the whole domain, as before.
+ */
+async function lookupVerdict(domain, fresh, url) {
+    const link = url ? shareableUrl(url) : null;
+    const reply = await verdicts.lookup(domain, { fresh, link });
+    if (!link && reply?.verdict?.value === "safe") await blockMemory.forgetDomain(domain);
     return reply;
 }
 
 /** Remembers a blocked page now; the backend's scan id is added once POST /scans answers. */
 function rememberBlock(message) {
-    const saved = blockMemory.remember(message.url, { domain: message.domain, score: message.score, signals: message.signals });
+    const domain = domainOfUrl(message.url, message.domain);
+    const saved = blockMemory.remember(message.url, { domain, score: message.score, signals: message.signals });
     if (message.reportKey) {
         recordIdFor(message.reportKey).then((recordId) => saved.then(() => blockMemory.setRecord(message.url, recordId)));
     }
@@ -174,7 +218,8 @@ if (browser.alarms) {
 const reports = new Map(); // report key → Promise<backend scan id | null>
 const reportLog = createReportLog({ storage: browser.storage.local });
 /** The Map dies with this page; the log answers for a report sent before that. */
-const recordIdFor = (key) => Promise.resolve(reports.has(key) ? reports.get(key) : reportLog.recordId(key));
+const recordFor = (key) => Promise.resolve(reports.has(key) ? reports.get(key) : reportLog.record(key));
+const recordIdFor = (key) => recordFor(key).then((record) => record?.id ?? null);
 
 /**
  * EX-07. Replies at once (block.js navigates as soon as we have the message); the page replica is
@@ -188,7 +233,8 @@ async function startReport(message) {
     // X1: a 422 on a scan that carries thresholdsVersion means the status and that version disagree
     // (thresholds changed while the page was being scored). Sent again without it, only the fence
     // applies; the scan matters more than the check.
-    const { thresholdsVersion, ...scan } = message.scan ?? {};
+    const { thresholdsVersion, ...sent } = message.scan ?? {};
+    const scan = { ...sent, domain: domainOfUrl(sent.url, sent.domain) };
     const post1 = (body) =>
         fetchJSON(endpoint(session.apiBaseURL, "/scans"), { method: "POST", token: session.token, timeoutMs: SCAN_TIMEOUT_MS, body });
     const send = (pageReplicaBase64, evidenceFragmentsBase64) => {
@@ -222,9 +268,12 @@ async function startReport(message) {
                 .catch((error) => (replica && error.status === 413 ? send(null, null) : Promise.reject(error))))
         .then(async (reply) => {
             const id = typeof reply?.id === "string" ? reply.id : null;
+            // #377: who the backend pushed. Only trusted when the backend says it (newer backend); an older one
+            // leaves it undefined and the block page falls back to the session's Guardian name.
+            const notified = reply && "notified" in reply ? (typeof reply.notified?.name === "string" ? reply.notified.name : null) : undefined;
             await reportLog.markSent(scan.domain);
-            if (id) await reportLog.saveRecord(message.key, id);
-            return id;
+            if (id) await reportLog.saveRecord(message.key, id, notified);
+            return id ? { id, ...(notified === undefined ? {} : { notified }) } : null;
         })
         .catch((error) => {
             console.warn("[Shoo] POST /scans failed", error);
@@ -241,8 +290,9 @@ browser.runtime.onMessage.addListener((message) => {
             lastSeen.report();
             return heartbeat.beat();
         case "profile":
-            // What blocked.html needs to pick its wording. Never the token.
-            return getSession().then((s) => ({
+            // What blocked.html needs to pick its wording. Never the token. Read fresh: a Guardian who left
+            // within the last 30 s must not show up as "Link sent to …" (#377).
+            return getSession({ fresh: true }).then((s) => ({
                 ok: true,
                 onboarded: Boolean(s),
                 mode: s?.mode ?? null,
@@ -253,15 +303,23 @@ browser.runtime.onMessage.addListener((message) => {
         case "thresholds":
             return thresholds.current().then((t) => ({ ok: true, thresholds: t }));
         case "domain":
-            return Promise.resolve({ ok: true, domain: domainFor(message.hostname) });
+            return Promise.resolve({ ok: true, domain: pageDomainFor(message.hostname) });
         case "analyze":
             return analyze(message.snapshot, message.localSignals ?? []);
         case "report":
             return startReport(message);
         case "recordId":
-            return recordIdFor(message.key).then((recordId) => ({ ok: true, recordId }));
-        case "verdict":
-            return lookupVerdict(message.domain, Boolean(message.fresh));
+            return recordFor(message.key).then((record) => ({
+                ok: true,
+                recordId: record?.id ?? null,
+                ...(record && "notified" in record ? { notified: record.notified } : {}),
+            }));
+        case "verdict": {
+            // From the URL, as report and rememberBlock do: a content script whose background didn't answer in time
+            // sends the full host (`login.scam.co.id`), and the lookup then asked about the wrong domain.
+            const url = typeof message.url === "string" ? message.url : null;
+            return lookupVerdict(url ? domainOfUrl(url, message.domain) : message.domain, Boolean(message.fresh), url);
+        }
         case "pageChecked":
             // A count for the app, no address (PF-01). Nothing depends on it, so a failure stays here.
             return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "pageChecked" }).catch(() => ({ ok: false }));

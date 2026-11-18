@@ -58,7 +58,12 @@ final class LivePushUITests: XCTestCase {
     func testPushTapOpensDetailInEveryAppState() throws {
         let app = XCUIApplication()
         // No `-UITestNotifications`: the real permission and the real APNs registration.
-        app.launchArguments += ["-settings.dataConsent", "granted", "-UITestReset", "YES", "-settings.language", "en", "-UITestExtensionActive", "YES"]
+        // No `-settings.dataConsent` argument either: arguments are gone when the push cold-starts the app,
+        // so the consent is answered on screen and saved like on a real phone.
+        // `-UITestSkipSplash` holds only for this launch: a push that cold-starts the app shows the splash first (ON-01).
+        app.launchArguments += [
+            "-UITestReset", "YES", "-UITestSkipSplash", "YES", "-settings.language", "en", "-UITestExtensionActive", "YES",
+        ]
         app.launch()
         onboardAsGuardian(app)
         try pairWithTheHost(app)
@@ -70,25 +75,14 @@ final class LivePushUITests: XCTestCase {
     @MainActor
     private func onboardAsGuardian(_ app: XCUIApplication) {
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
-        app.buttons["splash.skip"].tap()
-        let field = app.textFields["name.field"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap()
-        field.typeText("Rina")
-        app.buttons["name.continue"].tap()
-        app.buttons["mode.guardian"].tap()
-        app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.staticTexts["Hi, Rina!"].waitForExistence(timeout: 15), app.debugDescription)
-        XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
-        app.buttons["invite.skip"].tap()
-        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5), app.debugDescription)
-        app.buttons["safariDefault.alreadyUsing"].tap()
-        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5), app.debugDescription)
-        app.buttons["extensionOn.continue"].tap()
+        // The consent is the box on Aktifkan Ekstensi now (Figma 1205:4696), ticked on screen.
+        app.onboardPersonal("Rina")
         // ON-05: the system alert.
         let systemAllow = springboard.alerts.buttons["Allow"]
         if systemAllow.waitForExistence(timeout: 5) { systemAllow.tap() }
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 10), app.debugDescription)
+        // Onboarding ends as Pribadi; Family mode on makes the Guardian (GD-02).
+        app.becomeGuardian()
     }
 
     /// Shows a family code; the host joins it with a Protected device made by curl.
@@ -128,18 +122,23 @@ final class LivePushUITests: XCTestCase {
         banner.tap()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15), "App did not open (\(name))")
         XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 15), app.debugDescription)
-        XCTAssertTrue(app.tabBars.buttons["Activity"].isSelected, name)
+        // Detail hides the tab bar (DetailView `.toolbar(.hidden, for: .tabBar)`); the Activity tab under it
+        // is covered by DeepLinkUITests.
         try write("detail-\(name)", "\(Self.millis()) \(scanId)")
         try shot("push-\(name)-2-detail")
         let safe = app.buttons["detail.verdict.safe"]
         XCTAssertTrue(safe.waitForExistence(timeout: 10), app.debugDescription)
         for _ in 0..<4 where !safe.isHittable { app.swipeUp() }
         safe.tap()
+        // GD-07: "Aman" asks why first (SafeReasonSheet).
+        let reason = app.buttons["safeReason.chip.official_site"]
+        XCTAssertTrue(reason.waitForExistence(timeout: 10), app.debugDescription)
+        reason.tap()
+        app.buttons["safeReason.submit"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["detail.verdictNote"].waitForExistence(timeout: 10), app.debugDescription)
         try write("safe-\(name)", Self.millis())
         try shot("push-\(name)-3-safe")
         XCTAssertNotNil(waitFor("checked-\(name)", timeout: 30), "Host never checked the verdict (\(name))")
-        // Back to the Shield tab for the next state.
-        app.tabBars.buttons["Shield"].tap()
+        // The next states start from Home or from a killed app, so the app can stay on Detail.
     }
 }

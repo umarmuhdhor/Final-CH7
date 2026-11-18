@@ -6,9 +6,12 @@ struct ProfileView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: ProfileModel
     @State private var extensionStatus = ExtensionStatus.off(lastSeen: nil)
     @State private var isTurnOnPresented = false
+    /// Figma "Sheet · Matikan Shoo" (1681:5372): how to switch Shoo off, from the active extension row.
+    @State private var isTurnOffPresented = false
     @State private var isInvitePresented = false
     @State private var isDeleteConfirming = false
     @State private var remindingId: String?
@@ -26,22 +29,31 @@ struct ProfileView: View {
                 ShieldPulseLoader()
                     .frame(maxWidth: .infinity, minHeight: 300)
             case .failed:
-                VStack(spacing: 12) {
-                    Text("Couldn't load your profile").profileFont(17, .semibold)
-                    Button { Task { await model.retry() } } label: { Text("Try again") }
-                        .buttonStyle(ProfilePillButtonStyle(tint: ProfileStyle.link))
-                }
-                .frame(maxWidth: .infinity, minHeight: 300)
+                // Figma "Profile/Pribadi · Gagal memuat profil" (1681:6986): the card takes the profile card's
+                // place (370 × 344, r 20); the settings below still work.
+                ProfileLoadFailed(failure: model.loadFailure) { await model.load() }
+                    .frame(minHeight: 344)
+                    .background(ProfileStyle.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    // Figma: #1A264D at 6 %, y 4, blur 16.
+                    .shadow(color: Color(hex: 0x1A264D, opacity: 0.06), radius: 8, y: 4)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                protectionSection
+                accountSection
+                preferencesSection
+                deleteButton
             case .loaded:
                 loaded
+                    // Someone joins or is disconnected: rows fade, the card eases to its new
+                    // height and the sections below move with it. Reduce Motion: the list snaps,
+                    // since the sections below can't fade into their new place.
+                    .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: model.members.map(\.deviceId))
             }
         }
         .task {
             // Disconnect / delete hand the app back to onboarding: clear navigation first.
-            model.onSessionEnd = { [env, router = env.router] in
-                env.leaveDemo()
-                router.reset()
-                DeliveredPushes.clear()
+            model.onSessionEnd = { [env] in
+                env.returnToOnboardingAfterDelete()
             }
             await model.load()
         }
@@ -50,9 +62,21 @@ struct ProfileView: View {
             extensionStatus = await env.extensionStatus()
             await model.refreshNotifications()
             model.linked.refresh()
+            // Back from the background: a member may have left or been disconnected meanwhile. Only once loaded,
+            // so this never races the first load above.
+            if model.state == .loaded { await model.load() }
+        }
+        // A push while Profile is open (a member joined, left or was disconnected): the list follows without
+        // leaving the page, like Home and Activity (A-12).
+        .onChange(of: env.pushesWhileOpen) {
+            guard model.state == .loaded else { return }
+            Task { await model.load() }
         }
         .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
             TurnOnExtensionSheet()
+        }
+        .sheet(isPresented: $isTurnOffPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
+            TurnOffExtensionSheet()
         }
         .sheet(isPresented: $isInvitePresented, onDismiss: { Task { await model.load() } }) {
             InviteSheet(repository: env.repository) { isInvitePresented = false }
@@ -73,7 +97,8 @@ struct ProfileView: View {
         ProfileHeaderCard(
             banner: "ProfileBanner",
             avatarShadow: model.variant == .protected ? .glow : .none,
-            badgeBottom: model.variant == .protected ? -26 : 5,
+            // Figma 455:10289: the pill's ring ends 20 pt above the avatar's bottom (its 44 pt tap frame 18.5).
+            badgeBottom: model.variant == .protected ? -18.5 : 5,
             name: model.profile?.name ?? "",
             handle: model.handle(language: language),
             stats: model.stats(language: language)
@@ -81,7 +106,7 @@ struct ProfileView: View {
             AvatarView(id: model.profile?.avatarId ?? "", size: 88)
                 .overlay(alignment: .bottomTrailing) {
                     if model.variant == .protected, let guardian = model.profile?.guardian {
-                        GuardianBadge(name: guardian.name, avatarId: guardian.avatarId)
+                        GuardianBadge(avatarId: guardian.avatarId)
                             .offset(x: 16, y: 4)
                     }
                 }
@@ -90,17 +115,15 @@ struct ProfileView: View {
                 if model.profile?.guardian != nil {
                     Button { env.router.show(.profilePage(.connection)) } label: {
                         HStack(spacing: 5.5) {
-                            Image(systemName: ConnectedPillButtonStyle.symbol)
-                                .font(.system(size: 15))
-                                .accessibilityHidden(true)
+                            ConnectedPillButtonStyle.glyph
                             Text("Connected")
                         }
                     }
                     .buttonStyle(ConnectedPillButtonStyle())
                     .accessibilityHint(Text("Shows your linked account"))
                     .accessibilityIdentifier("profile.connectedPill")
-                    // Figma: 17 pt from the card's inner edge, not 12 like "Bagikan undangan".
-                    .padding(.trailing, 5)
+                    // Figma 455:10289: the pill ends 21.4 pt from the card's edge, 9.4 inside the 12 pt row inset.
+                    .padding(.trailing, -2.4)
                 }
             } else {
                 Button { isInvitePresented = true } label: {
@@ -116,7 +139,7 @@ struct ProfileView: View {
 
         if model.showsGuardianCard {
             GuardianModeCard {
-                model.becomeGuardian()
+                env.requestFamilyMode()
             } onDismiss: {
                 model.dismissGuardianCard()
             }
@@ -126,18 +149,21 @@ struct ProfileView: View {
         protectionSection
         accountSection
         preferencesSection
-        privacySection
 
+        deleteButton
+    }
+
+    private var deleteButton: some View {
         Button { isDeleteConfirming = true } label: {
-            // Figma "Hapus Akun" (title case here, unlike the Kelola profil row).
+            // Figma "Hapus Akun" (title case here, unlike the Kelola profil row): SF Pro Rounded 17.
             Text("Delete Account")
-                .profileFont(17, .medium, tracking: -0.17)
+                .profileBody()
                 .foregroundStyle(ProfileStyle.red)
                 .frame(minWidth: 44, minHeight: 44)
         }
         .disabled(model.isWorking)
-        // Figma: the text starts 28 pt under the last card; the 44 pt tap area adds 12 above it.
-        .padding(.top, 16)
+        // Figma: the text starts 28 pt under the last card; the 44 pt tap area adds 11 above its 22 pt line.
+        .padding(.top, 17)
         .accessibilityIdentifier("profile.delete")
     }
 
@@ -146,15 +172,18 @@ struct ProfileView: View {
     /// Protected sections sit 15 pt apart (Figma "Profile/Pribadi" of the protected user), others 28.
     private var sectionTop: CGFloat { model.variant == .protected ? 15 : 28 }
 
+    /// Title to card: 12 on the Protected profile (Figma 455:10275), 10 elsewhere (1115:14392).
+    private var sectionSpacing: CGFloat { model.variant == .protected ? 12 : 10 }
+
     /// Protected: "Terhubung", the guardian who gets the warnings.
     @ViewBuilder private var guardianSection: some View {
         if let guardian = model.profile?.guardian {
             ProfileSection(title: "Connected", spacing: 24) {
                 Button { env.router.show(.profilePage(.connection)) } label: {
                     HStack(spacing: 12) {
-                        InitialsAvatar(name: guardian.name, avatarId: guardian.avatarId, size: 33)
+                        AvatarView(id: guardian.avatarId, size: 33)
                         Text(verbatim: guardian.name)
-                            .profileFont(17, tracking: -0.17)
+                            .profileBody()
                             .foregroundStyle(ProfileStyle.ink)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Image(systemName: "chevron.right")
@@ -176,25 +205,28 @@ struct ProfileView: View {
     /// Pribadi and Protected: "Perlindungan" with the extension status (the switch lives in Safari).
     @ViewBuilder private var protectionSection: some View {
         if model.variant != .guardian {
-            ProfileSection(title: "Protection", top: protectionTop) {
+            ProfileSection(title: "Protection", top: protectionTop, spacing: sectionSpacing) {
                 extensionRow
             }
         }
     }
 
     private var extensionRow: some View {
-        Button { if !extensionStatus.isActive { isTurnOnPresented = true } } label: {
+        Button { if extensionStatus.isActive { isTurnOffPresented = true } else { isTurnOnPresented = true } } label: {
             ProfileRow(
                 symbol: ProfileStyle.extensionSymbol,
                 title: Text("Safari extension"),
-                // Figma v2 (455:10275): "Aktif" in grey. Its chevron is left out: the row does nothing while on.
+                // Pribadi (1115:14424): a green dot and "Terhubung" in green. Protected (455:10275): "Aktif" in grey.
+                // No chevron either way; while on, the row opens "Matikan Shoo".
                 accessory: extensionStatus.isActive
-                    ? .value(L10n.string("Active", language: language), chevron: false)
+                    ? (model.variant == .protected
+                        ? .value(L10n.string("Active", language: language), chevron: false)
+                        : .status(L10n.string("Connected", language: language), dot: ProfileStyle.green, color: ProfileStyle.greenText))
                     : .value(L10n.string("Off", language: language), color: ProfileStyle.red)
             )
         }
         .buttonStyle(.plain)
-        .accessibilityHint(extensionStatus.isActive ? Text(verbatim: "") : Text("Shows how to switch Shoo on in Safari"))
+        .accessibilityHint(extensionStatus.isActive ? Text("Shows how to switch Shoo off in Safari") : Text("Shows how to switch Shoo on in Safari"))
         .accessibilityIdentifier(extensionStatus.isActive ? "profile.extension.active" : "profile.extension.off")
     }
 
@@ -208,20 +240,15 @@ struct ProfileView: View {
         // Figma: 32 pt under the profile card (416:10447, 480:5353).
         ProfileSection(title: "People you protect", top: 32) {
             if model.membersFailed {
-                VStack(spacing: 8) {
-                    Text("Couldn't load your family").profileFont(15).foregroundStyle(ProfileStyle.secondary)
-                    Button { Task { await model.load() } } label: { Text("Try again") }
-                        .buttonStyle(ProfilePillButtonStyle(tint: ProfileStyle.link))
-                        .accessibilityIdentifier("profile.members.retry")
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                // Figma "Profile/Guardian · Gagal memuat" (1681:7088): the same card inside the section.
+                ProfileLoadFailed(identifier: "profile.members.retry", failure: model.membersLoadFailure) { await model.load() }
+                    .transition(.opacity)
             } else if model.members.isEmpty {
                 FamilyEmptyCard { isInvitePresented = true }
             } else {
                 ForEach(Array(model.members.enumerated()), id: \.element.id) { index, member in
-                    if index > 0 { ProfileDivider(leading: 73) }
-                    memberRow(member)
+                    if index > 0 { ProfileDivider(leading: 73).transition(.opacity) }
+                    memberRow(member).transition(.opacity)
                 }
             }
         }
@@ -232,11 +259,11 @@ struct ProfileView: View {
             Button { env.router.show(.member(deviceId: member.deviceId)) } label: {
                 HStack(spacing: 12) {
                     // Figma: a member whose extension is off has a half-faded avatar.
-                    InitialsAvatar(name: member.name, avatarId: member.avatarId)
+                    AvatarView(id: member.avatarId)
                         .opacity(member.extensionActive ? 1 : 0.5)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: member.name)
-                            .profileFont(17, .medium, tracking: -0.17)
+                            .profileBody()
                             .foregroundStyle(ProfileStyle.nameInk)
                         HStack(spacing: 6) {
                             Circle()
@@ -244,14 +271,14 @@ struct ProfileView: View {
                                 .frame(width: 7, height: 7)
                                 .accessibilityHidden(true)
                             Text(verbatim: MemberText.status(member, now: Date(), language: language))
-                                .profileFont(13, rounded: true)
+                                .profileCaption()
                                 .foregroundStyle(ProfileStyle.secondary)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     if member.extensionActive, let seen = member.lastSeenAt {
                         Text(verbatim: MemberText.ago(seen, language: language))
-                            .profileFont(13, rounded: true)
+                            .profileCaption()
                             .foregroundStyle(ProfileStyle.secondary)
                     }
                 }
@@ -274,12 +301,12 @@ struct ProfileView: View {
     }
 
     private var accountSection: some View {
-        ProfileSection(title: "Account", top: sectionTop) {
+        ProfileSection(title: "Account", top: sectionTop, spacing: sectionSpacing) {
             if model.variant == .protected {
                 // Figma: Kelola profil first, then Terhubung.
                 navRow(symbol: "person.fill", title: Text("Manage profile"), page: .editProfile, id: "profile.manage")
                 ProfileDivider()
-                navRow(symbol: ProfileStyle.switchSymbol, title: Text("Connected"), page: .connection, id: "profile.connection")
+                navRow(symbol: ProfileStyle.switchSymbol, title: Text(L10n.string(model.connectionRowTitle, language: language)), page: .connection, id: "profile.connection")
             } else {
                 navRow(
                     symbol: ProfileStyle.switchSymbol, title: Text("Account mode"),
@@ -297,7 +324,7 @@ struct ProfileView: View {
     }
 
     private var preferencesSection: some View {
-        ProfileSection(title: "Preferences", top: sectionTop) {
+        ProfileSection(title: "Preferences", top: sectionTop, spacing: sectionSpacing) {
             navRow(
                 symbol: "circle.lefthalf.filled", title: Text("Theme"),
                 value: L10n.string(themeTitle, language: language),
@@ -311,22 +338,6 @@ struct ProfileView: View {
             )
             ProfileDivider()
             navRow(symbol: "text.magnifyingglass", title: Text("About Shoo"), page: .about, id: "profile.about")
-        }
-    }
-
-    /// Apple 5.1.1: the online check can be taken back at any time.
-    private var privacySection: some View {
-        ProfileSection(title: "Privacy", top: sectionTop) {
-            ProfileToggleRow(
-                symbol: "checkmark.shield",
-                title: Text("Online check"),
-                subtitle: Text("Sends pages to Shoo's server and suspicious-page summaries to DeepSeek"),
-                isOn: Binding(
-                    get: { env.settings.dataConsent == .granted },
-                    set: { env.setDataConsent($0 ? .granted : .declined) }
-                )
-            )
-            .accessibilityIdentifier("profile.onlineCheck")
         }
     }
 
@@ -363,12 +374,18 @@ struct RemindButton: View {
         let sent = MemberText.recentlyReminded(member)
         Button { Task { await action() } } label: {
             if isWorking {
-                ProgressView().frame(width: 52)
+                ProgressView().frame(width: 62)
+                    .transition(.opacity)
             } else {
                 Text(sent ? "Sent" : "Remind")
+                    .contentTransition(.opacity)
+                    .transition(.opacity)
             }
         }
-        .buttonStyle(ProfilePillButtonStyle(tint: sent ? ProfileStyle.secondary : ProfileStyle.link))
+        .buttonStyle(ProfilePillButtonStyle(tint: sent ? ProfileStyle.secondary : ProfileStyle.link, large: true))
+        // Remind → (spinner) → Sent: a 0.2 s cross-fade, already gentle enough for Reduce Motion.
+        .animation(.easeInOut(duration: 0.2), value: sent)
+        .sensoryFeedback(.success, trigger: sent) { wasSent, isSent in !wasSent && isSent }
         .disabled(sent || isWorking)
         .accessibilityLabel(sent ? Text("Reminder sent to \(member.name)") : Text("Remind \(member.name)"))
         .accessibilityHint(sent ? Text(verbatim: "") : Text("Sends a notification to turn on Shoo in Safari"))
@@ -388,8 +405,10 @@ enum MemberText {
         return L10n.string("Extension off for \(duration(from: seen, to: now, language: language))", language: language)
     }
 
-    /// "2 mnt lalu".
+    /// "2 mnt lalu". Under a second ago, or ahead of this phone's clock (a normal gap between two phones): "baru saja",
+    /// never "in 0s" (A-08).
     static func ago(_ date: Date, now: Date = Date(), language: AppLanguage) -> String {
+        guard now.timeIntervalSince(date) >= 1 else { return L10n.string("just now", language: language) }
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = language.locale
         formatter.unitsStyle = .abbreviated

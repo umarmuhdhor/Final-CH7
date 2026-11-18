@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// The guardian's word under a row of the own Activity list (PR-05, Figma 450:8734 / 450:8739 /
-/// 450:8744): "Menurut Virellia website ini berbahaya!", "… link ini aman. Shoo tetap tak
-/// menyarankan …" or "Virellia belum melihat website ini".
+/// 450:8744): "Menurut Virellia website ini berbahaya!", "Virellia menandai link ini aman" (#369) or
+/// "Virellia belum melihat website ini".
 enum ActivityNote: Equatable {
     /// `name` nil = the viewer decided themselves ("you").
     case notSafe(name: String?)
@@ -11,10 +11,15 @@ enum ActivityNote: Equatable {
 
     /// A verdict always shows. Without one, only a blocked scan of a Protected user (one with a
     /// guardian) says the guardian has not looked yet; a warning row stays plain, as in Figma.
+    /// A verdict this build can't read (#493) gets no note: never "safe", and not "unseen" either.
     init?(scan: ScanResult, guardianName: String?, viewerDeviceId: String?) {
         if let verdict = scan.verdict {
             let name = verdict.byDeviceId == viewerDeviceId ? nil : verdict.byName
-            self = verdict.value == .notSafe ? .notSafe(name: name) : .safe(name: name)
+            switch verdict.value {
+            case .notSafe: self = .notSafe(name: name)
+            case .safe: self = .safe(name: name)
+            case .unknown: return nil
+            }
         } else if scan.status == .blocked, let guardianName, !guardianName.isEmpty {
             self = .unseen(guardianName: guardianName)
         } else {
@@ -22,11 +27,9 @@ enum ActivityNote: Equatable {
         }
     }
 
-    /// "… link ini aman. Shoo tetap tak menyarankan …" runs on two 15 pt lines in Figma (450:8657).
-    var isTwoLine: Bool {
-        if case .safe = self { return true }
-        return false
-    }
+    /// The old safe note ("… link ini aman. Shoo tetap tak menyarankan …", Figma 450:8657) ran on two lines.
+    /// Since #369 "Aman" stops the warnings, so the note is one line like the others.
+    var isTwoLine: Bool { false }
 
     /// Figma (icon, icon circle, stroke, text).
     fileprivate var colors: (icon: Color, circle: Color, stroke: Color, text: Color) {
@@ -47,7 +50,9 @@ enum ActivityNote: Equatable {
             let who = Text(verbatim: name ?? L10n.string("activity.note.you", language: language)).bold()
             return Text("activity.note.notSafe \(who)")
         case .safe(let name):
-            let who = Text(verbatim: name ?? L10n.string("activity.note.you", language: language)).bold()
+            // The name opens the sentence here ("Kamu menandai link ini aman"), so "you" gets a capital.
+            let you = L10n.string("activity.note.you", language: language)
+            let who = Text(verbatim: name ?? you.prefix(1).uppercased() + you.dropFirst()).bold()
             return Text("activity.note.safe \(who)")
         case .unseen(let guardianName):
             let who = Text(verbatim: guardianName).fontWeight(.semibold)

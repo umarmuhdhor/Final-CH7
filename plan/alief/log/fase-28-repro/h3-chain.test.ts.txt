@@ -1,0 +1,69 @@
+// Fase 28 hunt, hunter 3 (cross-component chain): what the REAL extension sends, posted to the real backend.
+// CASES is the output of h3-gen-backend-cases.mjs (extension domain.js + psl.js, detector.js, ai/src/analyze.js, pipeline.js).
+// Run: copy to backend/api/test/h3-chain.test.ts, then
+//   cd backend/api && db_guard && npx vitest run test/h3-chain.test.ts
+//   db_guard + SHOO_TEST_DB_URL + SHOO_TEST_ADMIN_DB_URL (both to a separate DB, never 54322): plan/alief/log/fase-28.md "Cara menunjuk vitest ke DB terpisah"
+// Tests named "BUG X-xx" assert the CORRECT behaviour and FAIL on main 9e5403ba.
+import { beforeEach, describe, expect, it } from "vitest";
+import { resetDb, testSql } from "./helpers/resetDb";
+import { call, callWithEnv, createDevice, type Created } from "./helpers/seed";
+
+const sql = testSql();
+beforeEach(() => resetDb(sql));
+const noEdge = { VERDICTS_GET_LIMITER: undefined };
+async function pair(g: Created, p: Created) {
+  const { code } = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
+  expect((await call("/family/join", { method: "POST", token: p.token, json: { code } })).status).toBe(200);
+}
+const scan = (url: string, domain: string, score = 92, status = "blocked", signals: unknown[] = []) => ({ url, domain, score, status, signals, detectedAt: new Date().toISOString() });
+const post = (d: Created, json: unknown) => call("/scans", { method: "POST", token: d.token, json });
+const verdictOf = async (d: Created, url: string, domain: string) => {
+  const res = await callWithEnv(noEdge, `/verdicts?url=${encodeURIComponent(url)}&domain=${encodeURIComponent(domain)}`, { token: d.token });
+  return { status: res.status, body: (await res.json()) as { verdict?: { value: string } | null; error?: { message: string } } };
+};
+const CASES = {"urls":[{"page":"https://toko.example/a","url":"https://toko.example/a","domain":"toko.example"},{"page":"https://toko.example./a","url":"https://toko.example./a","domain":"toko.example"},{"page":"https://toko.example:8443/a","url":"https://toko.example:8443/a","domain":"toko.example"},{"page":"https://xn--bcher-kva.example/a","url":"https://xn--bcher-kva.example/a","domain":"xn--bcher-kva.example"},{"page":"https://alice.github.io/a","url":"https://alice.github.io/a","domain":"alice.github.io"},{"page":"https://sites.google.com/view/x","url":"https://sites.google.com/view/x","domain":"google.com"},{"page":"http://203.0.113.9/login","url":"http://203.0.113.9/login","domain":"203.0.113.9"},{"page":"http://[2001:db8::1]/login","url":"http://[2001:db8::1]/login","domain":"[2001:db8::1]"},{"page":"http://router/login","url":"http://router/login","domain":"router"},{"page":"https://a_b.example.com/a","url":"https://a_b.example.com/a","domain":"example.com"},{"page":"https://shop_x.web.app/a","url":"https://shop_x.web.app/a","domain":"shop_x.web.app"},{"page":"https://www.co.id/x","url":"https://www.co.id/x","domain":"www.co.id"},{"page":"https://www.com/x","url":"https://www.com/x","domain":"www.com"},{"page":"https://toko.example/ppppppppp…(2121 chars)","url":"https://toko.example/pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp","domain":"toko.example"},{"page":"https://toko.example/ppppppppp…(2041 chars)","url":"https://toko.example/pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp","domain":"toko.example"}],"scam":{"url":"https://bca-verifikasi-akun.xyz/login/klikbca.php","domain":"bca-verifikasi-akun.xyz","score":100,"signals":[{"id":"asks_pin","layer":3,"weight":35,"label":{"en":"Form asks for a PIN or passcode","id":"Form meminta PIN atau kode sandi"},"labelSimple":{"en":"Asks for your secret PIN","id":"Meminta PIN rahasia kamu"},"evidence":"pin"},{"id":"asks_selfie_ktp","layer":3,"weight":35,"label":{"en":"Form asks for a selfie with KTP","id":"Form meminta selfie dengan KTP"},"labelSimple":{"en":"Asks for a photo of you holding your ID card","id":"Meminta foto kamu sambil memegang KTP"},"evidence":"foto_selfie_ktp"},{"id":"asks_ktp","layer":3,"weight":25,"label":{"en":"Form asks for a KTP number","id":"Form meminta nomor KTP"},"labelSimple":{"en":"Asks for your ID card number","id":"Meminta nomor KTP kamu"},"evidence":"nik_ktp"},{"id":"asks_otp","layer":3,"weight":25,"label":{"en":"Form asks for a one-time code (OTP)","id":"Form meminta kode sekali pakai (OTP)"},"labelSimple":{"en":"Asks for the code sent to your phone","id":"Meminta kode yang dikirim ke HP kamu"},"evidence":"otp"},{"id":"brand_logo_offsite","layer":3,"weight":25,"label":{"en":"BCA logo on an unofficial site","id":"Logo BCA di situs tidak resmi"},"labelSimple":{"en":"Pretends to be BCA","id":"Berpura-pura menjadi BCA"},"evidence":"BCA"},{"id":"asks_card","layer":3,"weight":20,"label":{"en":"Form asks for a card number","id":"Form meminta nomor kartu"},"labelSimple":{"en":"Asks for your bank card number","id":"Meminta nomor kartu bank kamu"},"evidence":"nomor_kartu"},{"id":"cheap_tld","layer":2,"weight":16,"label":{"en":"Cheap domain ending .xyz","id":"Akhiran domain murah .xyz"},"labelSimple":{"en":"This site uses a cheap address ending that scammers often use","id":"Situs ini memakai akhiran alamat murah yang sering dipakai penipu"},"evidence":".xyz · level 2"},{"id":"asks_password","layer":3,"weight":15,"label":{"en":"Form asks for a password on an unofficial site","id":"Form meminta kata sandi di situs tidak resmi"},"labelSimple":{"en":"Asks for your password on a site that is not official","id":"Meminta kata sandi kamu di situs yang tidak resmi"},"evidence":"password"},{"id":"urgent_language","layer":3,"weight":15,"label":{"en":"Urgent language: \"akun anda akan diblokir\"","id":"Kalimat mendesak: \"akun anda akan diblokir\""},"labelSimple":{"en":"Rushes you to act fast","id":"Memaksa kamu cepat-cepat bertindak"},"evidence":"Akun Anda akan diblokir"},{"id":"brand_plus_keyword","layer":2,"weight":14,"label":{"en":"Brand name plus extra word (BCA + verifikasi)","id":"Nama brand ditambah kata lain (BCA + verifikasi)"},"labelSimple":{"en":"This address mixes BCA with the word \"verifikasi\"","id":"Alamat ini menggabungkan BCA dengan kata \"verifikasi\""},"evidence":"bca · level 2 · verifikasi"},{"id":"suspicious_link","layer":2,"weight":11,"label":{"en":"The link looks suspicious (bait word in path)","id":"Tautan terlihat mencurigakan (kata umpan di path)"},"labelSimple":{"en":"The address of this page looks like the ones scammers use","id":"Alamat halaman ini mirip alamat yang biasa dipakai penipu"},"evidence":"file_ext,path_bait"}]}} as { urls: { page: string; url: string; domain: string }[]; scam: { url: string; domain: string; score: number; signals: unknown[] } };
+
+describe("extension output -> POST /scans and GET /verdicts", () => {
+  it("matrix: every page the extension can block is stored (a 422 is dropped by the extension for good, BH-06)", async () => {
+    const p = await createDevice("Ibu");
+    const refused: string[] = [];
+    for (const c of CASES.urls) {
+      const res = await post(p, scan(c.url, c.domain));
+      const v = await verdictOf(p, c.url, c.domain);
+      const why = res.status === 201 ? "" : ((await res.json()) as { error: { message: string } }).error.message;
+      console.log(`H3 scans | ${c.page} | sent domain ${c.domain} | POST /scans ${res.status} ${why} | GET /verdicts ${v.status}`);
+      if (res.status !== 201) refused.push(c.page);
+    }
+    console.log(`H3 scans | rows ${CASES.urls.length} | refused ${refused.length}`);
+    expect(refused).toEqual([]); // BUG X-06: fails, lists the pages whose block the Guardian never hears about
+  });
+
+  it("the real detector + /analyze signals of one scam page pass the backend schema", async () => {
+    const p = await createDevice("Ibu");
+    const res = await post(p, scan(CASES.scam.url, CASES.scam.domain, CASES.scam.score, "blocked", CASES.scam.signals));
+    console.log(`H3 signals | ${CASES.scam.signals.length} signals, score ${CASES.scam.score} | POST /scans ${res.status}`);
+    expect(res.status).toBe(201);
+  });
+});
+
+describe("not_safe covers the domain except shared hosts (contracts/api.md Verdicts, rule 2)", () => {
+  it.each([
+    ["https://docs.google.com/forms/d/scam", "google.com", "https://accounts.google.com/signin", "google.com"],
+    ["https://forms.office.com/r/scam", "office.com", "https://www.office.com/login", "office.com"],
+    ["https://sway.cloud.microsoft/scam", "cloud.microsoft", "https://outlook.cloud.microsoft/mail/", "cloud.microsoft"],
+    ["https://1drv.ms/f/scam", "1drv.ms", "https://1drv.ms/w/other", "1drv.ms"],
+    ["https://s.id/hadiah", "s.id", "https://s.id/undangan", "s.id"],
+    ["https://alice.medium.com/scam", "medium.com", "https://medium.com/@bob/post", "medium.com"],
+  ])("BUG X-07 candidate: not_safe on %s must not reach %s (other page of a shared platform)", async (scamUrl, scamDomain, otherUrl, otherDomain) => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await pair(g, p);
+    const { id } = (await (await post(p, scan(scamUrl, scamDomain))).json()) as { id: string };
+    expect((await call("/verdicts", { method: "POST", token: g.token, json: { scanId: id, value: "not_safe", notes: "scam form" } })).status).toBe(200);
+    const same = await verdictOf(p, scamUrl, scamDomain);
+    const other = await verdictOf(p, otherUrl, otherDomain);
+    console.log(`H3 shared | not_safe on ${scamUrl} | same link -> ${same.body.verdict?.value ?? null} | ${otherUrl} -> ${other.body.verdict?.value ?? null}`);
+    expect(same.body.verdict?.value).toBe("not_safe");
+    expect(other.body.verdict ?? null).toBeNull();
+  });
+});

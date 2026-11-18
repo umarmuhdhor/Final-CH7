@@ -33,13 +33,27 @@ final class DetailModel {
     private(set) var viewer: DeviceProfile?
     private(set) var isSubmittingVerdict = false
     /// The last verdict did not reach the server and was rolled back.
-    private(set) var verdictFailed = false
+    /// Why the last verdict was not saved (BH-27), so the footer says what happened.
+    enum VerdictError: Equatable, Sendable {
+        /// Offline, timeout, a server error: try again.
+        case connection
+        /// `verdict_not_allowed` (403): this viewer is no longer the owner's Guardian.
+        case notAllowed
+        /// `rate_limited` (429): more than 60 verdicts a minute.
+        case tooMany
+        /// `verdict_locked` (409, #476): the link is marked safe until Shoo's weekly review.
+        case locked
+    }
+    private(set) var verdictError: VerdictError?
+    var verdictFailed: Bool { verdictError != nil }
     /// Counts verdicts the server confirmed (drives the success haptic).
     private(set) var verdictSaves = 0
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
+    /// Told after every verdict the server confirmed (`AppEnvironment.verdictSaves`, K8).
+    @ObservationIgnored private let onVerdictSaved: @MainActor () -> Void
 
     /// fase 18b: a push can open Detail before the Worker stored the page copy (`waitUntil`).
     /// Within this many seconds of the scan, the screen waits for it instead of saying "no copy".
@@ -54,12 +68,14 @@ final class DetailModel {
         scanId: String,
         repository: any ShooRepository,
         now: @escaping () -> Date = Date.init,
-        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
+        onVerdictSaved: @escaping @MainActor () -> Void = {}
     ) {
         self.scanId = scanId
         self.repository = repository
         self.now = now
         self.sleep = sleep
+        self.onVerdictSaved = onVerdictSaved
     }
 
     // MARK: Derived
@@ -84,6 +100,15 @@ final class DetailModel {
     var pageCSSWidth: CGFloat?
     /// The owner's avatar for the chip, from the family list (best effort).
     private(set) var ownerAvatarId: String?
+
+    /// The guardian's avatar for the hero, on the protected person's own scan once that guardian decided
+    /// (Figma "Guardian Virellia", 1211:19925 / 1252:2473). `nil`: the hero shows the big shield.
+    var deciderAvatarId: String? {
+        guard isOwnScan, let verdict = scan?.verdict, let guardian = viewer?.guardian,
+              verdict.byDeviceId == guardian.deviceId
+        else { return nil }
+        return guardian.avatarId
+    }
 
     /// DT-03: the owner's name is for the guardian's family view, never for Protected.
     func showsOwner(familyModeOn: Bool) -> Bool {
@@ -113,10 +138,22 @@ final class DetailModel {
 
     // MARK: Actions
 
-    func load() async {
+    /// A push or the return to the foreground while Detail shows: reads the scan again (a verdict, a deleted
+    /// scan) but keeps the links of the page copy and screenshot on screen, so the copy is not loaded again
+    /// (each read hands out new short-lived links, contracts/api.md).
+    func refresh() async {
+        guard state == .loaded else { return }
+        await load(keepingMedia: true)
+    }
+
+    func load() async { await load(keepingMedia: false) }
+
+    private func load(keepingMedia: Bool) async {
         if scan == nil { state = .loading }
-        screenshotLinkRefreshed = false
-        replicaLinkRefreshed = false
+        if !keepingMedia {
+            screenshotLinkRefreshed = false
+            replicaLinkRefreshed = false
+        }
         let epoch = verdictEpoch
         do {
             async let fetchedScan = repository.scan(id: scanId)
@@ -126,6 +163,10 @@ final class DetailModel {
             // A verdict tapped while this load was in flight is newer than the snapshot.
             if isSubmittingVerdict || epoch != verdictEpoch, let current = scan, current.id == loadedScan.id {
                 loadedScan.verdict = current.verdict
+            }
+            if keepingMedia, let current = scan, current.id == loadedScan.id {
+                if let link = current.pageReplicaUrl { loadedScan.pageReplicaUrl = link }
+                if let link = current.screenshotUrl { loadedScan.screenshotUrl = link }
             }
             scan = loadedScan
             viewer = loadedViewer
@@ -219,27 +260,54 @@ final class DetailModel {
     }
 
     /// GD-07: applies at once, no confirmation. Optimistic; rolled back if the server says no.
+    /// `notes`: why the Guardian decided (the "Aman" reason sheet), sent as `POST /verdicts` `notes`.
     @discardableResult
-    func setVerdict(_ value: Verdict.Value) async -> VerdictOutcome {
+    func setVerdict(_ value: Verdict.Value, notes: String? = nil) async -> VerdictOutcome {
         guard canValidate, !isSubmittingVerdict, let viewer, let previous = scan else { return .ignored }
         isSubmittingVerdict = true
         verdictEpoch += 1
-        verdictFailed = false
+        verdictError = nil
         scan?.verdict = Verdict(value: value, byDeviceId: viewer.deviceId, byName: viewer.name, decidedAt: now())
         defer { isSubmittingVerdict = false }
         do {
-            let verdict = try await repository.setVerdict(scanId: previous.id, value: value)
+            let verdict = try await repository.setVerdict(scanId: previous.id, value: value, notes: notes)
             scan?.verdict = verdict
             verdictSaves += 1
+            onVerdictSaved()
             return .saved
         } catch RepositoryError.api(.notFound, _) {
             scan = nil
             state = .notFound
             return .gone
+        } catch RepositoryError.api(.verdictLocked, _) {
+            // #476 (A-02, K5): the server already holds a safe verdict on this link that stays until the weekly
+            // review (an "Aman" whose answer was lost, or another device). Show the server's verdict, not the
+            // rollback, so the badge, buttons and footer agree. Not `load()`: `isSubmittingVerdict` is still
+            // true here, so `load()` would keep the rolled-back verdict. Never guess `safe` from the 409 alone.
+            // The message is set once the reload is done, so it never sits over the rolled-back buttons.
+            scan?.verdict = previous.verdict
+            do {
+                let fresh = try await repository.scan(id: previous.id)
+                guard scan != nil else { return .gone }
+                if scan?.id == fresh.id { scan?.verdict = fresh.verdict }
+            } catch RepositoryError.api(.notFound, _) {
+                scan = nil
+                state = .notFound
+                return .gone
+            } catch {
+                // Offline or cancelled: the rollback and the locked message stay; reopening Detail reloads.
+                if !error.isCancellation { Log.ui.error("Detail reload after a locked verdict failed", error) }
+            }
+            verdictError = .locked
+            return .rolledBack
         } catch {
             Log.ui.error("Verdict failed", error)
             scan?.verdict = previous.verdict
-            verdictFailed = true
+            verdictError = switch (error as? RepositoryError)?.apiCode {
+            case .verdictNotAllowed?: .notAllowed
+            case .rateLimited?: .tooMany
+            default: .connection
+            }
             return .rolledBack
         }
     }

@@ -12,20 +12,24 @@ const TEXT: Record<Language, Record<"blocked" | "warning", (name: string, score:
   },
 };
 
-// Family pushes to the protected device, in its own language (PF-01, proposed contract addition).
-const FAMILY: Record<Language, Record<"remind" | "disconnected", (guardian: string) => string>> = {
+// Family pushes, in the receiver's own language (PF-01, proposed contract addition). `remind` and
+// `disconnected` go to the protected device and name the guardian; `memberLeft` goes to the guardian when a
+// member deleted their account (QA 2026-11-10 #6) and names that member.
+type FamilyKind = "remind" | "disconnected" | "memberLeft";
+const FAMILY: Record<Language, Record<FamilyKind, (name: string) => string>> = {
   en: {
     remind: (g) => `${g} reminds you: turn on Shoo in Safari`,
     disconnected: (g) => `${g} stopped protecting you`,
+    memberLeft: (m) => `${m} deleted their Shoo account. You no longer protect them`,
   },
   id: {
     remind: (g) => `${g} mengingatkan: nyalakan Shoo di Safari`,
     disconnected: (g) => `${g} berhenti melindungimu`,
+    memberLeft: (m) => `${m} menghapus akun Shoo-nya. Kamu tidak lagi melindunginya`,
   },
 };
 
-export const familyPushText = (language: Language, kind: "remind" | "disconnected", guardianName: string) =>
-  FAMILY[language][kind](guardianName);
+export const familyPushText = (language: Language, kind: FamilyKind, name: string) => FAMILY[language][kind](name);
 
 export const pushText = (language: Language, status: "blocked" | "warning", ownerName: string, score: number) =>
   TEXT[language][status](ownerName, score);

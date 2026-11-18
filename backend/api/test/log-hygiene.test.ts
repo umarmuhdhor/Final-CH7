@@ -44,7 +44,8 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
     await seedScreenshot(sql, { id, ownerId: p.deviceId, domain: "very-private-domain.example" }, b64(jpeg(50, 50)));
     expect((await sql`select screenshot_path from scans where id = ${id}`)[0]?.screenshot_path).toBeTruthy();
     // EX-07: the replica is stored in waitUntil after the push.
-    await vi.waitFor(async () => expect((await sql`select replica_path from scans where id = ${id}`)[0]?.replica_path).toBeTruthy());
+    // Ready = the put finished; only then does Detail below get a pageReplicaUrl (fase 22 fix, 8 Nov 2026).
+    await vi.waitFor(async () => expect((await sql`select replica_ready_at from scans where id = ${id}`)[0]?.replica_ready_at).toBeTruthy());
     // A broken replica on a second scan: the drop is logged with its reason only.
     await call("/scans", {
       method: "POST", token: p.token, ip,
@@ -137,13 +138,14 @@ describe("every rate limit has a test (429, or 401 + Retry-After for auth_fail; 
   it("the list of limits is the reviewed one; a new limit needs a test and an entry here", () => {
     // Bucket → test file that proves its 429.
     const tested: Record<string, string> = {
-      devices_create: "devices.test.ts", healthz_db: "health.test.ts", healthz_db_all: "health.test.ts", family_code: "family.test.ts",
+      devices_create: "devices.test.ts", devices_protected: "devices.test.ts", healthz_db: "health.test.ts", healthz_db_all: "health.test.ts", family_code: "family.test.ts",
       scans_create: "scans.test.ts", screenshots_view: "screenshots.test.ts", verdicts_create: "verdicts.test.ts",
       verdicts_get: "verdicts.test.ts", auth_fail: "security-headers.test.ts", auth_fail_all: "security-headers.test.ts",
       devices_create_all: "security-review.test.ts", scans_create_all: "security-review.test.ts",
       favicons_view: "favicons.test.ts", favicons_fetch: "favicons.test.ts", favicons_fetch_all: "favicons.test.ts",
       replicas_ip: "replicas.test.ts", replicas_view: "replicas.test.ts", replicas_view_day: "replicas.test.ts",
       ops_status: "ops-status.test.ts",
+      join_page_all: "join-page.test.ts",
     };
     expect(Object.values(limits).map((l) => l.bucket).sort()).toEqual(Object.keys(tested).sort());
     // Not in `limits`: join attempts (family.test.ts "too_many_attempts") and the push cap (push-notify.test.ts).

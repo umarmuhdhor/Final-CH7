@@ -79,6 +79,17 @@ struct ActivityModelTests {
         #expect(!model.isEmpty)
     }
 
+    /// A-03 (fase 28m): one row the app can't read fails the page; the screen says "Something went wrong", not
+    /// "Check your connection". (Keeping the readable rows waits for Q11.)
+    @Test(arguments: [RepositoryError.decoding, .api(.internal, message: "HTTP 500")])
+    func aServerFailureShowsTheGeneralSentence(_ error: RepositoryError) async {
+        let model = ActivityModel(repository: FailingRepository(error: error), owner: .family)
+        await model.load()
+        #expect(model.state == .failed)
+        #expect(L10n.string(model.loadFailure.message(connection: "Check your connection and try again."), language: .english)
+            == "Something went wrong. Try again.")
+    }
+
     @Test func staleResponseFromThePreviousFilterIsIgnored() async {
         // The "All" request answers after the "Blocked" one.
         let repository = DelayedScansRepository(
@@ -124,6 +135,80 @@ struct ActivityModelTests {
         #expect(!model.isLoadingMore)
     }
 
+    /// F-A5 (repro `loadingMoreSpinnerClearsAfterAFailedRefresh`, timing replaced by a gate): a next page
+    /// still on its way when a refresh lands, failed or not, must not leave the spinner row for good.
+    @Test(arguments: [false, true])
+    func loadingMoreSpinnerClearsAfterARefresh(refreshFails: Bool) async {
+        let repository = GatedScansRepository(base: MockRepository(mode: .guardian, latency: .zero, pageSize: 2))
+        let model = ActivityModel(repository: repository, owner: .family)
+        await model.load()
+        #expect(model.hasMore)
+
+        await repository.hold(.next)
+        async let more: Void = model.loadMore()
+        await repository.waitUntilHeld()
+        #expect(model.isLoadingMore)
+        if refreshFails { await repository.setFailure(RepositoryError.network) }
+        await model.refresh()
+        await repository.release()
+        await more
+
+        #expect(model.refreshFailed == refreshFails)
+        #expect(!model.isLoadingMore, "spinner row stuck; loadMore is blocked by its own guard")
+        // The dropped page was for the list before the refresh: not a "couldn't load more".
+        #expect(!model.loadMoreFailed)
+        await repository.setFailure(nil)
+        await model.loadMore()
+        #expect(model.items.count == 3)
+    }
+
+    /// K8 (F-A15): a verdict saved elsewhere (Detail, Home) reloads the list once when it shows again.
+    @Test func reloadsOnlyAfterAVerdictWasSaved() async throws {
+        let repository = GatedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let env = AppEnvironment(
+            repository: repository,
+            settings: AppSettings(defaults: try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))),
+            notifications: FakeNotificationPermission()
+        )
+        let model = ActivityModel(repository: repository, owner: .family, verdictSaves: { env.verdictSaves })
+        await model.load()
+        let loaded = await repository.scanCalls
+
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == loaded, "nothing changed: no request")
+
+        env.verdictSaves += 1
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == loaded + 1)
+
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == loaded + 1, "already reloaded for that verdict")
+    }
+
+    /// A reload for a verdict that was cancelled (the user left the tab) or failed is tried again on the next
+    /// appearance: only a list that arrived counts as seen.
+    @Test(arguments: [URLError(.cancelled) as any Error, RepositoryError.network])
+    func reloadForAVerdictIsRetriedUntilAListArrives(error: any Error) async throws {
+        let repository = GatedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let env = AppEnvironment(
+            repository: repository,
+            settings: AppSettings(defaults: try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))),
+            notifications: FakeNotificationPermission()
+        )
+        let model = ActivityModel(repository: repository, owner: .family, verdictSaves: { env.verdictSaves })
+        await model.load()
+        env.verdictSaves += 1
+
+        await repository.setFailure(error)
+        await model.refreshIfVerdictsChanged()
+        let afterMiss = await repository.scanCalls
+        await repository.setFailure(nil)
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == afterMiss + 1, "the missed reload must run again")
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == afterMiss + 1)
+    }
+
     @Test func failedNextPageCanBeRetried() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero, pageSize: 2))
         let model = ActivityModel(repository: repository, owner: .family)
@@ -153,16 +238,6 @@ struct ActivityModelTests {
         await model.select(.all)
         #expect(model.items == shown)
         #expect(model.state == .loaded)
-    }
-
-    @Test(arguments: [("avatar_01", 0), ("avatar_02", 1), ("avatar_03", 2), ("avatar_04", 0), ("", 0), ("x", 0)])
-    func memberAvatarUsesAFigmaGradientPerAvatarId(avatarId: String, index: Int) {
-        #expect(ActivityAvatar.gradient(avatarId: avatarId) == ActivityAvatar.gradients[index])
-    }
-
-    @Test(arguments: [("Syahnaz", "S"), (" bayu", "B"), ("", "")])
-    func memberAvatarShowsTheFirstLetter(name: String, initial: String) {
-        #expect(ActivityAvatar.initial(of: name) == initial)
     }
 
     @Test func rowLinkHidesQueryAndFragment() throws {
@@ -219,31 +294,88 @@ struct ActivityModelTests {
         #expect(model.hasMore)
     }
 
-    @Test func aSiteShowsOnceAsItsNewestScanAcrossPages() async throws {
+    @Test func aLinkShowsOnceAsItsNewestScanAcrossPages() async throws {
         let base = MockRepository(mode: .protected, latency: .zero)
         let newest = try #require(try await base.scans(owner: .me, status: nil, cursor: nil).items.first)
-        func scan(_ id: String, _ domain: String, owner: String = newest.ownerDeviceId) -> ScanResult {
+        func scan(_ id: String, _ link: String, owner: String = newest.ownerDeviceId) throws -> ScanResult {
             var scan = newest
             scan.id = id
-            scan.domain = domain
+            scan.url = try #require(URL(string: link))
+            scan.domain = try #require(scan.url.host())
             scan.ownerDeviceId = owner
             return scan
         }
-        // Rows from before the backend kept one row per site: a.example three times for one owner.
+        // Duplicate rows of one link (older rows from before one row per link): a.example/x three times.
         let repository = CountingScansRepository(base: base)
         repository.pages = [
-            "": ScanPage(items: [scan("1", "a.example"), scan("2", "a.example"), scan("3", "b.example")], nextCursor: "p2"),
-            "p2": ScanPage(items: [scan("4", "a.example")], nextCursor: "p3"),
-            "p3": ScanPage(items: [scan("5", "a.example", owner: "dev_dad")], nextCursor: nil),
+            "": ScanPage(items: [try scan("1", "https://a.example/x"), try scan("2", "https://a.example/x?ref=wa"),
+                                try scan("3", "https://b.example/")], nextCursor: "p2"),
+            "p2": ScanPage(items: [try scan("4", "https://a.example/x")], nextCursor: "p3"),
+            "p3": ScanPage(items: [try scan("5", "https://a.example/x", owner: "dev_dad")], nextCursor: nil),
         ]
         let model = ActivityModel(repository: repository, owner: .me)
         await model.load()
         #expect(model.items.map(\.id) == ["1", "3"])
         await model.loadMore()
-        // The page with only a.example again is skipped; another owner's visit of it still shows.
+        // The page with only a.example/x again is skipped; another owner's visit of it still shows.
         #expect(model.items.map(\.id) == ["1", "3", "5"])
         #expect(repository.scanCalls == 3)
         #expect(!model.hasMore)
+    }
+
+    /// BH-25 (#241): the backend keeps one row per owner + link, so two pages of one site are two rows.
+    @Test func twoPagesOfOneSiteAreTwoRows() async throws {
+        let base = MockRepository(mode: .protected, latency: .zero)
+        let newest = try #require(try await base.scans(owner: .me, status: nil, cursor: nil).items.first)
+        func scan(_ id: String, _ link: String) throws -> ScanResult {
+            var scan = newest
+            scan.id = id
+            scan.url = try #require(URL(string: link))
+            scan.domain = "bca-verifikasi.site"
+            return scan
+        }
+        let repository = CountingScansRepository(base: base)
+        repository.pages = [
+            "": ScanPage(items: [try scan("a", "https://bca-verifikasi.site/a"), try scan("b", "https://bca-verifikasi.site/b"),
+                                try scan("login", "https://login.bca-verifikasi.site/a")], nextCursor: nil),
+        ]
+        let model = ActivityModel(repository: repository, owner: .me)
+        await model.load()
+        #expect(model.items.map(\.id) == ["a", "b", "login"])
+    }
+
+    /// BH-25: each row tells which page it is: the registrable domain first (always readable), then the
+    /// path, percent-encoded so bidi or invisible characters cannot reorder it (as `displayLink`).
+    @Test func rowTitleIsTheDomainThenThePath() throws {
+        func title(_ link: String, _ domain: String) throws -> String {
+            ActivityRow.pageTitle(url: try #require(URL(string: link)), domain: domain)
+        }
+        #expect(try title("https://bca-verifikasi.site/", "bca-verifikasi.site") == "bca-verifikasi.site")
+        #expect(try title("https://bca-verifikasi.site/login?otp=1#x", "bca-verifikasi.site") == "bca-verifikasi.site/login")
+        #expect(try title("https://login.bca-verifikasi.site/b", "bca-verifikasi.site") == "bca-verifikasi.site/b")
+        #expect(try title("https://x.site/%E2%80%AEdi.oc", "x.site") == "x.site/%E2%80%AEdi.oc")
+    }
+
+    /// U-05: the row keeps the whole registrable domain apart from the path, so a long domain is never cut at
+    /// its tail (the end is the part a scammer cannot choose); only the path runs out.
+    @Test func rowTitleKeepsTheWholeDomainApartFromThePath() throws {
+        let domain = "verifikasi-akun-nasabah-prioritas-bca-mobile-banking-resmi.site"
+        #expect(domain.count == 63)
+        let url = try #require(URL(string: "https://login.\(domain)/login/verifikasi/pin?ref=wa#x"))
+        let parts = ActivityRow.titleParts(url: url, domain: domain)
+        #expect(parts.domain == domain)
+        #expect(parts.path == "/login/verifikasi/pin")
+        #expect(parts.domain + parts.path == ActivityRow.pageTitle(url: url, domain: domain))
+        let root = ActivityRow.titleParts(url: try #require(URL(string: "https://\(domain)/")), domain: domain)
+        #expect(root.domain == domain)
+        #expect(root.path.isEmpty)
+        let bare = ActivityRow.titleParts(url: try #require(URL(string: "https://\(domain)")), domain: domain)
+        #expect(bare.domain == domain)
+        #expect(bare.path.isEmpty)
+        // The path stays percent-encoded (BH-36), apart from the domain.
+        let encoded = ActivityRow.titleParts(url: try #require(URL(string: "https://x.site/%E2%80%AEdi.oc")), domain: "x.site")
+        #expect(encoded.domain == "x.site")
+        #expect(encoded.path == "/%E2%80%AEdi.oc")
     }
 
     @Test func ownListKeepsTheGuardiansRows() async {
@@ -306,5 +438,21 @@ struct ActivityModelTests {
         #expect(model.person == .everyone)
         #expect(model.state == .loaded)
         #expect(!model.items.contains { $0.ownerDeviceId == "dev_dad" })
+    }
+
+    /// A-12: a push while Activity is open reloads it once, so the list matches the banner.
+    /// The same counter value again (a view redrawn) does not reload a second time.
+    @Test(arguments: [(UserMode.protected, ScanOwnerFilter.me), (.guardian, .family)])
+    func pushWhileOpenReloadsOnce(mode: UserMode, owner: ScanOwnerFilter) async {
+        let env = tabsEnvironment(mode: mode)
+        let repository = CountingScansRepository(base: MockRepository(mode: mode, latency: .zero))
+        let model = ActivityModel(repository: repository, owner: owner)
+        await model.load()
+        let oneLoad = repository.scanCalls
+        env.pushArrivedWhileOpen()
+        await model.pushesWhileOpenChanged(to: env.pushesWhileOpen)
+        #expect(repository.scanCalls == 2 * oneLoad)
+        await model.pushesWhileOpenChanged(to: env.pushesWhileOpen)
+        #expect(repository.scanCalls == 2 * oneLoad)
     }
 }

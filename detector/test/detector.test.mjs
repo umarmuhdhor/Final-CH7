@@ -88,7 +88,7 @@ test("a normal international domain does not crash or trigger", async () => {
 test("fixture domains from contracts/fixtures", async () => {
     const a = await scan("https://bca-verifikasi.site/login?ref=wa");
     assert.deepEqual(ids(a), ["brand_plus_keyword", "cheap_tld"]);
-    assert.equal(score(a), 29);
+    assert.equal(score(a), 30); // #381: brand + bait word on a cheap TLD reaches the first warning
 
     const b = await scan("https://promo-undian-shopee.click/hadiah");
     assert.deepEqual(ids(b), ["brand_plus_keyword", "cheap_tld"]);
@@ -126,9 +126,9 @@ test("brand in a subdomain of an unrelated domain", async () => {
     assert.ok(ids(await scan("https://bca-login.evil-hosting.com/")).includes("brand_plus_keyword"));
 });
 
-test("cheap TLD with a brand scores 15, alone only 5", async () => {
+test("cheap TLD with a brand scores 16, alone only 5", async () => {
     assert.equal(find(await scan("https://random-shop.xyz/"), "cheap_tld").weight, 5);
-    assert.equal(find(await scan("https://bca-verifikasi.xyz/"), "cheap_tld").weight, 15);
+    assert.equal(find(await scan("https://bca-verifikasi.xyz/"), "cheap_tld").weight, 16);
 });
 
 test("two-part suffixes (.co.id) are never treated as a cheap TLD", async () => {
@@ -470,7 +470,7 @@ test("link: legit international domain and plain sites stay silent", async () =>
 test("link: cheap TLD from brands.json is counted once (cheap_tld signal), not again by the dissector", async () => {
     const s = await scan("https://bca-verifikasi.xyz/");
     assert.deepEqual(ids(s), ["brand_plus_keyword", "cheap_tld"]);
-    assert.equal(score(s), 29);
+    assert.equal(score(s), 30);
 });
 
 test("link: official domains still return nothing, whatever the path", async () => {
@@ -511,4 +511,165 @@ test("ag0da.com, dh1.com, dhl-express.xyz -> lookalike_domain", async () => {
 
 test("words that merely contain dhl are not the DHL brand (adhlete.com, studhall.com)", async () => {
     for (const host of ["adhlete.com", "studhall.com"]) assert.deepEqual(await scan(`https://${host}/`), [], host);
+});
+
+// ---------- #381: domain-only look-alikes reach the first warning (30) ----------
+test("#381: a homoglyph look-alike alone reaches 30; leet and typo stay at 25", async () => {
+    const cyr = await scan("https://bcа.co.id/"); // Cyrillic а
+    assert.ok(new URL("https://bcа.co.id/").hostname.startsWith("xn--"));
+    assert.equal(find(cyr, "lookalike_domain").weight, 30);
+    assert.ok(score(cyr) >= 30);
+    assert.equal(find(await scan("https://gооgle.com/"), "lookalike_domain").weight, 30);
+    assert.equal(find(await scan("https://p0stindonesia.com/"), "lookalike_domain").weight, 25);
+});
+
+test("#381: brand in a subdomain + bait word on a cheap TLD reaches 30 (was 29)", async () => {
+    const s = await scan("https://login.klikbca.com.verifikasi-akun.xyz/");
+    assert.ok(ids(s).includes("brand_plus_keyword") && ids(s).includes("cheap_tld"), ids(s).join(","));
+    assert.ok(score(s) >= 30, String(score(s)));
+});
+
+// ---------- #379: credential form on a suspicious name (layer 2C) ----------
+const withForm = (url, fields) =>
+    run({ url, domain: new URL(url).hostname.replace(/^www\./, ""), forms: [{ action: null, fields: fields.map((f) => ({ type: "text", name: null, id: null, label: null, placeholder: null, autocomplete: null, ...f })) }] });
+
+test("#379: PIN / OTP / KTP fields on a brand look-alike count on the phone (layer 2)", async () => {
+    const s = await withForm("https://bca-verifikasi.site/login", [{ name: "nik", label: "NIK KTP" }, { name: "pin", type: "password", label: "PIN" }, { name: "otp", label: "Kode OTP" }]);
+    for (const id of ["asks_ktp", "asks_pin", "asks_otp"]) {
+        assert.equal(find(s, id)?.layer, 2, id);
+    }
+    assert.equal(find(s, "asks_pin").evidence, "pin");
+    assert.ok(score(s) >= 50, String(score(s)));
+});
+
+test("#379: the same form on a clean or official name says nothing (layer 3 judges it online)", async () => {
+    const fields = [{ name: "pin", type: "password" }, { name: "otp" }, { name: "cardnumber" }];
+    assert.deepEqual(await withForm("https://toko-maju.co.id/checkout", fields), []);
+    assert.deepEqual(await withForm("https://www.klikbca.com/login", fields), []);
+});
+
+test("#379: postal 'PIN code' and a CVV next to the card number don't add extra signals", async () => {
+    const zip = await withForm("https://bca-verifikasi.site/alamat", [{ name: "pincode", label: "PIN code (postal)" }]);
+    assert.ok(!ids(zip).includes("asks_pin"), ids(zip).join(","));
+    const card = await withForm("https://bca-verifikasi.site/bayar", [{ name: "cardnumber" }, { name: "cvv" }]);
+    assert.ok(ids(card).includes("asks_card") && !ids(card).includes("asks_cvv"), ids(card).join(","));
+});
+
+test("#379: a weak hint alone (cheap TLD, 10-point link) doesn't open the form check", async () => {
+    const fields = [{ name: "nik" }, { name: "otp" }, { name: "cardnumber" }];
+    assert.deepEqual(ids(await withForm("https://random-shop.xyz/checkout", fields)), ["cheap_tld"]);
+});
+
+// ---------- #497: host.marks / host.official on address signals (DT-04 address card) ----------
+const ADDRESS_IDS = ["lookalike_domain", "brand_plus_keyword", "cheap_tld", "suspicious_link"];
+const at = (url, domain) => run({ url, domain });
+const hostIn = async (url, id, domain = new URL(url).hostname.replace(/^www\./, "")) => find(await at(url, domain), id)?.host;
+
+test("#497: brand + bait word marks both parts and names the real domain; cheap TLD marks the ending", async () => {
+    const s = await scan("https://bca-verifikasi.site/login?ref=wa");
+    assert.deepEqual(find(s, "brand_plus_keyword").host, { marks: ["bca", "verifikasi"], official: "bca.co.id" });
+    assert.deepEqual(find(s, "cheap_tld").host, { marks: [".site"] });
+    assert.deepEqual(await hostIn("https://promo-undian-shopee.click/hadiah", "brand_plus_keyword"), { marks: ["promo", "shopee"], official: "shopee.co.id" });
+    assert.deepEqual(await hostIn("https://random-shop.xyz/", "cheap_tld"), { marks: [".xyz"] });
+});
+
+test("#497: a look-alike marks the word as written (leet, typo) and names the real domain", async () => {
+    assert.deepEqual(await hostIn("https://p0stindonesia.com/", "lookalike_domain"), { marks: ["p0stindonesia"], official: "posindonesia.co.id" });
+    assert.deepEqual(await hostIn("https://tokopedla.com/", "lookalike_domain"), { marks: ["tokopedla"], official: "tokopedia.com" });
+    assert.deepEqual(await hostIn("https://lphone-login.com/", "lookalike_domain"), { marks: ["lphone"], official: "apple.com" });
+    assert.deepEqual(await hostIn("https://lphone-login.com/", "brand_plus_keyword"), { marks: ["lphone", "login"], official: "apple.com" });
+    // level 1 (official name on an unlisted domain) is a lookalike_domain too
+    assert.deepEqual(await hostIn("https://bri.com/", "lookalike_domain"), { marks: ["bri"], official: "bri.co.id" });
+});
+
+test("#497: glued and connector names mark the brand and the word separately", async () => {
+    assert.deepEqual(await hostIn("https://bcalogin.com/", "brand_plus_keyword"), { marks: ["bca", "login"], official: "bca.co.id" });
+    assert.deepEqual(await hostIn("https://loginbca.com/", "brand_plus_keyword"), { marks: ["login", "bca"], official: "bca.co.id" });
+    assert.deepEqual(await hostIn("https://qlolla-bybri.com/", "brand_plus_keyword"), { marks: ["by", "bri"], official: "bri.co.id" });
+    assert.deepEqual(await hostIn("https://kodepembatalanbybni.pages.dev/", "brand_plus_keyword"), { marks: ["by", "bni"], official: "bni.co.id" });
+});
+
+test("#497: a punycode label is marked whole, as written in the domain (xn--)", async () => {
+    const url = "https://bcа.co.id/"; // Cyrillic а
+    const domain = new URL(url).hostname;
+    assert.ok(domain.startsWith("xn--"));
+    assert.deepEqual(await hostIn(url, "lookalike_domain", domain), { marks: [domain.split(".")[0]], official: "bca.co.id" });
+});
+
+test("#497: hyphen pieces joined into a brand mark the whole label (toko-pedia)", async () => {
+    assert.deepEqual(await hostIn("https://toko-pedia.com/", "lookalike_domain"), { marks: ["toko-pedia"], official: "tokopedia.com" });
+});
+
+test("#497: a brand in a subdomain is not marked in the registrable domain; official stays", async () => {
+    const s = await at("https://bca-login.evil-hosting.xyz/", "evil-hosting.xyz");
+    assert.deepEqual(find(s, "brand_plus_keyword").host, { official: "bca.co.id" });
+    assert.deepEqual(find(s, "cheap_tld").host, { marks: [".xyz"] });
+    // "bca" also appears in the domain, but not where the detector found it: still not marked
+    assert.deepEqual(await hostIn("https://bca-login.bcafans.xyz/", "brand_plus_keyword", "bcafans.xyz"), { official: "bca.co.id" });
+});
+
+test("#497: official is always the first domain of the brand in brands.json", async () => {
+    for (const brand of brands.brands) {
+        const name = brand.names[0];
+        const h = await hostIn(`https://${name}-verifikasi.com/`, "brand_plus_keyword");
+        assert.deepEqual(h, { marks: [name, "verifikasi"], official: brand.domains[0] }, name);
+    }
+});
+
+test("#497: suspicious_link marks only parts of the domain behind its reasons", async () => {
+    assert.deepEqual(await hostIn("https://bantuannbansos2026.blogspot.com/", "suspicious_link"), { marks: ["bantuan", "bansos", "2026"] });
+    assert.deepEqual(await hostIn("https://helpnets.info/0442827f6o7cfb43933ba59e2881cc906b7c.html/", "suspicious_link"), { marks: [".info"] });
+    assert.deepEqual(await hostIn("https://storee-dp9hsk1cxr2y.com/a.html/", "suspicious_link"), { marks: ["dp9hsk1cxr2y"] });
+    // the word-digit subdomain is not in the registrable domain, and the hyphen in the name has no precise part: no host
+    assert.equal(await hostIn("https://regs-apps14.regnows-dfg.com/", "suspicious_link", "regnows-dfg.com"), undefined);
+    // path, query and fragment reasons never give a mark
+    const path = find(await scan("https://example.com/x/0442827f6o7cfb43933ba59e2881cc906b7c.html/?redirect=https://a.b#https://c"), "suspicious_link");
+    assert.ok(path);
+    assert.equal(path.host, undefined);
+});
+
+test("#497: db_match and asks_* carry no host", async () => {
+    const db = await withLists(hit("shoo"), () => scan("https://bca-verifikasi.site/"));
+    assert.equal(db[0].host, undefined);
+    const form = await withForm("https://bca-verifikasi.site/bayar", [{ name: "pin" }]);
+    assert.ok(ids(form).includes("asks_pin"));
+    for (const s of form) if (s.id.startsWith("asks_")) assert.equal(s.host, undefined, s.id);
+});
+
+test("#497: without snapshot.domain nothing is marked (marks must be in the scan's domain)", async () => {
+    const s = await run({ url: "https://bca-verifikasi.site/" });
+    assert.deepEqual(find(s, "brand_plus_keyword").host, { official: "bca.co.id" });
+    assert.equal(find(s, "cheap_tld").host, undefined);
+});
+
+test("#497: host follows the contract on every sample (marks in the domain, max 4, no overlap, official on brand ids only)", async () => {
+    const urls = [
+        "https://bca-verifikasi.site/", "https://promo-undian-shopee.click/hadiah", "https://p0stindonesia.com/", "https://g00gle.com/",
+        "https://lphone-login.com/", "https://bcalogin.com/", "https://kodeviabni.com/", "https://cashfrombsi.com/", "https://bri.com/",
+        "https://gооgle.com/", "https://klikbcа-login.com/", "https://bantuannbansos2026.blogspot.com/", "https://gratiskuota60gb.blogspot.com/",
+        "https://a-b-c-d-e.verify-bca-login-cek.xyz/", "https://login-bca-promo-hadiah-cek-undian.top/", "https://xn--80ak6aa92e.com/",
+    ];
+    for (const url of urls) {
+        const domain = new URL(url).hostname.replace(/^www\./, "");
+        for (const s of await at(url, domain)) {
+            if (!s.host) continue;
+            assert.ok(ADDRESS_IDS.includes(s.id), `${url} ${s.id}`);
+            assert.deepEqual(Object.keys(s.host).filter((k) => k !== "marks" && k !== "official"), [], url);
+            if ("official" in s.host) {
+                assert.ok(s.id === "lookalike_domain" || s.id === "brand_plus_keyword", `${url} ${s.id}`);
+                assert.ok(brands.brands.some((b) => b.domains[0] === s.host.official), s.host.official);
+            }
+            if ("marks" in s.host) {
+                const marks = s.host.marks;
+                assert.ok(marks.length >= 1 && marks.length <= 4, `${url} ${marks}`);
+                let end = 0;
+                for (const m of marks) {
+                    assert.match(m, /^[a-z0-9.-]+$/, `${url} ${m}`);
+                    const i = domain.indexOf(m, end);
+                    assert.ok(i >= 0, `${url}: "${m}" in order, not overlapping, inside ${domain}`);
+                    end = i + m.length;
+                }
+            }
+        }
+    }
 });

@@ -45,6 +45,21 @@ test("memoryKey: one scam on a shared platform never stands for the whole platfo
     assert.equal(memoryKey("https://bucket.s3.amazonaws.com/a.html", domainOf), "bucket.s3.amazonaws.com");
 });
 
+test("#495: every host_path platform (domain.js) is keyed by host + path, never its registrable domain", () => {
+    // under a host_path apex (cloud.microsoft): one Sway never blocks outlook.cloud.microsoft
+    assert.equal(memoryKey("https://sway.cloud.microsoft/AbCdEf123", domainOf), "sway.cloud.microsoft/AbCdEf123");
+    assert.equal(memoryKey("https://1drv.ms/f/s!scam", domainOf), "1drv.ms/f/s!scam");
+    assert.equal(memoryKey("https://firebasestorage.googleapis.com/v0/b/x/o/a.html", domainOf), "firebasestorage.googleapis.com/v0/b/x/o/a.html");
+    assert.equal(memoryKey("https://Docs.Google.com./forms/d/x", domainOf), "docs.google.com/forms/d/x");
+});
+
+test("#487: a host with no registrable domain is keyed by the same full host `domain` carries", () => {
+    assert.equal(memoryKey("http://www.co.id/x", domainOf), "www.co.id");
+    assert.equal(memoryKey("http://www.com/x", domainOf), "www.com");
+    assert.equal(memoryKey("http://router./login", domainOf), "router");
+    assert.equal(memoryKey("http://[2001:db8::1]/login", domainOf), "[2001:db8::1]");
+});
+
 test("memoryKey: no key for non-web pages or junk", () => {
     for (const url of ["about:blank", "safari-web-extension://x/blocked.html", "not a url", ""]) assert.equal(memoryKey(url, domainOf), null, url);
 });

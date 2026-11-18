@@ -6,6 +6,7 @@
 	<string>development</string>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
+		<string>applinks:join.shoo.ai.id</string>
 		<string>applinks:shoo-api.afindo-mi01.workers.dev</string>
 	</array>
 	<key>com.apple.security.application-groups</key>

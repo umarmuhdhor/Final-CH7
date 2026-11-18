@@ -14,11 +14,14 @@ struct GuardianShieldView: View {
                 repository: env.repository,
                 settings: env.settings,
                 scope: env.settings.familyModeOn ? .family : .personal,
-                extensionStatus: env.extensionStatus
+                extensionStatus: env.extensionStatus,
+                // One `GET /devices/me` per foreground, shared with `sceneBecameActive` (OPT-06).
+                profile: { [env] in try await env.foregroundProfile() },
+                onVerdictSaved: { [env] in env.verdictSaves += 1 }
             )
         }
-        .task(id: scenePhase) {
-            guard scenePhase == .active else { return }
+        .task(id: canRemind) {
+            guard canRemind else { return }
             notificationStatus = await env.notifications.status()
             isReminderPresented = NotificationReminder.isShown(status: notificationStatus, mode: env.settings.mode)
                 && !env.router.notificationReminderShown
@@ -31,11 +34,24 @@ struct GuardianShieldView: View {
             Button("Not now", role: .cancel) {}
                 .accessibilityIdentifier("reminder.notNow")
         } message: {
-            Text("You won't hear when your family is at risk.")
+            // Pribadi (Family mode off) protects nobody: its pushes are about its own blocked sites.
+            if env.settings.familyModeOn {
+                Text("You won't hear when your family is at risk.")
+            } else {
+                Text("You won't hear when Shoo blocks a dangerous site.")
+            }
         }
         .onChange(of: isReminderPresented) { _, isPresented in
             if isPresented { env.router.notificationReminderShown = true }
         }
+    }
+
+    /// In use, and the launch splash (ON-01) is gone: the popup never covers the brand.
+    /// PR-03: not over the join sheet an invite link opens after onboarding. SwiftUI shows one presentation at a
+    /// time, so an alert at the same moment drops the sheet; the reminder comes once the sheet is closed.
+    private var canRemind: Bool {
+        scenePhase == .active && env.launchSplash == .done
+            && !env.router.isJoinFamilyPresented && !env.router.isConnectPresented
     }
 
     /// Never asked yet: the system prompt. Denied: only Settings can change it.

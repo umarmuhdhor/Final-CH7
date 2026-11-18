@@ -1,0 +1,125 @@
+import { env } from "cloudflare:workers";
+import { beforeEach, describe, expect, it } from "vitest";
+import warning41 from "../../../contracts/fixtures/warning-41.json";
+import { joinFamily } from "../src/services/family";
+import { deleteDevice, insertProtectedCopy } from "../src/db/repo/devices";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+import { sha256 } from "../src/http/crypto";
+import { adminSql, resetDb, testSql } from "./helpers/resetDb";
+import { call, createDevice, type Created } from "./helpers/seed";
+
+// Fase 27 (state-machine audit) reproductions. Each test asserts the CORRECT behaviour,
+// so on unfixed code it fails: that failure is the evidence for the finding.
+
+useRateKeySecret(env.RATE_KEY_SECRET);
+const sql = testSql();
+const admin = adminSql();
+beforeEach(() => resetDb(sql));
+
+const newCode = async (g: Created) =>
+  ((await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string }).code;
+const join = (p: Created, code: string) => call("/family/join", { method: "POST", token: p.token, json: { code } });
+const becomeProtected = (g: Created, code: string) =>
+  call("/devices/me/protected", { method: "POST", token: g.token, json: { code } });
+const guardianOf = async (id: string) =>
+  (await sql<{ g: string }[]>`select guardian_id as g from family_links where protected_id = ${id}`)[0]?.g ?? null;
+const scanBody = (url: string, score: number, status: "warning" | "blocked") => ({
+  url, domain: new URL(url).hostname, pageTitle: "t", faviconUrl: null, score, status,
+  signals: warning41.signals, detectedAt: new Date().toISOString(),
+});
+const postScan = async (d: Created, url: string, score: number, status: "warning" | "blocked") => {
+  const res = await call("/scans", { method: "POST", token: d.token, json: scanBody(url, score, status) });
+  expect(res.status, await res.clone().text()).toBe(201);
+  return ((await res.json()) as { id: string }).id;
+};
+
+describe("F-B1 become-protected with your own code", () => {
+  it("never leaves a protected device without a guardian", async () => {
+    const g = await createDevice("Solo", "guardian");
+    const res = await becomeProtected(g, await newCode(g));
+    if (res.status === 200) {
+      const body = (await res.json()) as { deviceId: string };
+      expect(await guardianOf(body.deviceId), "200 but the new protected device has no guardian").not.toBeNull();
+    } else {
+      expect((await call("/devices/me", { token: g.token })).status).toBe(200);
+    }
+  });
+});
+
+describe("F-B2 become-protected races a member joining the old guardian", () => {
+  it("replay: count → Mom joins G → copy joins Budi → delete old G; Mom keeps a guardian", async () => {
+    // Same calls, same order as routes/devices.ts:177-190, with Mom's join landing after the count.
+    const g = await createDevice("G", "guardian");
+    const other = await createDevice("Budi", "guardian");
+    const p = await createDevice("Mom");
+    const gCode = await newCode(g);
+    const [{ n }] = await sql<{ n: number }[]>`select count(*)::int as n from family_links where guardian_id = ${g.deviceId}`;
+    expect(n).toBe(0); // has_members check passes
+    expect((await join(p, gCode)).status, "Mom joins G between the count and the delete").toBe(200);
+    const copy = await insertProtectedCopy(sql, g.deviceId, await sha256("t".repeat(40)));
+    await joinFamily(sql, copy!.id, await keyHash("join:198.51.100.7"), await newCode(other));
+    await deleteDevice(sql, g.deviceId);
+    expect(await guardianOf(p.deviceId), "Mom silently lost her guardian").not.toBeNull();
+  });
+});
+
+describe("F-B3 become-protected: join commits, then the old-device delete fails", () => {
+  it("(state-only variant, no timing) the ghost copy from a committed join holds a slot", async () => {
+    const g = await createDevice("G", "guardian");
+    const other = await createDevice("Budi", "guardian");
+    const copy = await insertProtectedCopy(sql, g.deviceId, await sha256("t".repeat(40)));
+    await joinFamily(sql, copy!.id, await keyHash("join:198.51.100.9"), await newCode(other));
+    const retry = await becomeProtected(g, await newCode(other));
+    expect(retry.status).toBe(200);
+    const [{ n }] = await sql<{ n: number }[]>`select count(*)::int as n from family_links where guardian_id = ${other.deviceId}`;
+    expect(n, "copies of G linked to Budi").toBe(1);
+  });
+});
+
+describe("F-B4 a safe verdict and a later higher-score visit on another path", () => {
+  it("Activity still shows the guardian's decision for the row it was made on", async () => {
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Mom");
+    expect((await join(p, await newCode(g))).status).toBe(200);
+    const id = await postScan(p, "https://x-site.example/a", 63, "warning");
+    expect((await call("/verdicts", { method: "POST", token: g.token, json: { scanId: id, value: "safe" } })).status).toBe(200);
+    const again = await postScan(p, "https://x-site.example/login", 90, "blocked");
+    expect(again).toBe(id); // same row kept, url rewritten
+
+    const list = (await (await call("/scans?owner=family", { token: g.token })).json()) as {
+      items: { id: string; url: string; verdict: { value: string } | null }[];
+    };
+    const row = list.items.find((i) => i.id === id)!;
+    const verdicts = await sql<{ url: string; value: string }[]>`select url, value from verdicts where owner_id = ${p.deviceId}`;
+    // Either the row keeps showing the decision, or no orphan safe verdict is left behind.
+    const orphan = verdicts.filter((v) => v.value === "safe" && !row.url.startsWith(v.url));
+    expect({ rowVerdict: row.verdict?.value ?? null, orphanSafe: orphan.length }).not.toEqual({ rowVerdict: null, orphanSafe: 1 });
+  });
+});
+
+describe("F-B7 a rejected blocklist entry", () => {
+  it("does not return to the review queue after not_safe → safe → not_safe by its only supporter", async () => {
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Mom");
+    expect((await join(p, await newCode(g))).status).toBe(200);
+    const id = await postScan(p, "https://rejected-shop.example/pay", 95, "blocked");
+    const v = (value: string) => call("/verdicts", { method: "POST", token: g.token, json: { scanId: id, value } });
+    expect((await v("not_safe")).status).toBe(200);
+    await admin`update blocklist_entries set rejected_at = now(), rejected_by = 'test' where domain = 'rejected-shop.example'`;
+    expect((await v("safe")).status).toBe(200);
+    expect((await v("not_safe")).status).toBe(200);
+    const [row] = await admin<{ rejected_at: Date | null }[]>`select rejected_at from blocklist_entries where domain = 'rejected-shop.example'`;
+    expect(row === undefined || row.rejected_at !== null, "rejected domain is back in the queue").toBe(true);
+  });
+});
+
+describe("F-B5 pre-link history", () => {
+  it("(probe) a guardian sees a member's scans from before they were linked", async () => {
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Mom");
+    await postScan(p, "https://before-link.example/x", 95, "blocked");
+    expect((await join(p, await newCode(g))).status).toBe(200);
+    const list = (await (await call("/scans?owner=family", { token: g.token })).json()) as { items: { url: string }[] };
+    expect(list.items.map((i) => i.url)).not.toContain("https://before-link.example/x");
+  });
+});

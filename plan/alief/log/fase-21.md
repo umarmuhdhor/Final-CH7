@@ -68,16 +68,95 @@ Verifikasi 1–2 file fase (`wrangler dev --test-scheduled` + curl lokal) belum 
 - Alasan: rekomendasi file fase; satu query; logika ambang dites.
 - Catatan untuk koordinator: entri ini dipindah ke `log/DECISIONS.md` di PR plan (#207) supaya PR fase tidak bentrok di file yang sama.
 
+## 21b — skrip + workflow (`feat/B9-ops-watch`, dari `origin/main` 7dc0caa)
+
+- **Status:** [r] PR (lihat PROGRESS), reviewer @umarmuhdhor. Urutan dibalik atas instruksi Alief 9 Nov 2026: kode + workflow dulu, lalu satu issue ke Umar (K7) yang berisi PR + setup environment `ops`. Workflow tidak jalan sebelum `vars.OPS_WATCH_ENABLED == 'true'`.
+- **Model:** Claude Opus 5.5, 9 Nov 2026.
+
+### Checklist langkah
+
+- [x] 1. Merah: `backend/ci/ops-watch.test.mjs` (`node:test`, `fetch`/`gh`/`sleep` palsu) → `ERR_MODULE_NOT_FOUND`.
+- [x] 2. Hijau: `backend/ci/ops-watch.mjs` (Node 24, tanpa dependency). `--quick`: `/healthz` 3× jeda 20 s → `healthz_down`; `/ops/status` Bearer → `failing[]` diteruskan (bentuk ketat), non-200/3xx/tanpa token → `ops_status_unreachable`, 429 → `ops_status_limited` (warn, catatan handoff 21a). `--daily`: + `/healthz/db` (`healthz_db_failed`) + GraphQL (`worker_exceeded_cpu`, `worker_errors`, `worker_requests_high`, `r2_class_a_high`, `r2_class_b_high`, `r2_storage_high`, `cf_analytics_unavailable`). R2 per `actionType` saja (tanpa `objectName`). Issue `ops-alert`: buat (assign `aliefauzan`), comment kalau kode berubah, tutup setelah 2 run hijau; `simulate` hanya kode yang dikenal.
+- [x] 3. `node --test 'backend/ci/*.test.mjs'` hijau; `backend/ci/README.md` bagian ops-watch, `backend/README.md` baris runbook kode workflow.
+- [x] 4. `.github/workflows/ops-watch.yml` (jadwal K1, `concurrency: ops-watch`, `timeout-minutes: 5`, `permissions: contents: read, issues: write`, `environment: ops`, skip sampai variable, action di-pin SHA, input lewat `env:`) + langkah `backend/ci tests` di `backend.yml`.
+
+### Deviasi
+
+- `node --test backend/ci/` (Verifikasi fase) di Node 24 menganggap folder sebagai file → dipakai `node --test 'backend/ci/*.test.mjs'` (workflow + README).
+- Kode tambahan di luar K3: `ops_status_limited` (warn, 429) dan `cf_analytics_unavailable`. `ops_status_limited` "buta": run dengan kode ini tidak dihitung hijau dan tetap memegang kode quick lama (review security MEDIUM). `cf_analytics_unavailable` sejak review Umar (PR #340, 9 Nov) jadi `alert` dan mengganti kode daily lama, bukan "buta" lagi.
+- Status issue di marker tersembunyi pada komentar bot (bukan label): hanya penulis `github-actions` dipercaya (repo publik).
+- Langkah `bundle-size.mjs` di `backend.yml` (K7 pertanyaan 4, fase 22 K11) tidak ikut: di luar 21b.
+
+### Review (berurutan)
+
+| Reviewer | Temuan | Tindakan |
+|---|---|---|
+| `ecc:security-reviewer` | HIGH: workflow terjadwal mati sendiri setelah 60 hari repo sepi, tanpa alert. MEDIUM: kode "buta" dihitung hijau; `issue list` memercayai issue berlabel dari siapa saja; `--assignee` gagal = alert hilang; komentar flapping tiap 15 menit. LOW: host `OPS_API_URL` bebas, redirect diikuti, ringkasan blocklist salah saat `/ops/status` mati, concurrency daily, marker bisa diedit pemilik akses write | HIGH diterima (fase 21 "Risiko & rollback": cron Worker tetap menjaga Supabase; dicatat di README). Semua MEDIUM diperbaiki (`BLIND`, `--author app/github-actions` + filter penulis, retry tanpa assignee, jam tenang 60 menit). LOW host (`*.workers.dev` saja), redirect (`manual`), ringkasan (`unknown`) diperbaiki; concurrency + marker write diterima, dicatat di README |
+| @umarmuhdhor (PR #340, 8 Nov 23:42 UTC) | 1. retry tanpa assignee menangkap semua error (`err.message` memuat `--assignee`). 2. lookup issue tidak pernah dicoba ke gh asli. 3. token CF kedaluwarsa mematikan cek harian diam-diam. 4. run daily buta menahan kode daily lama selamanya. 5. kode daily menahan issue ±24 jam. 6. file di luar `backend/`. 7. `environment: ops` = 1 record deployment per run. 8. komentar state ditulis sebelum edit judul | 1: hanya `err.stderr` + pola sempit; sebelum retry, list ulang (create yang timeout tapi jadi tidak dibuka dua kali); fake test melempar error berbentuk execFile. 2: dicek ke gh asli (lihat Verifikasi): perintah lama menemukan issue bot, tetapi `gh issue list --label` lewat search index (bisa tertinggal sesaat setelah create = issue baru tiap 15 menit) → lookup pindah ke REST `/issues?labels=ops-alert&state=open` (bot = `github-actions[bot]`), `issue view` dihapus. 3: `cf_analytics_unavailable` = `alert`; GraphQL transient (0/429/5xx) dicoba 3× jeda 20 s, 401/403 tidak. 4: run daily selalu mengganti set daily; tanpa analytics jadi `cf_analytics_unavailable`; run 429 hanya memegang kode quick lama. 5: run quick bertanya `/healthz/db` lagi kalau `healthz_db_failed` masih di issue; kode analytics (jendela 24 j) tetap menunggu run daily, ditulis di FOOTER + runbook (dispatch `daily` manual). 6: diputuskan lead di PR, tanpa perubahan; berikutnya lewat issue pertanyaan dulu. 7: `environment: { name: ops, deployment: false }` (changelog GitHub Maret 2026; environment tanpa custom protection rule). 8: edit judul dulu baru komentar; run "unchanged" membetulkan judul yang tidak cocok |
+| `code-reviewer` (perbaikan review Umar, 9 Nov) | Tidak ada CRITICAL/HIGH. MEDIUM: 200 + `errors[]` dari GraphQL (timeout/budget Cloudflare) tidak di-retry → alert palsu. LOW: run 429 yang `recheckDb`-nya lolos tidak menulis state (recheck berulang). LOW: run 429 di antara dua run hijau tidak mereset hitungan | MEDIUM diperbaiki (hanya 400/401/403 tidak di-retry, test baru). LOW 1: `recheckDb` tidak jalan saat run buta (test). LOW 2 diterima, FOOTER + README: run 429 tidak dihitung dan tidak mereset |
+| `ecc:typescript-reviewer` | HIGH: GraphQL 200 dengan `accounts: []` (akun salah) = hijau selamanya. MEDIUM: jam tenang menelan perubahan set daily; status `exceededCpu`/`exceededMemory`; komentar hanya halaman pertama; cron daily dicocokkan dengan string. LOW: jendela 24 jam di batas dataset, judul issue tidak ikut, retry assignee untuk semua error, test kurang | Semua HIGH/MEDIUM diperbaiki (`analyticsUsable`, jam tenang hanya untuk kode quick, `startsWith("exceeded")`, `gh api --paginate --slurp`, komentar di cron). LOW: jendela 24 j − 1 menit, `gh issue edit --title`, retry hanya error assign, test baru (49) |
+
+### Verifikasi (9 Nov 2026)
+
+| Perintah | Hasil |
+|---|---|
+| `node --test 'backend/ci/*.test.mjs'` | 49/49 (awal); 60/60 setelah review Umar (kode sebelum review: 32 dari 59 gagal; commit 9b84ee0: 2 test review kedua gagal) |
+| Review Umar #2, gh asli (9 Nov ±01:05–01:30 UTC, read-only, repo publik dengan 5 issue `ops-alert` open buatan bot) | Perintah lama `gh issue list --label ops-alert --state open --author app/github-actions --json number,author` → 5 issue, `author.login` `app/github-actions`, `is_bot: true`: filternya benar. `GH_DEBUG=api` → `search(type: ISSUE_ADVANCED …)`: lewat search index. Tanpa `--label`, `--author app/github-actions` → 0 (bukan jalur search), `--author github-actions[bot]` → 5. REST `issues?labels=ops-alert&state=open` → 5, `user.login` `github-actions[bot]`. |
+| Dry-run cloud setelah review Umar (9 Nov, token dari Keychain, tiap run berjarak > 60 s karena `/healthz/db` 1/menit per IP) | `--quick` dan `--daily` (token asli): `warn tombstones_stuck`, `warn blocklist_queue`, `issue: dry-run`, sama seperti sebelum review. `--daily` dengan token CF palsu: + `alert cf_analytics_unavailable` saja. Catatan: dua run daily < 60 s berturut-turut memberi `healthz_db_failed` (429 rate limit), bukan bug |
+| `syncIssue` ke gh asli, tulis diblok (skrip uji di luar repo) | Repo dengan issue bot: baca REST list + komentar issue terlama (#1) → `updated`, tulis yang diblok `issue edit 1`, `issue comment 1` (urutan butir 8). Repo ini (belum ada issue): baca REST list → `opened`, tulis yang diblok `label create`, `issue create` |
+| `git grep -n "objectName" backend/ci/ops-watch.mjs` | 0 hasil |
+| Dry-run cloud `OPS_DRY_RUN=1 node backend/ci/ops-watch.mjs --quick` (token dari Keychain) | `warn tombstones_stuck`, `warn blocklist_queue`, `issue: dry-run`; tanpa angka/URL/token di output |
+| Dry-run cloud `--daily` (token Analytics dari Keychain, akun Shoo) | `warn tombstones_stuck`, `warn blocklist_queue`, `issue: dry-run`: `/healthz/db` 200, GraphQL dua query sah (tanpa `cf_analytics_unavailable`) |
+
+### Privasi (SECURITY §3)
+
+- P6: output publik (stdout, job summary, issue) hanya kode + level + waktu UTC (test `main` memaku: tanpa token, URL, angka respons). R2 tanpa `objectName` (test + `git grep`).
+- §1: token hanya di header; error cetak teks tetap; token tidak pernah di argv `gh`. `OPS_STATUS_TOKEN` + `CF_ANALYTICS_TOKEN` di environment `ops` (bukan `production`).
+
 ## LANGKAH MANUAL (setelah PR 21a merge dan CI deploy)
 
 - [x] 1. **(Alief)** `openssl rand -base64 32` → simpan di password manager → dari `backend/api/`: `npx wrangler secret put OPS_STATUS_TOKEN` (di luar 18:30–19:30 UTC). Uji: `read -rs OPS_STATUS_TOKEN`, lalu `curl -s -H "Authorization: Bearer $OPS_STATUS_TOKEN" https://shoo-api.afindo-mi01.workers.dev/ops/status` → 200; tanpa header → 404. Catat hasil (tanpa token) di sini. Sebelum run cron pertama, `failing` memuat `retention_stale`/`notifications_stale` (belum ada baris `ops_jobs`): normal.
   - **7 Nov 2026, 17:11 UTC** (`wrangler secret list`, hanya nama): `OPS_STATUS_TOKEN` **sudah ada** di Worker (ada 3 deploy "Secret Change" 6 Nov ±06:24 UTC). Sesi ini tidak membuat atau menimpa token. `GET /ops/status` tanpa header → 404; `Bearer wrong` → 404. **Belum:** uji 200 dengan token asli (sesi tidak memegang nilainya). Alief: pastikan nilai token ada di password manager; kalau tidak, rotasi (`wrangler secret put`, di luar 18:30–19:30 UTC) lalu uji 200.
   - **8 Nov 2026, ±07:25 UTC (Alief):** nilai lama tidak tersimpan di mana pun → token dirotasi: `openssl rand -base64 32`, disimpan di Keychain Mac Alief (item `Shoo OPS_STATUS_TOKEN`), `wrangler secret put OPS_STATUS_TOKEN` → Success. `GET /ops/status` dengan token baru → **200**. Token lama tidak berlaku lagi. Nanti 21b (`ops-watch`) butuh token ini sebagai GitHub secret.
-- [ ] 2. **(Alief, D10)** Cloudflare → Notifications → Usage Based Billing → R2 Class A ambang 500 000 dan Class B ambang 5 000 000, email pemilik akun. Kalau tidak bisa dipilih: catat di sini.
+- [x] 2. **(Alief, D10)** Cloudflare → Notifications → Usage Based Billing → R2 Class A ambang 500 000 dan Class B ambang 5 000 000, email pemilik akun. Kalau tidak bisa dipilih: catat di sini.
   - **7 Nov 2026:** tidak bisa lewat API: token OAuth wrangler tanpa scope Notifications (`available_alerts` → `10000 Authentication error`, hanya baca, tidak ada create). Tetap langkah dashboard Alief (atau token API terpisah dengan scope Notifications).
-- [ ] 3. **(Alief)** Catat pemilik email notifikasi Supabase (pause/kuota) dan Cloudflare (billing).
+  - **9 Nov 2026, ±03:40 UTC (dicek di dashboard, tidak diubah):** sudah ada dan `Enabled` di Platform Notifications: "R2 Storage Class A Operations usage above 500000", "R2 Storage Class B Operations usage above 5000000" (Usage based billing; konfigurasi Class A dibuka: produk R2 Storage Class A Operations, ambang 500000), plus "Shoo R2 storage above 5 GB". D10 selesai.
+- [x] 3. **(Alief)** Catat pemilik email notifikasi Supabase (pause/kuota) dan Cloudflare (billing).
   - **7 Nov 2026:** Supabase `shoo-demo` dan Worker `shoo-api` sama-sama diakses lewat login CLI Alief, jadi pemilik notifikasi = akun Alief. Alamat email sengaja tidak ditulis (repo publik). Alief konfirmasi; mailbox tim K10 = fase 24 LANGKAH MANUAL 1.
-- [ ] 4–8. Sesuai `fase-21-monitoring.md` LANGKAH MANUAL 4–8 (spike GraphQL, custom alert, Environment `ops` oleh Umar, TestFlight crash, cek Senin). 4–6 baru perlu sebelum 21b.
+  - **9 Nov 2026:** dicek ulang lewat CLI: `shoo-demo` ada di org Supabase "Shoo" yang terlihat dari login CLI Alief; akun Cloudflare Shoo = akun login `wrangler` Alief. Pemilik notifikasi keduanya = Alief (alamat tidak ditulis).
+- [x] 4. **(Alief, spike, 9 Nov 2026 ±17:00 UTC)** Token API "shoo ops-watch analytics read (fase 21b)": hanya Account → Account Analytics → Read, akun Afindo.mi01 (Shoo) saja, kedaluwarsa 9 Nov 2027, dibuat dari profil Cloudflare pemilik akun; disimpan di Keychain Mac Alief (`Shoo OPS_CF_ANALYTICS_TOKEN`), `/user/tokens/verify` → active. Hasil (tanpa angka, repo publik):
+  - (a) GraphQL Analytics jalan di plan Free: `workersInvocationsAdaptive` (filter `scriptName`, `datetime_geq/lt`, 24 j − 1 menit), `r2OperationsAdaptiveGroups` (`actionType`), `r2StorageAdaptiveGroups` (`max { payloadSize metadataSize }`, `bucketName`) menjawab tanpa error.
+  - (b) Nilai `status` `shoo-api` dalam 24 jam: `success`, `clientDisconnected`. Skrip menghitung semua `exceeded*` (`exceededResources`, `exceededCpu`, `exceededMemory`).
+  - (c) `workersInvocationsScheduled` ada (field langsung `cron`, `status`, tanpa `dimensions`), tetapi 0 baris untuk `shoo-api` dalam 24 jam walau cron jalan tiap jam: invocation Cron tidak terlihat di sini. Status cron tetap dari `ops_jobs` (`/ops/status`), sesuai K2.
+  - (d) 500 dari `onError` di `errors`: **belum terverifikasi** (tidak ada baris dengan `errors > 0` dalam 24 jam). `worker_errors` tetap memakai `errors`; 5xx `onError` dicari di Query Builder (C16).
+  - Token yang sempat dibuat dari profil Cloudflare lain di Chrome (nilai tidak tersimpan, belum pernah dipakai) dihapus.
+- [x] 5. Custom alert Workers Observability (C7): **tersedia**, 2 monitor aktif (lihat 9 Nov ±04:15 UTC).
+  - **9 Nov 2026, ±03:45 UTC:** Observability → Alerts → **Monitors (Beta)** ada di akun ini (threshold, anomaly detection, SLO; tujuan email/webhook/dll.), dataset termasuk "Workers Logs" (`logs.workersLogs`). Monitor `replica_dropped` tidak dibuat: pemilih kolom filter tidak memuat daftar field untuk Workers Logs, dan nama kolom untuk Custom SQL tidak ada di docs. Tidak dibuat dengan nama kolom tebakan (alert yang tidak pernah menyala lebih buruk dari tidak ada). Monitors tetap kosong. Kuota replica tetap dijaga `replica_full`/`replica_reserve` lewat `/ops/status` + ops-watch.
+  - **9 Nov 2026, ±04:15 UTC:** nama kolom ditemukan lewat introspection dataset (`GET /api/v4/analytics/sql/introspection?…&include_columns=true`): `scriptName`, `level`, `message`, dst. adalah kolom; field log kita (`event`, `reason`) ada di kolom JSON `attributes` dan dibaca dengan `attributes['event']`. `LIKE`, `IN`, `JSONExtract*` ditolak.
+  - Uji query 7 hari: `replica_dropped` ada (semua `reason = no_family`), `global_quota`/`global_bytes` = 0. Jadi query-nya jalan dan baseline sehat.
+  - Bug beta: saat Create, dashboard membungkus SQL jadi subquery + `accountTag`. Dengan 2 kondisi atau lebih (`AND`/`OR`), server membalas `recursion limit exceeded` dan monitor tidak bisa disimpan. Hanya 1 kondisi yang lolos. Karena itu dibuat 2 monitor, masing-masing 1 kondisi:
+    - "Shoo replica_dropped global_bytes": `WHERE attributes['reason'] = 'global_bytes'`. Reason ini hanya dari `replica_dropped` (`services/replicas.ts`; fragments memakai `quota_global_bytes`).
+    - "Shoo global_quota drop (replica or screenshot)": `WHERE attributes['reason'] = 'global_quota'`. Reason ini juga dipakai `screenshot_dropped` (`services/scans.ts`, kuota global screenshot 300/24 j). Itu juga tanda kuota global penuh, jadi tetap layak di-alert. Cek event-nya di Query Builder sebelum bertindak.
+  - Keduanya: `count()` rata-rata 1 jam `> 0` (satu drop pun menyalakan), jalan otomatis, notifikasi ulang tiap 1 jam, email pemilik akun (alamat tidak ditulis). API policies: `enabled: true`, `alert_type: custom_analytics`. Preview 60 menit = 0.
+  - Kalau Cloudflare memperbaiki batas kedalaman: gabungkan jadi satu monitor `attributes['event'] = 'replica_dropped' AND (reason global_quota OR global_bytes)`.
+- [x] 6. **(Umar, setelah issue K7)** Environment `ops` (tanpa custom protection rule, job memakai `deployment: false`) + 3 secret + variable `OPS_WATCH_ENABLED=true`, merge PR 21b, Run workflow `daily` sekali. Lalu alert test `simulate` = `retention_failed` dan perintah REST di `backend/ci/README.md` (review #340 butir 2): tempel output (nomor + `github-actions[bot]`) di sini. Nilai dari Alief lewat jalur privat (Keychain: `Shoo OPS_STATUS_TOKEN`, `Shoo OPS_CF_ANALYTICS_TOKEN`; account id sama dengan secret `CLOUDFLARE_ACCOUNT_ID` di `production`).
+  - **9 Nov 2026, ±03:22–03:28 UTC (Umar, #341):** environment `ops` (deployment branches `main` saja, tanpa protection rule) + `OPS_STATUS_TOKEN`, `CF_ANALYTICS_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; variable `OPS_WATCH_ENABLED` = `true`. PR #340 merged (76aaab0).
+  - `daily` (run 42556059739): `issue: none`, warn yang diharapkan saja (`tombstones_stuck`, `blocklist_queue`).
+  - `simulate` = `retention_failed` (run 42556198280): `issue: opened` → #345, di-assign `aliefauzan`. Dua run quick berikutnya: "Green run 1 of 2" (03:24 UTC), lalu "2 green runs in a row … closing" (03:25 UTC). Tidak ada issue kedua: label `ops-alert` (state all) hanya punya #345.
+  - Lookup REST saat #345 masih open (review #340 butir 2, perintah di `backend/ci/README.md`), output dari Umar:
+
+    ```json
+    {"assignees":["aliefauzan"],"login":"github-actions[bot]","number":345,"title":"ops-alert: retention_failed"}
+    ```
+
+  - `deployment: false` (review #340 butir 7): `GET /repos/…/deployments?environment=ops` → 0 record setelah run `daily`, `simulate` dan dua run quick.
+- [ ] 7–8. Sesuai `fase-21-monitoring.md` LANGKAH MANUAL 7–8 (TestFlight crash, cek Senin).
+  - **Cek Senin 9 Nov 2026, ±03:31 UTC (D11, sebagian):**
+    - `/ops/status`: `ok: true`; warn `tombstones_stuck`, `blocklist_queue` (antrean 1); DB 16 MB (Free 500 MB); retention umur 8,5 j, `failed: 0`; notifications umur 0,4 j; `healthzAgeHours` 0,1; replica `ok`, 7 upload / ±87 KB dari kuota 3000 / 500 MB, 3 keluarga, 0 di batas.
+    - R2 bulan berjalan (GraphQL): Class A 752, Class B 1502 (ambang 500 000 / 5 000 000); `shoo-replicas` 0,43 MB / 30 objek, `shoo-replica-archive` 0,35 MB / 16 objek.
+    - Worker 24 jam: `shoo-api` 2381 request, `errors` 0 (`success`, `clientDisconnected`); `shoo-ai` 329, 0; `shoo-admin` 732, 0; seluruh akun < 5 000 (batas Free 100 000/hari).
+    - Supabase Usage (`shoo-demo`, Free, siklus 21 Okt – 21 Nov 2026, dibaca setelah Alief login): DB 0,031 / 0,5 GB (6 %, ukuran DB maks 29,8 MB), egress 0,017 / 5 GB, cached egress 0, Storage 0 / 1 GB (kosong sejak fase 20, C12), log ingestion 0,019 / 1 GB, MAU 0. Semua jauh di bawah batas.
+    - Belum (7): TestFlight feedback + Crashes. App Store Connect di browser belum login; akses Xcode Organizer tidak diberikan. Data Organizer lokal (4 Nov, build 4) belum punya folder crash. Langkah Alief: Xcode → Window → Organizer → Crashes (Shoo), dan App Store Connect → TestFlight → Feedback.
 
 Verifikasi cloud setelah butir 1: pagi setelah run 19:00 UTC pertama → `jobs.retention.failed = 0`, `ageHours < 12`; satu jam setelah deploy → `jobs.notifications.ageHours < 1.2`.
 

@@ -43,10 +43,13 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | POST | [`/devices`](API.md#post-devices) | app, onboarding | Register this phone, get its device token |
 | GET | [`/devices/me`](API.md#get-devicesme) | app | My profile, and my Guardian if I am Protected |
 | PATCH | [`/devices/me`](API.md#patch-devicesme) | app, extension | Rename, APNs token, language, extension heartbeat |
+| POST | [`/devices/me/protected`](API.md#post-devicesmeprotected) | Guardian app, Mode akun | A Guardian who protects nobody joins another family as Protected |
 | DELETE | [`/devices/me`](API.md#delete-devicesme) | app, Profile | Delete my data now |
 | POST | [`/family/code`](API.md#post-familycode) | Guardian app | 6-digit code + QR + invite link, valid 30 min; `refresh` makes a new one |
 | POST | [`/family/join`](API.md#post-familyjoin) | Protected app | Connect to a Guardian with the code |
 | GET | [`/family/members`](API.md#get-familymembers) | Guardian app | Family cards: members, extension status, last scan |
+| PATCH | [`/family/members/{deviceId}`](API.md#patch-familymembersdeviceid) | Guardian app | "Kabari saya": push on or off for one member |
+| POST | [`/family/members/{deviceId}/remind`](API.md#post-familymembersdeviceidremind) | Guardian app | "Ingatkan": push the member to turn Shoo on in Safari |
 | DELETE | [`/family/members/{deviceId}`](API.md#delete-familymembersdeviceid) | Guardian app | Remove a member |
 | DELETE | [`/family/guardian`](API.md#delete-familyguardian) | Protected app | Disconnect from my Guardian |
 | POST | [`/scans`](API.md#post-scans) | extension | Report a warned or blocked page (+ page replica); pushes the Guardian |
@@ -56,28 +59,31 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | GET | [`/screenshots/{scanId}`](API.md#get-screenshotsscanidvexpsig) | app, Detail | The screenshot image behind that link (deprecated, 18c) |
 | GET | [`/favicons/{scanId}`](API.md#get-faviconsscanidvexpsig) | app, Activity + Detail | The stored site icon behind a `faviconUrl` link (PR-05) |
 | POST | [`/verdicts`](API.md#post-verdicts) | Guardian app | It's safe / Not safe for a blocked domain |
-| GET | [`/verdicts?domain=`](API.md#get-verdictsdomain) | extension | Poll for the Guardian's decision on a block screen |
+| GET | [`/verdicts?url=&domain=`](API.md#get-verdictsurldomain) | extension | Poll for the Guardian's decision on a block screen (`?domain=` alone: deprecated) |
 | GET | [`/blocklist?since=`](API.md#get-blocklistsince) | extension | Global approved scam domains for on-device checks |
+| GET | [`/config/public`](API.md#get-configpublic) | extension | Score thresholds set in the admin dashboard (warning / blocked) |
 | GET | [`/j/{code}`](API.md#get-jcode) | browser (WhatsApp / AirDrop link) | Invite page when the app is not installed: open Shoo, or copy + install |
 | GET | [`/og/invite.jpg`](API.md#get-oginvitejpg) | WhatsApp / Messages crawler | Link preview image for `/j/{code}` |
 | GET | [`/.well-known/apple-app-site-association`](API.md#get-well-knownapple-app-site-association) | iOS | Universal Link for `/j/*` |
 | GET | [`/privacy`](API.md#get-privacylangenid) | browser | Privacy policy, EN/ID |
 | GET | [`/support`](API.md#get-supportlangenid) | browser, App Store Connect | Support page: contact, delete data, EN/ID |
+| GET | [`/terms`](API.md#get-termslangenid) | browser, Profile | Terms of use, EN/ID |
+| GET | [`/get`](API.md#get-get) | browser ("Bagikan Shoo" link) | `302` to the App Store |
 
 All errors are `{ "error": { "code", "message" } }`; `429` carries `Retry-After`. Every response is
 `Cache-Control: private, no-store` except `GET /blocklist`. Details: [API.md, General rules](API.md#general-rules).
 
 ## Schema summary
 
-Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_blocklist_times.sql`, `20261021160000_family.sql`, `20261021170000_screenshot_bucket.sql`, `20261021180000_verdicts.sql`, `20261022100000_push_log_privacy.sql` (details: `plan/alief/ref/R2-skema-db.md`).
+Migrations: every file in `db/supabase/migrations/` (43 as of 17 Nov 2026, oldest `20261021130000_init.sql`, newest `20261117120000_drop_live_activity_tokens.sql`), applied in name order by CI (`supabase db push`, see [Deploy](#deploy)). A new migration must sort after the last one already on the cloud database, or the push refuses it (QA-D-H01, `fd8dc4ec`). Early table details: `plan/alief/ref/R2-skema-db.md`.
 
 | Table | Purpose |
 |---|---|
-| `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt` |
+| `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt`. The removed Dynamic Island's APNs token columns were dropped by `20261117120000_drop_live_activity_tokens.sql` (EX-03, #555) |
 | `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
 | `family_codes`, `join_attempts` | 6-digit codes (30 min) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
-| `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.`. `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path. `favicon_path` = `<ownerId>/<scanId>-favicon.<png\|ico\|jpg\|gif\|webp>` in the same bucket, downloaded by the Worker from `favicon_url` (PR-05); reused the same way; `favicon_url` is never returned |
-| `verdicts` | one per (owner, domain), last decision wins; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not protected by `admin.domain_lists`) |
+| `scans` | Activity items, score 30–100, status consistent with score, domain lowercase (`contracts/api.md` Scans "`domain`"; a leading `www.` only as in `www.co.id`, #487). `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path. `favicon_path` = `<ownerId>/<scanId>-favicon.<png\|ico\|jpg\|gif\|webp>` in the same bucket, downloaded by the Worker from `favicon_url` (PR-05); reused the same way; `favicon_url` is never returned |
+| `verdicts` | one per (owner, link) since #241 (`url` = origin + path, `public.verdict_link`, an IPv6 host in brackets since #487; `domain` kept for the queue and the not_safe fallback), last decision wins; `notes` ≤ 280, cleared after 14 days; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not protected by `admin.domain_lists`) |
 | `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served. `rejected_at`/`rejected_by` = reviewer said no: out of the queue, cannot be approved until cleared, deleted like any undecided row when support ends |
 | `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
 | `ops_jobs` | one row per cron job (`retention`, `notifications`): last start, last finish, last clean finish (`ok_at`), failed steps, backlog. Read by `GET /ops/status`; `shoo_api` cannot delete rows |
@@ -112,14 +118,17 @@ Cloud setup (once, SQL editor as `postgres`): `alter role shoo_admin password '<
 
 - `admin.domain_review`: one row per LLM review of a queued domain. The dashboard cron calls `admin.review_due(limit)` (pending, not a shared host, no review since the last label change; counts only, no notes or page text) and stores `POST /review` answers with `admin.review_record(results, model, prompt, actor)`, which cleans model output and never touches `blocklist_entries`. `admin.vote` copies its decision to the latest review (trigger on `review_decisions`). Off until `review_enabled` (config, default `false`).
 - Shared hosts: the view `admin.v_shared_hosts` (rows of `admin.domain_lists` with `hosting <> 'none'`, see below). The `admin.shared_hosts` table and `shared_hosts_set` were dropped in ADM-09.
-- `admin.ai_dataset` (view): one row per Guardian decision with the detector result per layer at scan time, RDAP age, the domain summary and the latest review. URL = `https://` + host + tokenised path, note masked by `admin.mask_note` (e-mail, digit runs ≥ 8). No `owner_id`, `by_device_id`, name, `owner_ref` or `by_ref`.
+- `admin.guardian_decisions` (QA-D-H01, migration `20261113030000_admin_guardian_decisions.sql`): append-only, one row per verdict insert and per change of value or Guardian, written by `on_verdict`. Unlink, device delete and the forget drain delete its rows; a failed delete queues `label_forget` so the rows are hidden at once (fail closed).
+- `admin.ai_dataset` (view, reads `admin.guardian_decisions` since QA-D-H01): one row per Guardian decision with the detector result per layer at scan time, RDAP age, the domain summary and the latest review. URL = `https://` + host + tokenised path, note masked by `admin.mask_note` (e-mail, digit runs ≥ 8). No `owner_id`, `by_device_id`, name, `owner_ref` or `by_ref`.
 - Role `shoo_ai` (Team AI, login, read-only transactions, 3 connections): `select` on `admin.ai_dataset` only. Cloud setup (once, SQL editor as `postgres`): `alter role shoo_ai password '<from the password manager>';`.
+
+`admin.scan_archive` has an index on `(created_at, scan_id)` (QA-D-H02, migration `20261113020000_admin_scan_archive_created_index.sql`) for the dashboard's `scans.jsonl` export, which pages in insert order and stops at the last full hour minus 5 minutes.
 
 ### Domain lists (ADM-09, migration `20261107095337_admin_domain_lists.sql`)
 
 `admin.domain_lists` is the one list of domains that must never be blocked (official banks, e-wallets, popular sites, public suffixes, shared hosting platforms). Each row has `protect` (`subtree` = the domain and its subdomains, `apex` = the exact name), `trusted` (official site, layer 3 stays quiet), `hosting` (`subdomains`: anyone gets a subdomain, `host_path`: anyone publishes under a path) and `public_suffix`. The matching rule is `admin.domain_match(host)`.
 
-- **Backend:** `POST /verdicts` asks `src/db/repo/domainLists.ts` `isProtected` in its own transaction (`admin.v_domain_lists_public`, the only `admin` object `shoo_api` reads besides `public_config`). A protected domain never enters the global review queue; the family's own verdict still applies. The backend keeps no list in code.
+- **Backend:** `POST /verdicts` asks `src/db/repo/domainLists.ts` `isProtected` in its own transaction (`admin.v_domain_lists_public`, the only `admin` object `shoo_api` reads besides `public_config`). A protected domain never enters the global review queue, nor does a domain on or under a `hosting = 'host_path'` row (`sites.google.com`, `sway.cloud.microsoft`) or one with no registrable domain (IP, `router`, `www.co.id`; #495, #487); the family's own verdict still applies. The backend keeps no list in code.
 - **Change it:** in the dashboard (page *Daftar domain*, phase 10b), which calls `admin.domain_set` / `admin.domain_remove` (note ≥ 10 characters, audited). Seed rows are `locked`: changing or removing one needs the domain typed again. Brand rows and 18 bank/payment rows are `hard_locked`: change them with a migration only. `admin.vote` (approve) and `admin.add_domain` refuse a protected domain (`SA019 allowlisted`).
 - **Seed:** generated once from the old lists by `db/scripts/domain-lists-seed.mjs`; `db/scripts/domain-lists-golden.mjs` recorded the old answers (`api/test/fixtures/domain-lists-golden.json`), and `api/test/domain-lists-golden.test.ts` proves the seed answers the same except the listed, categorized differences (`domain-lists-expected-diff.json`, summary in `db/scripts/domain-lists-diff.md`). `ai/` and the extensions keep their own lists until dashboard phase 10c.
 - **Rollback:** see the header of the migration (one transaction), then `git revert` the backend change.
@@ -131,7 +140,7 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | Name | Kind | Now |
 |---|---|---|
 | `DB` | Hyperdrive binding | `shoo-db` (id filled in at first deploy) |
-| `INVITE_BASE_URL` | var | Worker URL (used from fase 08) |
+| `INVITE_BASE_URL` | var | Public host of invite/share links and signed image URLs: `https://join.shoo.ai.id` (Custom Domain on this Worker, PR-03) |
 | `APP_STORE_URL` | var | "Install" link on the invite page: TestFlight public link now, App Store later. Only `https://testflight.apple.com` / `https://apps.apple.com`; `""` or anything else → `https://apps.apple.com/` |
 | `APPLINKS_APP_IDS` | var | Comma-separated `<Team ID>.<bundle ID>` listed in the AASA for the Universal Link (issue #129): `DWTZNGA7Y8.com.umarmuhdhor.shoo` (dev builds and TestFlight share that team and bundle ID); `""` → no app listed |
 | `SUPABASE_URL` | var | `https://nmekxihgjszgcibqytyj.supabase.co` (public project URL); tests read the local one from `supabase status` |
@@ -155,6 +164,7 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 - scans older than 14 days without a screenshot, favicon or page replica in chunks of 2000, max 25 per run (no Storage call);
 - scans older than 14 days with a screenshot, favicon and/or page replica in the same chunks of 2000, max 25 per run, so dedupe reuses never hold other users' rows past day 14 (PR #20 review, HIGH). Each chunk tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects oldest first, grouped per store: at most 10 Supabase Storage DELETEs of 100 paths per run (50 external subrequests per Cron) and at most 40 R2 deletes of 100 keys per run (R2 binding, shared with the tombstone step; `backlog: true` in the log when rows are left). Paths over a budget, or left by a store failure, stay tombstoned; a failing store stops only its own calls; the rows are gone on day 14 either way. Verdicts stay with `scan_id` null (D-alief-14);
 - `storage_tombstones` (intent log of every screenshot, favicon and replica object, D-alief-B12): paths no scan points at, older than 10 min (retention's own are due at once: no upload can still land for a 14-day-old row), max 500 per run for Supabase plus what is left of the R2 budget. The store comes from the path: `-replica.html.gz` and `-icon.<ext>` are in R2, `<scan_id>.fragments.html.gz` (no `/`) in the archive bucket (tombstoned only by `DELETE /devices/me` for domains without scam evidence, from what is left of the R2 budget), everything else in Supabase Storage. `REPLICAS_ENABLED` never stops deletes;
+- `verdicts.notes` older than 14 days (#241): set to null in chunks of 5000, max 20, rows locked `skip locked`; the decision stays.
 - `family_codes` expired > 1 h, `join_attempts` > 1 day, `push_log` > 14 days, `rate_limit_hits` > 1 day (chunks of 20000, max 50).
 - inactive devices (E7, fase 24a, mode `INACTIVE_DEVICES`), last: a device with no request for 90 days goes only when every member of its family (guardian + all its protected devices) has none either; a device without a family is judged alone; a registration never used again (last seen within 1 h of `created_at`, no family link) goes after 30 days. `dry_run` counts the candidates; `delete` deletes at most 50 per run through `deleteDevice` (same as `DELETE /devices/me`), rechecking the rule inside each transaction (`lock_timeout` 3 s, family rows locked); a device that came back or was locked (40P01/55P03) is skipped until tomorrow, any other error fails the step. More candidates than 50 → `backlog: true` (delete mode only). Object paths are tombstoned and removed by a later run's tombstone step. Log: `{"event":"inactive_devices","mode","candidates","deleted","skipped","failed"}`, counts only.
 
@@ -164,7 +174,7 @@ Logs: one `{"event":"retention", …counts}` line. Local trigger while `wrangler
 
 ## Notifications (hourly cron, PF-01 proposed)
 
-`"5 * * * *"` runs `src/cron/notifications.ts` (`scheduled()` picks the job by `controller.cron`, see `CRONS` in `src/index.ts`): "Perlindungan mati" for members whose extension has been silent 24 h, and the Monday "Ringkasan mingguan", at most 40 pushes per run. Quiet hours (`devices.quiet_*` in `devices.time_zone`) are worked out in TypeScript with `Intl`. Migration `20261028130000_notification_settings.sql` adds the switches to `devices` and `family_links.off_notified_at`. Logs: one `{"event":"notifications","protectionOff":n,"summaries":n}` line. The same run then logs the page-replica quota gauge (fase 19 K5.2): one `{"event":"replica_quota_usage","level":"ok|reserve|full",…}` line with aggregates only (`console.log`/`warn`/`error` by level); a failing gauge logs `replica_usage_failed` and never fails the run. Drops stay `{"event":"replica_dropped","reason":…}` (reasons include `family_quota`, `family_bytes`, `reserve`). Local trigger: `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=5+*+*+*+*"`.
+`"5 * * * *"` runs `src/cron/notifications.ts` (`scheduled()` picks the job by `controller.cron`, see `CRONS` in `src/index.ts`): "Perlindungan mati" for members whose extension has been silent 24 h, and the Monday "Ringkasan mingguan", at most 40 pushes per run. Quiet hours (`devices.quiet_*` in `devices.time_zone`) are worked out in TypeScript with `Intl`. Migration `20261028130000_notification_settings.sql` adds the switches to `devices` and `family_links.off_notified_at`. Logs: one `{"event":"notifications","protectionOff":n,"summaries":n}` line. If the weekly summary step throws, the run still sends the "protection off" pushes it already claimed, records itself as failed in `ops_jobs`, then rethrows (fase 28k). The summary counts scans with `owner_id in (guardian, members)`, one index range per owner on `scans_owner_time`. The same run then logs the page-replica quota gauge (fase 19 K5.2): one `{"event":"replica_quota_usage","level":"ok|reserve|full",…}` line with aggregates only (`console.log`/`warn`/`error` by level); a failing gauge logs `replica_usage_failed` and never fails the run. Drops stay `{"event":"replica_dropped","reason":…}` (reasons include `family_quota`, `family_bytes`, `reserve`). Local trigger: `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=5+*+*+*+*"`.
 
 Check for a backlog (SQL editor): `select count(*) from scans where created_at < now() - interval '15 days';` should be 0.
 
@@ -192,7 +202,7 @@ into an issue, PR or plan log. Public places (issues, Actions logs) get codes on
 | `retention_backlog` | warn | the last run left rows for the next one | same as above | same as above |
 | `tombstones_stuck` | warn | a tombstone older than 2 days | Query Builder: `screenshots_delete_failed`, `replica_clear_failed` | Check the R2 binding and the Supabase key |
 | `notifications_stale` | alert | no notifications run for 2 h 15 min (or never) | Query Builder: `push_failed`, `push_config_incomplete`, `ops_job_write_failed`; Cron Events in the Worker dashboard | Fix through a PR |
-| `db_size_high` | warn ≥ 350 MB, alert ≥ 450 MB | `pg_database_size` (Free: 500 MB) | `select relname, pg_size_pretty(pg_total_relation_size(oid)) from pg_class order by pg_total_relation_size(oid) desc limit 10` | Usually `rate_limit_hits` or `scans`: check retention first |
+| `db_size_high` | warn ≥ 350 MB, alert ≥ 450 MB | `pg_database_size` (Free: 500 MB) | `select relname, pg_size_pretty(pg_total_relation_size(oid)) from pg_class order by pg_total_relation_size(oid) desc limit 10` | Usually `scans`, `admin.scan_archive` (kept for good, see [Quota](#quota-supabase-free--r2)) or `rate_limit_hits`: check retention first |
 | `blocklist_queue` | warn | the oldest undecided domain waits more than 24 h (D9) | Review in the SQL editor ([Schema summary](#schema-summary)) | Note approvals and rejections in the active phase log |
 | `replica_full` | alert | a full-size page replica no longer fits the global quota of 24 h (3000 uploads / 500 MB): new replicas are dropped for everyone (scans and pushes go on) | `replica` in the response; Query Builder: `event = replica_dropped` grouped by `reason` (`global_quota`, `global_bytes`, `reserve`, `family_*`) and `replica_quota_usage` over the last day | Normal use is far below the quota, so this is abuse or a wrong setting. If one family dominates (`topFamilyUploads`): wait, the family quota already stops it. If many: kill-switch ([Page replicas](#page-replicas-kill-switch-and-takedown)) and tell Umar |
 | `replica_reserve` | warn | usage is in the last 600 uploads / 100 MB of the global quota: only families with fewer than 10 uploads still get replicas | same as above | Watch the next hours; usually it drains within 24 h |
@@ -204,13 +214,31 @@ The `replica` numbers (fase 21c) describe families, even without ids: with one a
 Actions log or any other public place; public places get codes only.
 
 `healthzAgeHours` (last `/healthz/db`) is a number only: it shows whether the ops-watch keep-alive
-still runs. The workflow (fase 21b) adds `healthz_down`, `ops_status_unreachable`, `healthz_db_failed`,
-`worker_*` and `r2_*`; their rows join this table with it.
+still runs.
+
+The `ops-watch` workflow (fase 21b, [backend/ci/README.md](ci/README.md#ops-watch-fase-21b-todo-b9)) calls
+`/healthz` and `/ops/status` every 15 minutes and, once a day, `/healthz/db` and Cloudflare analytics. Alert
+codes open one issue labelled `ops-alert`, assigned to Alief; it closes itself after 2 green runs in a row
+once every code is gone. Daily codes (`worker_*`, `cf_analytics_unavailable`) are only re-checked by the
+next daily run, about 24 h later; `healthz_db_failed` is re-checked every 15 minutes. After a fix, run the
+workflow by hand with mode `daily` (Actions → ops-watch → Run workflow). Its own codes:
+
+| Code | Level | When | First step | Next step |
+|---|---|---|---|---|
+| `healthz_down` / `ops_status_unreachable` | alert | `/healthz` failed 3 times / `/ops/status` not 200 | Open `https://shoo-api.afindo-mi01.workers.dev/healthz`; Workers dashboard → Deployments. `ops_status_unreachable` alone: the `ops` environment token no longer matches the Worker secret | Broken deploy → `npx wrangler rollback`, then fix forward through a PR ([Rollback](#rollback)). Cloudflare down → wait, note it |
+| `ops_status_limited` | warn | `/ops/status` answered 429 | Someone with the token used up the 30/h | Nothing, unless it repeats: then rotate `OPS_STATUS_TOKEN` (Worker + environment `ops`) |
+| `healthz_db_failed` | alert | the daily `/healthz/db` was not 200 | Supabase dashboard: paused or over quota? | Restore the project; the cron Worker is the main keep-alive |
+| `worker_exceeded_cpu` / `worker_errors` | alert | `shoo-api` hit the CPU limit / errors above 1 % (24 h) | Workers dashboard → Metrics; Query Builder `error.name`, `route` | `wrangler tail --status error` on your Mac (never copy URLs out of it) |
+| `worker_requests_high` | warn | ≥ 80 000 requests/day on the account | Workers dashboard → which Worker | Find the source; lower a quota through a PR |
+| `r2_class_a_high` / `r2_class_b_high` / `r2_storage_high` | warn | R2 month-to-date operations or storage near the Free tier | R2 → `shoo-replicas` → Metrics | Replica quota or kill-switch ([Page replicas](#page-replicas-kill-switch-and-takedown)) |
+| `cf_analytics_unavailable` | alert | the analytics token is missing, expired or revoked, the account id is wrong, or GraphQL failed 3 times: the Worker and R2 checks are off | Token still valid? (`CF_ANALYTICS_TOKEN`, Account Analytics Read; it expires 9 Nov 2027) | Roll it and update the `ops` environment, then run `daily` by hand |
 
 ## Quota (Supabase Free + R2)
 
-`db/scripts/quota-estimate.sql` (local, rolled back): 1000 realistic scans ≈ 1.4 MB with indexes (≈ 1.5 KB per scan); polling `GET /verdicts` writes no `rate_limit_hits` row since the Rate Limiting binding (before: ≈ 17k rows ≈ 4 MB per block screen open all day, kept 1 day).
-- DB 500 MB: ≈ 300k scans alive (14 days) ≈ 20k scans/day.
+`db/scripts/quota-estimate.sql` (local, rolled back) inserts 1000 realistic scans and prints table sizes. Its size report (between `-- report: start` and `-- report: end`) only reads, so it can also be run alone, read-only, on another database. Polling `GET /verdicts` writes no `rate_limit_hits` row since the Rate Limiting binding (before: ≈ 17k rows ≈ 4 MB per block screen open all day, kept 1 day).
+- DB 500 MB: measured on a 320k-scan seed with the admin triggers on (fase 28, H5-01): ≈ 3.3 KB per live scan (`scans` 683 MB ≈ 2.2 KB per row, plus one `admin.scan_archive` row per scan, 345 MB ≈ 1.1 KB per row). So 500 MB is reached at about 150k live scans (14 days) ≈ 10k scans/day. That is an upper bound: `push_log` (≈ 350 B per row), `admin.domain_intel` and the small tables come on top. The old figure (≈ 1.5 KB per scan, 300k scans) left out the archive and was about 2× too high.
+- `admin.scan_archive` (ADM-07, D-dash-17) keeps one row per scan for good: retention never deletes it, and `DELETE /devices/me` only strips the owner's rows (`stripped_at`). The 150k above holds while the archive has about one row per live scan (the first 14 days); after that the archive keeps growing and the database fills sooner. A size rule for the archive is an open question (Q25 in [fase-28-truth-hunt.md](../plan/alief/fase-28-truth-hunt.md)); until it is decided, nothing limits it.
+- `db_size_high` ([Monitoring and alerts](#monitoring-and-alerts)) warns at 350 MB and alerts at 450 MB. Run the size report to see which table grew.
 - Supabase Storage 1 GB: screenshots only from older builds (≤ 150 KB, ≤ 50 per device and 300 in total per day, kept 14 days) and favicons stored before fase 18a (`-favicon.`, gone within 15 days). Both are removed in 18c.
 - Supabase egress 5 GB/month: every screenshot view streams from Storage (no cache, D-alief-B08) → ≈ 35k views/month at 150 KB.
 - R2 (`shoo-replicas`, free tier 10 GB-month, 1 M Class A, 10 M Class B, free egress, D-alief-C26): page replicas ≤ 300 KB gzip, ≤ 50 per device, ≤ 60 and 10 MB per family (Guardian + members), 3000 and 500 MB in total per 24 h (the last 600 / 100 MB only for families with fewer than 10 uploads), ≤ 300 per IP per 24 h; objects live ≤ 16 days → ≤ 8 GB worst case. New favicons ≤ 64 KB, 1000 downloads per day in total → ≈ 1 GB worst case. Views: 10 per minute and 500 per day per viewer, no global cap (egress is free). Check: R2 dashboard → `shoo-replicas` → Metrics.

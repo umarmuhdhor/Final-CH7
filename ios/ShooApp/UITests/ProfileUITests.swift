@@ -62,6 +62,7 @@ final class ProfileUITests: XCTestCase {
         let switchButton = app.buttons["mode.switch"]
         XCTAssertTrue(switchButton.waitForExistence(timeout: 5), app.debugDescription)
         switchButton.tap()
+        app.buttons["guardianIntro.start"].tapWhenHittable()
         XCTAssertFalse(switchButton.waitForExistence(timeout: 1), "Nothing left to switch")
         app.buttons["profile.back"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
@@ -70,9 +71,11 @@ final class ProfileUITests: XCTestCase {
     @MainActor
     func testGuardianCardTurnsOnFamilyModeOrCloses() {
         let app = openProfile(mode: "guardian")
-        let become = app.buttons["profile.guardianCard.become"]
+        let become = app.buttons["profile.guardianCard.action"]
         XCTAssertTrue(become.waitForExistence(timeout: 5), app.debugDescription)
         become.tap()
+        // Figma "To be guardian" comes first, the first time.
+        app.buttons["guardianIntro.start"].tapWhenHittable()
         XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertFalse(app.descendants(matching: .any)["profile.guardianCard"].exists)
 
@@ -120,6 +123,28 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Language"].firstMatch.waitForExistence(timeout: 5))
     }
 
+    /// A language save the server missed says so on the Language page, not only under it on Profile.
+    @MainActor
+    func testFailedLanguageSaveSaysSoOnTheLanguagePage() {
+        let app = openProfile(mode: "guardian", extra: ["-mock.fail", "updateMe"])
+        // Profile's own load may resend the language and fail first: close that alert.
+        if app.alerts.firstMatch.waitForExistence(timeout: UITestTimeout.optional) {
+            app.alerts.firstMatch.buttons.firstMatch.tap()
+        }
+        let language = app.buttons["profile.language"]
+        reveal(language, in: app)
+        language.tap()
+        let indonesian = app.buttons["language.id"]
+        XCTAssertTrue(indonesian.waitForExistence(timeout: 5), app.debugDescription)
+        indonesian.tap()
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), app.debugDescription)
+        alert.buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["language.en"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["language.en"].tap()
+        if alert.waitForExistence(timeout: 5) { alert.buttons.firstMatch.tap() }
+    }
+
     @MainActor
     func testNameEditFollowsTheOnboardingRule() {
         let app = openProfile(mode: "guardian")
@@ -127,7 +152,9 @@ final class ProfileUITests: XCTestCase {
         reveal(manage, in: app)
         manage.tap()
         XCTAssertTrue(app.buttons["profile.changePhoto"].waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(app.descendants(matching: .any)["profile.username"].label.contains("@adhella"), app.debugDescription)
+        // Figma 416:12854: name and status, no username or phone number.
+        XCTAssertTrue(app.descendants(matching: .any)["profile.status"].label.contains("Personal user"), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["profile.username"].exists)
         app.buttons["profile.displayName"].tap()
         let field = app.textFields["profile.name"]
         XCTAssertTrue(field.waitForExistence(timeout: 5), app.debugDescription)
@@ -206,6 +233,9 @@ final class ProfileUITests: XCTestCase {
         let avatar = app.buttons["avatar.avatar_02"]
         XCTAssertTrue(avatar.waitForExistence(timeout: 5), app.debugDescription)
         avatar.tap()
+        XCTAssertTrue(avatar.isSelected, avatar.debugDescription)
+        // Figma 1286:12383: picking marks the avatar, "Simpan" saves and closes the sheet.
+        app.buttons["profile.avatar.save"].tap()
         XCTAssertFalse(avatar.waitForExistence(timeout: 2), "The picker closes after a save")
     }
 
@@ -294,6 +324,21 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Third-party licenses"].firstMatch.waitForExistence(timeout: 5), app.debugDescription)
     }
 
+    /// Apple 5.1.1(ii): the online check is no longer on Profile, but it can still be turned off in About Shoo.
+    @MainActor
+    func testOnlineCheckCanBeWithdrawnInAbout() {
+        let app = openProfile(mode: "protected")
+        let about = app.buttons["profile.about"]
+        reveal(about, in: app)
+        XCTAssertFalse(app.descendants(matching: .any)["profile.onlineCheck"].exists, app.debugDescription)
+        about.tap()
+        let onlineCheck = app.switches["about.onlineCheck"]
+        XCTAssertTrue(onlineCheck.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertEqual(onlineCheck.value as? String, "1")
+        onlineCheck.switches.firstMatch.tap()
+        XCTAssertEqual(onlineCheck.value as? String, "0")
+    }
+
     /// "Punya kode undangan?": a guardian without members joins another family and is protected from then on.
     @MainActor
     func testGuardianWithoutMembersJoinsAnotherFamily() {
@@ -322,6 +367,19 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["profile.guardian"].label.contains("Budi"), app.debugDescription)
     }
 
+    /// QA 2026-11-10 #4 and #6: a protected person whose guardian disconnected them (or deleted their account)
+    /// reads why on Akun Tertaut and connects again from there.
+    @MainActor
+    func testProtectedWithoutGuardianConnectsAgainFromLinkedAccount() {
+        let app = openProfile(mode: "protected", extra: ["-mock.scenario", "unpaired"])
+        let connection = app.buttons["profile.connection"]
+        reveal(connection, in: app)
+        connection.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["profile.guardian.none"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["profile.guardian.connect"].tap()
+        XCTAssertTrue(app.textFields["connect.code"].waitForExistence(timeout: 5), app.debugDescription)
+    }
+
     @MainActor
     func testGuardianWithMembersIsAskedToDisconnectThemFirst() {
         let app = openProfile(mode: "guardian")
@@ -329,8 +387,9 @@ final class ProfileUITests: XCTestCase {
         app.buttons["profile.mode"].tap()
         let join = app.buttons["mode.joinFamily"]
         reveal(join, in: app)
-        join.tap()
-        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5), app.debugDescription)
+        // Figma "Mode akun · Terkunci" (1619:7207): the row is off and the reason sits under it.
+        XCTAssertTrue(app.descendants(matching: .any)["mode.locked"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(join.isEnabled)
         XCTAssertFalse(app.textFields["connect.code"].exists)
     }
 }

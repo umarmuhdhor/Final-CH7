@@ -39,7 +39,8 @@ globalThis.ShooLists.match(hostname);
 ```ts
 type PageSnapshot = {
   url: string;            // full URL on the device; /analyze gets https://host/path only (no query, fragment or credentials)
-  domain: string;         // registrable domain, lowercase, no www
+  domain: string;         // api.md Scans "`domain`": registrable domain, lowercase, no www; the full host on a shared
+                          // host_path platform (sites.google.com) or when there is none ([2001:db8::1], router, www.co.id)
   title: string;
   lang: string | null;    // <html lang>
   text: string;           // visible text minus editable areas (contenteditable = typed input), max 20,000 chars
@@ -88,6 +89,26 @@ Optional, but it drives what the extension marks on the page:
 - **Field signals** (`asks_*`): `evidence` is the field's `name`/`id` (e.g. `"pin"`). Not highlighted as text — the extension strikes sensitive fields itself at score ≥ 50.
 - Never put typed values in `evidence`.
 
+## `host` (DT-04 address card, #497)
+Optional, only on the layer 1–2 address signals the detector makes: `lookalike_domain`, `brand_plus_keyword`, `cheap_tld`,
+`suspicious_link`. It tells the app which part of the address to mark and the brand's real domain:
+```json
+{ "id": "brand_plus_keyword", "layer": 2, "weight": 14, "label": { … }, "labelSimple": { … },
+  "evidence": "bca · level 2 · verifikasi",
+  "host": { "marks": ["bca", "verifikasi"], "official": "bca.co.id" } }
+```
+- `marks` (optional): 1–4 substrings of the scan's `domain` to highlight, exactly as written there (lowercase, punycode
+  for an IDN: a `xn--` label is marked whole), in the order they read, never overlapping. Only parts the detector found
+  inside the registrable domain: a brand found in a subdomain gives no mark. `cheap_tld` → the ending (`[".site"]`);
+  `suspicious_link` → only host parts behind its reasons (rare ending, bait word or number in a free-hosting name,
+  digit-mixed piece, punycode label, hyphen-heavy label), never path, query or fragment.
+- `official` (optional): the brand's real domain = the **first** entry of its `domains` in `detector/data/brands.json`.
+  Only on `lookalike_domain` and `brand_plus_keyword`. Public data.
+- No precise part → no `marks`; nothing at all → no `host`. `db_match` and `new_domain` never have one; `asks_*` neither.
+- Missing `host` = the app marks the whole domain (behaviour before #497); old scans keep decoding. The app ignores a
+  mark it does not find in `domain`.
+- `evidence` stays free-form for layer 1–2: read `host`, never parse `evidence`.
+
 ## Known signal ids
 | id | Layer | Meaning |
 |---|---|---|
@@ -97,7 +118,7 @@ Optional, but it drives what the extension marks on the page:
 | `cheap_tld` | 2 | .xyz, .site, .click, ... |
 | `suspicious_link` | 2 | Whole URL looks like a scam link (free-hosting subdomain with bait words, redirect param, random file name, ...). Weight 10–100, the dissector's raw score: the link alone can reach the popup or the block (#140, #231) |
 | `new_domain` | 3 | Domain age in days (made by the server via RDAP) |
-| `asks_pin` / `asks_otp` / `asks_password` / `asks_card` / `asks_cvv` / `asks_ktp` / `asks_selfie_ktp` | 3 | Form requests sensitive data |
+| `asks_pin` / `asks_otp` / `asks_password` / `asks_card` / `asks_cvv` / `asks_ktp` / `asks_selfie_ktp` | 3 (2) | Form requests sensitive data. Layer 3 on the server. Since #379 the detector also emits `asks_pin` / `asks_otp` / `asks_card` / `asks_cvv` / `asks_ktp` as **layer 2**, with lower weights, only when the address already raised a layer 1–2 signal, so a page offline still shows its credential form. Same id on both layers: the extension keeps the heavier one (`mergeSignals`), never both |
 | `brand_logo_offsite` | 3 | Brand logo on non-official domain |
 | `urgent_language` | 3 | "blocked in 24 hours", etc. |
 | `impersonation_model` | 3 | Impersonation model (text + address + page facts) says the page copies another site: weight 40 (warn) or 80 (block). No `evidence`. Only when the server runs with `SHOO_L3_MODEL=impersonation` |

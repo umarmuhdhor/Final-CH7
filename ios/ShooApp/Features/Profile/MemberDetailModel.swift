@@ -35,6 +35,8 @@ final class MemberDetailModel {
     let deviceId: String
     private(set) var state: State = .loading
     private(set) var member: FamilyMember?
+    /// Why the member could not be read (`state == .failed`): picks the sentence under the title (A-03).
+    private(set) var loadFailure: LoadFailure = .connection
     /// Newest first, at most 3 ("Aktivitas terbaru").
     private(set) var recent: [ScanResult] = []
     private(set) var recentFailed = false
@@ -45,37 +47,70 @@ final class MemberDetailModel {
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let now: () -> Date
+    /// After a disconnect: the member's pushes leave the lock screen (P13). Tests count the calls.
+    @ObservationIgnored private let onDisconnected: @MainActor () -> Void
 
-    init(deviceId: String, repository: any ShooRepository, now: @escaping () -> Date = Date.init) {
+    init(
+        deviceId: String,
+        repository: any ShooRepository,
+        now: @escaping () -> Date = Date.init,
+        onDisconnected: @escaping @MainActor () -> Void = { DeliveredPushes.clear() }
+    ) {
         self.deviceId = deviceId
         self.repository = repository
         self.now = now
+        self.onDisconnected = onDisconnected
     }
 
+    /// Overlapping calls (the first load and a push reload, A-12): only the newest one is applied.
     func load() async {
+        generation += 1
+        let request = generation
         do {
             let members = try await repository.familyMembers()
-            guard let found = members.first(where: { $0.deviceId == deviceId }) else {
+            guard request == generation else { return }
+            guard var found = members.first(where: { $0.deviceId == deviceId }) else {
                 state = .gone
                 return
             }
+            // "Kabari saya" on its way: the switch stays where the guardian put it, not the server's old value.
+            if isSavingNotify, let notify = member?.notify { found.notify = notify }
             member = found
             state = .loaded
         } catch {
-            guard !error.isCancellation else { return }
+            guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Member load failed", error)
-            if state != .loaded { state = .failed }
+            if state != .loaded {
+                loadFailure = LoadFailure(error)
+                state = .failed
+            }
             return
         }
         do {
-            recent = Array(try await repository.scans(owner: .device(deviceId), status: nil, cursor: nil).items.prefix(3))
+            let page = try await repository.scans(owner: .device(deviceId), status: nil, cursor: nil)
+            guard request == generation else { return }
+            recent = Array(page.items.prefix(3))
             recentFailed = false
         } catch {
-            guard !error.isCancellation else { return }
+            guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Member activity failed", error)
             recentFailed = true
         }
     }
+
+    @ObservationIgnored private var generation = 0
+
+    /// A push arrived while this screen is open: `AppEnvironment.pushesWhileOpen` went up to `count` (A-12).
+    /// Reload once, so the page under the banner tells the same story as Guardian Home does. The same count
+    /// again (the view redrawn) does nothing.
+    func pushesWhileOpenChanged(to count: Int) async {
+        guard count != handledPushes else { return }
+        handledPushes = count
+        await load()
+    }
+
+    /// The `pushesWhileOpen` value this screen last reloaded for.
+    @ObservationIgnored private var handledPushes = 0
 
     /// Calendar days since the link was made, counting today.
     var daysProtected: Int? {
@@ -86,8 +121,12 @@ final class MemberDetailModel {
     }
 
     /// "Kabari saya": optimistic, back to the old value when the server says no.
+    /// BH-30: one change at a time. A tap while one is on its way is ignored (the switch snaps back), so
+    /// two answers arriving in any order cannot leave the switch on a value the server never had.
     func setNotify(_ on: Bool) async {
-        guard let old = member?.notify, old != on else { return }
+        guard !isSavingNotify, let old = member?.notify, old != on else { return }
+        isSavingNotify = true
+        defer { isSavingNotify = false }
         member?.notify = on
         do {
             try await repository.setMemberNotify(deviceId: deviceId, notify: on)
@@ -97,6 +136,8 @@ final class MemberDetailModel {
             actionError = "Couldn't save. Check your connection and try again."
         }
     }
+
+    @ObservationIgnored private var isSavingNotify = false
 
     /// The message to announce after "Ingatkan".
     func remind() async -> String.LocalizationValue? {
@@ -122,6 +163,9 @@ final class MemberDetailModel {
             actionError = "Couldn't disconnect. Check your connection and try again."
             return false
         }
+        // Their pushes go too; one call can't pick a person's, so the lock screen is cleared (C18), as
+        // the family list does (`FamilyCodeModel.remove`).
+        onDisconnected()
         return true
     }
 }

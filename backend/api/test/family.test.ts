@@ -377,6 +377,19 @@ describe("disconnect", () => {
     expect((await call(`/family/members/${p.deviceId}`, { method: "DELETE", token: p.token })).status).toBe(403);
   });
 
+  it.each(
+    (["a%00b", "not-a-uuid"] as const).flatMap((id) => [
+      ["DELETE", `/family/members/${id}`, undefined],
+      ["PATCH", `/family/members/${id}`, { notify: false }],
+      ["POST", `/family/members/${id}/remind`, undefined],
+    ] as const),
+  )("%s %s: a member id that is not a UUID (NUL included) → 404 not_found, not 500 (B-07)", async (method, path, json) => {
+    const { g } = await linked();
+    const res = await call(path, { method, token: g.token, ...(json ? { json } : {}) });
+    expect(res.status).toBe(404);
+    expect(await errorCode(res)).toBe("not_found");
+  });
+
   it("DELETE /family/guardian: protected leaves; 404 when not connected; 403 for guardian", async () => {
     const { g, p } = await linked();
     expect((await call("/family/guardian", { method: "DELETE", token: g.token })).status).toBe(403);

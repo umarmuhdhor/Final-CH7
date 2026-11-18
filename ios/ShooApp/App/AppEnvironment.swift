@@ -18,7 +18,18 @@ final class AppEnvironment {
     /// The server no longer knows our token (401), or the Keychain has none (backup restored onto
     /// another iPhone). `RootView` then shows "Session expired" (fase 13 step 4).
     private(set) var sessionExpired = false
+    /// Verdicts the server confirmed in this launch, from Detail and Home (fase 27 K8). Activity reloads
+    /// when it shows again and this changed since its last load: its rows are a separate list.
+    var verdictSaves = 0
+    /// Members the guardian disconnected in this launch (Member detail). Family Activity reloads when it shows
+    /// again and this changed: its rows and person picker must not keep a removed member's sites and name.
+    var familyChanges = 0
     @ObservationIgnored private var isSyncingForeground = false
+    /// PR-03: the server check behind the latest invite link (`routeInvite`). A newer link cancels it.
+    @ObservationIgnored private(set) var inviteTask: Task<Void, Never>?
+    /// PR-03: onboarding ended with an invite code waiting. The tabs open its sheet once they are on screen
+    /// (`presentInviteAfterOnboarding`): a sheet asked for before then is lost in the cross-fade.
+    @ObservationIgnored private(set) var opensInviteAfterOnboarding = false
     /// Asks iOS for the APNs token; the answer comes back through `AppDelegate`.
     @ObservationIgnored private let registerForPush: @MainActor () -> Void
     /// The token the server has (or is getting) from this launch: the same one is not sent twice.
@@ -27,11 +38,24 @@ final class AppEnvironment {
     @ObservationIgnored private var sentDeviceInfo = false
     /// Bumped by `register`: a token send that started for the old device can't mark the new one as sent.
     @ObservationIgnored private var pushTokenEpoch = 0
+    /// While `becomeProtected` runs, the server may already have swapped the device: a 401 for the old token
+    /// is the old session's, not this one's (fase 27h, F-A3). A count, so overlapping calls each hold it;
+    /// back to 0 when the requests end either way.
+    @ObservationIgnored private var switchingSessions = 0
+    /// OPT-06: the last `GET /devices/me` asked by the foreground sync or by Home, for the other side to share.
+    @ObservationIgnored private var profileCall: ProfileCall?
+    /// How long a profile call is shared: covers the heartbeat `PATCH` that runs before the sync's own ask.
+    static let profileShareWindow: TimeInterval = 10
     /// UI tests (`-UITestReduceMotion YES`, Debug only): no endless shield animation keeping the app busy,
     /// so XCUITest finds it idle (fase 23a K2). Not for screenshots or the accessibility audit.
     @ObservationIgnored private(set) var reducesMotionForUITests = false
     /// Builds the real backend when the demo ends. `nil` in previews and tests that don't leave a demo.
     @ObservationIgnored fileprivate var makeLiveBackend: (() -> (repository: any ShooRepository, session: SessionStore))?
+    /// ON-01: the brand splash over the first screen (`LaunchSplash`). It lives as long as the process, so a
+    /// cold launch shows it and a return from the background does not.
+    var launchSplash: LaunchSplashPhase = .showing
+    /// UI tests: how long the splash stays before it fades (`-UITestSplashSeconds`, Debug only).
+    @ObservationIgnored private(set) var launchSplashHold: Double?
 
     init(
         repository: any ShooRepository,
@@ -98,9 +122,20 @@ final class AppEnvironment {
         if usesMock {
             let scenario = Self.value(after: "-mock.scenario", in: arguments)
                 .flatMap(MockRepository.Scenario.init(rawValue:)) ?? .standard
+            #if DEBUG
+            // Error states in the simulator: `-mock.fail me,setVerdict=verdict_not_allowed`.
+            let failures = MockRepository.failures(from: Self.value(after: "-mock.fail", in: arguments))
+            // Loading states in the simulator: `-mock.latency 8000` (milliseconds per call).
+            let latency = Self.value(after: "-mock.latency", in: arguments).flatMap(Int.init).map { Duration.milliseconds($0) }
+                ?? .milliseconds(300)
+            #else
+            let failures: [String: RepositoryError] = [:]
+            let latency = Duration.milliseconds(300)
+            #endif
             repository = MockRepository(
-                mode: settings.mode ?? .guardian, scenario: scenario,
-                pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES"
+                mode: settings.mode ?? .guardian, scenario: scenario, latency: latency,
+                pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES",
+                failures: failures
             )
             session = nil
             // Fixtures only, nothing leaves the phone: UI tests don't answer the question unless they test it.
@@ -132,6 +167,14 @@ final class AppEnvironment {
         case "offTwoDays": extensionStatus = { .off(lastSeen: Date().addingTimeInterval(-2 * 86_400), reason: .switchedOff) }
         default: break
         }
+        // "Mengecek Shoo…" (1681:5275): Safari takes this many seconds to answer, `-UITestExtensionDelay 3`.
+        if let delay = Self.value(after: "-UITestExtensionDelay", in: arguments).flatMap(Double.init) {
+            let read = extensionStatus
+            extensionStatus = {
+                try? await Task.sleep(for: .seconds(delay))
+                return await read()
+            }
+        }
         // Activity empty states (PR-05): the extension's counters as in Figma (#183, not written yet).
         if Self.value(after: "-UITestCheckStats", in: arguments) == "YES" {
             let lastChecked = Calendar.current.date(bySettingHour: 10, minute: 42, second: 0, of: Date()) ?? Date()
@@ -157,10 +200,34 @@ final class AppEnvironment {
             environment.router.selectedTab = tab
         }
         if Self.value(after: "-debug.profile", in: arguments) == "YES" { environment.router.openProfile() }
+        // Figma parity screenshots of a Profile page: `-debug.profilePage editProfile|notifications|…`.
+        let pages: [String: ProfilePage] = [
+            "mode": .mode, "editProfile": .editProfile, "connection": .connection, "notifications": .notifications,
+            "language": .language, "theme": .theme, "accessibility": .accessibility, "about": .about,
+        ]
+        if let page = Self.value(after: "-debug.profilePage", in: arguments).flatMap({ pages[$0] }) {
+            environment.router.openProfile()
+            environment.router.show(.profilePage(page))
+        }
+        // A family member's detail (PF-01): `-debug.member dev_dad`.
+        if let deviceId = Self.value(after: "-debug.member", in: arguments) {
+            environment.router.openProfile()
+            environment.router.show(.member(deviceId: deviceId))
+        }
+        // ON-01: UI tests that don't test the launch splash start on their screen (`-UITestSkipSplash YES`);
+        // the splash test holds it long enough to see (`-UITestSplashSeconds 5`).
+        if Self.value(after: "-UITestSkipSplash", in: arguments) == "YES" { environment.launchSplash = .done }
+        environment.launchSplashHold = Self.value(after: "-UITestSplashSeconds", in: arguments).flatMap(Double.init)
         if Self.value(after: "-UITestReduceMotion", in: arguments) == "YES" {
             environment.reducesMotionForUITests = true
             // Push and sheet transitions too (UIKit); SwiftUI's own animations read `shooReduceMotion`.
             UIView.setAnimationsEnabled(false)
+        }
+        // A test that needs the real push and tab bar transitions (QA 2026-11-10 #1, #9) but not the endless
+        // shield loops: with those running XCUITest never finds the app idle, and a slow CI runner hung on it
+        // until the 300 s test limit (#405). UIKit animations stay on.
+        if Self.value(after: "-UITestStillLoops", in: arguments) == "YES" {
+            environment.reducesMotionForUITests = true
         }
         // Detail (fase 03): `-debug.detail <scanId>` opens it on the selected tab.
         if let scanId = Self.value(after: "-debug.detail", in: arguments) {
@@ -171,7 +238,20 @@ final class AppEnvironment {
     }
 
     /// A device registered before the question existed answers it before anything else (Apple 5.1.2(i)).
-    var needsDataConsent: Bool { settings.mode != nil && settings.dataConsent == nil && !sessionExpired }
+    /// Only once onboarding is done: during onboarding the invite path asks before Connect and ON-04 has its
+    /// checkbox, so this screen must not replace the flow halfway (fase 27d, F-A1).
+    var needsDataConsent: Bool {
+        settings.mode != nil && settings.onboardingCompleted && settings.dataConsent == nil && !sessionExpired
+    }
+
+    /// The local part of "this device is deleted on the server" (P13), shared by "Delete my data" and
+    /// cancelling a failed invite join: the Protected switches and the checked-pages counter. The session is
+    /// already empty (`ApiRepository.deleteMe`); the caller resets the settings its own way.
+    @MainActor
+    static func forgetDeletedDevice(linked: LinkedAccountSettings) {
+        linked.clear()
+        CheckStats.clear()
+    }
 
     /// Onboarding, the same question for an existing device, and the switch in Profile.
     @MainActor
@@ -184,6 +264,7 @@ final class AppEnvironment {
     /// device (the mock adopts the name, avatar and mode; the API knows them from the token).
     @MainActor
     func register(name: String, mode: UserMode, avatarId: String? = nil) async throws -> DeviceRegistration {
+        await deletePreviousInstall()
         let registration = try await repository.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: nil)
         // Keychain + App Group before the mode is saved: a relaunch never finds a mode without a session.
         do {
@@ -196,10 +277,11 @@ final class AppEnvironment {
             throw RepositoryError.network
         }
         settings.chooseMode(mode)
-        // A new device on the server: its first token must be sent even if APNs hands out the same one.
+        // A new device on the server: its first token must be sent even if APNs hands out the same one, and
+        // its model, iOS version and time zone too (a second registration in one launch, fase 27h F-A8).
         sentPushToken = nil
+        sentDeviceInfo = false
         pushTokenEpoch += 1
-        if mode == .guardian { router.pendingJoinCode = nil }
         // `POST /devices` has no language; the server defaults to English (pushes are localized, D-alief-05).
         if settings.language != .english {
             do {
@@ -212,8 +294,28 @@ final class AppEnvironment {
         return registration
     }
 
+    /// A Keychain token with no mode saved: Shoo was deleted and installed again. The Keychain item outlives
+    /// the app, the settings don't. That old device is still on the server, linked to the family, shown as
+    /// "Aktif" and holding one of the 3 places (QA 2026-11-11 #6). It goes first (`DELETE /devices/me` with
+    /// its own token, as "Delete my data" would): nothing of the old install stays behind (SECURITY §3).
+    /// Best effort: if it fails, the new device registers anyway, as before.
+    @MainActor
+    private func deletePreviousInstall() async {
+        guard settings.mode == nil, let session, session.token != nil else { return }
+        Log.app.info("Token from an earlier install found: deleting that device")
+        do {
+            try await repository.deleteMe()
+        } catch {
+            // Already gone (`deleteMe` cleared the session) or the server refused: the new token replaces it.
+            session.clear()
+            guard !error.isCancellation else { return }
+            Log.app.error("Deleting the earlier install failed", error)
+        }
+    }
+
     /// Every time the app comes to the foreground (contracts/api.md `extensionLastSeenAt`): tells the
-    /// server the extension's last heartbeat (GD-03 "Not connected"), then refreshes name + guardian
+    /// server the extension's last heartbeat (GD-03 "Not connected"; none while this app shows Off because
+    /// Safari access is narrowed or Safari's switch is off), then refreshes name + guardian
     /// in the App Group from `GET /devices/me`.
     @MainActor
     func sceneBecameActive(now: Date = Date()) async {
@@ -221,7 +323,15 @@ final class AppEnvironment {
         guard settings.mode != nil, !sessionExpired, !isSyncingForeground else { return }
         isSyncingForeground = true
         defer { isSyncingForeground = false }
-        let lastSeen = await extensionStatus().lastSeen
+        let status = await extensionStatus()
+        // X-01: Safari lets Shoo read only some sites, or Safari's switch for Shoo is off, so this app shows
+        // Off. The Guardian must not see better than that: the heartbeat in the App Group stays on the phone,
+        // or the server would call the member "connected". Once the server's 24 h window passes, the Guardian
+        // sees "Not connected", the same lag accepted in #380.
+        let lastSeen: Date? = switch status {
+        case .off(_, .someSitesOnly), .off(_, .switchedOff): nil
+        case .active, .off(_, .notSeen): status.lastSeen
+        }
         // PF-01: the guardian's member detail shows the model and iOS version; sent once per launch.
         // The time zone goes with it: quiet hours and the weekly summary use the phone's local time.
         let device = sentDeviceInfo ? nil : (model: DeviceInfo.modelName, os: DeviceInfo.osMajorVersion, zone: DeviceInfo.timeZone)
@@ -241,12 +351,50 @@ final class AppEnvironment {
             }
         }
         do {
-            _ = try await repository.me()
+            _ = try await sharedProfile(forSync: true)
         } catch {
             guard !error.isCancellation else { return }
             Log.app.error("Profile refresh failed", error)
         }
         await registerForPushIfAllowed()
+    }
+
+    /// `GET /devices/me` for Home (OPT-06, fase 28i K11). Coming to the foreground, `sceneBecameActive` and Home both
+    /// need it, for the same answer: Home takes the sync's call (still running, or answered moments ago) and the
+    /// sync takes Home's. One request per foreground instead of two.
+    @MainActor
+    func foregroundProfile() async throws -> DeviceProfile {
+        try await sharedProfile(forSync: false)
+    }
+
+    /// The other side's call is taken once, if it started under the same token and repository less than
+    /// `profileShareWindow` ago. A second ask from the same side (pull to refresh, the next foreground) asks anew.
+    @MainActor
+    private func sharedProfile(forSync: Bool, now: Date = Date()) async throws -> DeviceProfile {
+        let token = session?.token
+        let source = ObjectIdentifier(repository)
+        let task: Task<DeviceProfile, any Error>
+        if var shared = profileCall, !shared.taken, shared.forSync != forSync, shared.token == token,
+           shared.source == source, (0..<Self.profileShareWindow).contains(now.timeIntervalSince(shared.startedAt)) {
+            shared.taken = true
+            profileCall = shared
+            task = shared.task
+        } else {
+            let repository = repository
+            task = Task { try await repository.me() }
+            profileCall = ProfileCall(task: task, token: token, source: source, startedAt: now, forSync: forSync)
+        }
+        let profile: DeviceProfile
+        do {
+            profile = try await task.value
+        } catch {
+            // A failed call is never handed on: the next ask tries anew.
+            if profileCall?.task == task { profileCall = nil }
+            throw error
+        }
+        // The shared call is not cancelled with one asker; this asker still stops like a cancelled request.
+        try Task.checkCancellation()
+        return profile
     }
 
     /// A registered device whose token is gone (backup restored onto another iPhone: the Keychain item
@@ -271,10 +419,11 @@ final class AppEnvironment {
     }
 
     /// A 401 for `usedToken`. Ignored when the session has moved on since that request left
-    /// (restart, new registration): only the current token can expire.
+    /// (restart, new registration): only the current token can expire. Also ignored while
+    /// `becomeProtected` runs: the old token is about to be replaced (and the server may have dropped it).
     @MainActor
     func handleUnauthorized(usedToken: String) {
-        guard let current = try? session?.readToken(), current == usedToken else { return }
+        guard switchingSessions == 0, let current = try? session?.readToken(), current == usedToken else { return }
         markSessionExpired()
     }
 
@@ -322,13 +471,54 @@ final class AppEnvironment {
         DeliveredPushes.clear()
     }
 
+    /// "Delete my data" is done (the device is gone on the server): back to onboarding. Profile calls it
+    /// right before `settings.reset()`.
+    @MainActor
+    func returnToOnboardingAfterDelete() {
+        leaveDemo()
+        router.reset()
+        // A 401 for another request with the same token can land before the delete answers (fase 27h, F-N7):
+        // the device is gone on purpose, so onboarding shows, not "Session expired".
+        sessionExpired = false
+        DeliveredPushes.clear()
+    }
+
+    /// Family mode on (Pribadi → Guardian). The first time, Figma "To be guardian" shows first and its
+    /// "Mulai" turns it on (`startGuardian`).
+    @MainActor
+    func requestFamilyMode() {
+        guard settings.mode == .guardian, !settings.familyModeOn else { return }
+        if settings.guardianIntroSeen {
+            settings.familyModeOn = true
+        } else {
+            router.isGuardianIntroPresented = true
+        }
+    }
+
+    /// "Mulai" on Figma "To be guardian".
+    @MainActor
+    func startGuardian() {
+        settings.guardianIntroSeen = true
+        settings.familyModeOn = true
+        router.isGuardianIntroPresented = false
+    }
+
     /// PF-01 "Punya kode undangan?": a guardian without members joins another family. The server
     /// replaces this device with a protected one; its session and the mode take over here at once
     /// (the old token is dead). The caller closes its screens afterwards (`router.reset()`).
     /// Throws the join errors (code, full family) and `has_members`.
     @MainActor
     func becomeProtected(code: String, name: String) async throws -> GuardianInfo {
-        let result = try await repository.becomeProtected(code: code)
+        switchingSessions += 1
+        defer { switchingSessions -= 1 }
+        let result: ProtectedSwitch
+        do {
+            result = try await repository.becomeProtected(code: code)
+        } catch let error as RepositoryError where error.apiCode == .unauthorized {
+            // This request's own 401: the token was already dead before the switch, and nothing replaces it.
+            markSessionExpired()
+            throw error
+        }
         do {
             try session?.save(result.registration, name: name, mode: .protected)
         } catch {
@@ -348,29 +538,74 @@ final class AppEnvironment {
         return result.guardian
     }
 
-    /// Deep links (contracts/app-group-keys.md). A join link only fills in the code: Connect still asks
-    /// for a tap (T11). `scan` opens Detail, `activity` the Activity tab; a Guardian's join link, or any
-    /// unknown link, lands on Shield.
+    /// Deep links (contracts/app-group-keys.md). A join link only fills in the code: joining still asks
+    /// for a tap (T11). Every mode gets its invite (PR-03, BH-10): `routeInvite` decides between the join sheet,
+    /// Connect and a Home card. `scan` opens Detail, `activity` the Activity tab; an unknown link lands on Shield.
     @MainActor
     func open(_ url: URL) {
         switch DeepLink(url: url) {
-        case .join(let code) where settings.mode != .guardian:
+        case .join(let code):
             router.pendingJoinCode = code
-            // Not registered yet: onboarding reaches Connect with the code. Mid-onboarding Connect picks it up.
-            guard settings.mode == .protected, settings.onboardingCompleted else { return }
-            // Already open, `ConnectSheet` picks the new code up.
-            router.showConnect()
+            // Not registered or still onboarding (everyone onboards as Pribadi): the join sheet opens with the
+            // code once onboarding is done (`finishOnboarding`). "Session expired": the code just waits.
+            guard isInMainScreen else { return }
+            inviteTask?.cancel()
+            inviteTask = Task { await routeInvite() }
         case .scan(let id) where isInMainScreen:
             router.openDetail(scanId: id)
         case .activity where isInMainScreen:
             router.openActivity()
-        case .join, .unknown:
-            // A Guardian's join link, or a link we don't know: Shield.
+        case .unknown:
+            // A link we don't know: Shield.
             if isInMainScreen { router.reset() }
         case .scan, .activity:
             // Onboarding or "Session expired" is on screen: nothing to open yet.
             break
         }
+    }
+
+    /// PR-03, an invite link while the tabs show (Figma "Flow · Protected buka link undangan"). An open join
+    /// sheet just gets the new code. Otherwise the server decides what Home says: a guardian still protecting
+    /// someone can't join (`has_members`), a protected iPhone with a guardian can't either, and anyone else gets
+    /// the invite banner (Pribadi) or Connect (Protected without a guardian). Offline: the banner or Connect, and
+    /// the join itself says why it can't.
+    @MainActor
+    func routeInvite() async {
+        if router.isConnectPresented || router.isJoinFamilyPresented { return }
+        router.inviteNotice = nil
+        switch settings.mode {
+        case .guardian:
+            let members = try? await repository.familyMembers()
+            guard !Task.isCancelled, router.pendingJoinCode != nil else { return }
+            showHomeForInvite()
+            if let members, !members.isEmpty {
+                router.dismissInviteNotice()
+                router.inviteNotice = .hasMembers
+            } else {
+                router.inviteNotice = .invited
+            }
+        case .protected:
+            let guardian = try? await repository.me().guardian
+            guard !Task.isCancelled, router.pendingJoinCode != nil else { return }
+            if let guardian {
+                showHomeForInvite()
+                router.dismissInviteNotice()
+                router.inviteNotice = .alreadyProtected(guardian: guardian.name)
+            } else {
+                // Already open, `ConnectSheet` picks the new code up.
+                router.showConnect()
+            }
+        case nil:
+            break
+        }
+    }
+
+    /// The banner shows over Home: no pushed screen, no Turn on sheet.
+    @MainActor
+    private func showHomeForInvite() {
+        router.isTurnOnPresented = false
+        router.popToRoot()
+        router.selectedTab = .shield
     }
 
     /// The tabs are showing (not onboarding, not "Session expired").
@@ -379,12 +614,13 @@ final class AppEnvironment {
         settings.onboardingCompleted && settings.mode != nil && !sessionExpired
     }
 
-    /// GD-06: a tapped push. A push without a usable `scanId` opens Shield. The Protected device only
-    /// gets family pushes (reminder, disconnect, PF-01), which never carry a `scanId`.
+    /// GD-06: a tapped push. One with a usable `scanId` opens Detail in either mode: the Guardian's pushes
+    /// are about a member's scan, the Protected device's about its own (`ownPush`, `GET /scans/{id}` lets
+    /// the owner read it). Family pushes (reminder, disconnect, PF-01) carry none and open Shield.
     @MainActor
     func openPush(scanId: String?) {
         guard isInMainScreen else { return }
-        if let scanId, settings.mode == .guardian {
+        if let scanId {
             router.openDetail(scanId: scanId)
         } else {
             router.reset()
@@ -394,6 +630,17 @@ final class AppEnvironment {
     /// A push that arrives while Shoo is open: a banner only where a tap can open it (C15).
     @MainActor
     var showsPushBanner: Bool { isInMainScreen }
+
+    /// Bumped by every push that arrives while the tabs are showing. Guardian Home reloads on it, so the
+    /// banner and the page under it tell the same story without a pull-to-refresh (QA 2026-11-11 #4).
+    private(set) var pushesWhileOpen = 0
+
+    /// A push arrived while Shoo is open (`willPresent`).
+    @MainActor
+    func pushArrivedWhileOpen() {
+        guard isInMainScreen else { return }
+        pushesWhileOpen += 1
+    }
 
     /// ON-05: both modes send their token. The Guardian gets scan pushes; the Protected device gets
     /// family pushes ("Ingatkan", disconnect, PF-01 proposed in backend/API.md).
@@ -427,6 +674,25 @@ final class AppEnvironment {
     @MainActor
     func finishOnboarding() {
         settings.onboardingCompleted = true
+        // PR-03: an invite link opened before or during onboarding. The tabs open the join sheet with its code
+        // (`presentInviteAfterOnboarding`), so the only step left is the Hubungkan tap (T11).
+        router.dropExpiredInvite()
+        opensInviteAfterOnboarding = router.pendingJoinCode != nil
+    }
+
+    /// The tabs are on screen after onboarding: the join sheet for a waiting invite code. An older build's
+    /// Protected registration gets Connect.
+    @MainActor
+    func presentInviteAfterOnboarding() {
+        guard opensInviteAfterOnboarding else { return }
+        opensInviteAfterOnboarding = false
+        router.dropExpiredInvite()
+        guard router.pendingJoinCode != nil else { return }
+        switch settings.mode {
+        case .guardian: router.showJoinFamily()
+        case .protected: router.showConnect()
+        case nil: break
+        }
     }
 
     /// For SwiftUI previews: fixtures, no latency, onboarding done.
@@ -437,7 +703,9 @@ final class AppEnvironment {
         settings.language = language
         settings.onboardingCompleted = true
         settings.dataConsent = .granted
-        return AppEnvironment(repository: MockRepository(mode: mode, latency: .zero), settings: settings)
+        let environment = AppEnvironment(repository: MockRepository(mode: mode, latency: .zero), settings: settings)
+        environment.launchSplash = .done
+        return environment
     }
 
     private static func value(after flag: String, in arguments: [String]) -> String? {
@@ -454,4 +722,15 @@ final class SessionExpiry: @unchecked Sendable {
     func report(usedToken: String) {
         Task { @MainActor [weak self] in self?.environment?.handleUnauthorized(usedToken: usedToken) }
     }
+}
+
+/// One shared `GET /devices/me` (OPT-06): asked by the foreground sync (`forSync`) or by Home, under `token` and
+/// the repository `source`, at `startedAt`. `taken`: the other side used it already.
+private struct ProfileCall {
+    let task: Task<DeviceProfile, any Error>
+    let token: String?
+    let source: ObjectIdentifier
+    let startedAt: Date
+    let forSync: Bool
+    var taken = false
 }

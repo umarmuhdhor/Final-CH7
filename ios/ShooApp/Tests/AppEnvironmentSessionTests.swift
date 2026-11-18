@@ -61,6 +61,40 @@ struct AppEnvironmentSessionTests {
         #expect(server.requests.map(\.path) == ["/devices"])
     }
 
+    /// QA 2026-11-11 #6: reinstalled, the Keychain still holds the old token. That device is deleted with its
+    /// own token before the new one registers, so it stops holding a family place.
+    @Test func reinstallDeletesTheEarlierDeviceFirst() async throws {
+        let server = StubServer(token: "shoo_old_install")
+        server.reply { $0.path == "/devices" ? Self.registered : Self.ok }
+        let env = environment(server: server)
+        _ = try await env.register(name: "Rina", mode: .protected)
+        let requests = server.requests
+        #expect(requests.map { "\($0.method) \($0.path)" } == ["DELETE /devices/me", "POST /devices"])
+        #expect(requests.first?.headers["Authorization"] == "Bearer shoo_old_install")
+        #expect(server.session.token == "shoo_fresh_token")
+        #expect(env.settings.mode == .protected)
+        #expect(server.unauthorizedCount == 0)
+    }
+
+    /// The old device is already gone (401 / 404) or the server fails: the new device registers anyway,
+    /// and no "Session expired" shows for the old token.
+    @Test(arguments: [
+        HostStubProtocol.Reply.json(401, #"{"error":{"code":"unauthorized","message":"gone"}}"#),
+        .json(404, #"{"error":{"code":"not_found","message":"gone"}}"#),
+        .json(500, #"{"error":{"code":"internal","message":"boom"}}"#),
+    ])
+    func reinstallStillRegistersWhenTheOldDeviceCantBeDeleted(reply: HostStubProtocol.Reply) async throws {
+        let server = StubServer(token: "shoo_old_install")
+        server.reply { $0.path == "/devices" ? Self.registered : reply }
+        let env = environment(server: server)
+        _ = try await env.register(name: "Rina", mode: .guardian)
+        #expect(server.requests.map(\.path) == ["/devices/me", "/devices"])
+        #expect(server.session.token == "shoo_fresh_token")
+        #expect(env.settings.mode == .guardian)
+        #expect(!env.sessionExpired)
+        #expect(server.unauthorizedCount == 0)
+    }
+
     @Test func indonesianAppTellsTheServerRightAway() async throws {
         let server = StubServer(token: nil)
         server.reply { $0.path == "/devices" ? Self.registered : Self.ok }
@@ -125,6 +159,29 @@ struct AppEnvironmentSessionTests {
         #expect(first?["extensionLastSeenAt"] == nil)
         await env.sceneBecameActive()
         #expect(server.requests.map(\.method) == ["PATCH", "GET", "GET"])
+    }
+
+    /// X-01 (fase 28d): Safari access narrowed to some sites, or Safari's switch for Shoo turned off. The
+    /// member's own app says Off, so the Guardian must not be told "connected": no `extensionLastSeenAt`,
+    /// even with a fresh heartbeat in the App Group. The model and time zone still go on the first activation.
+    @Test(arguments: [ExtensionStatus.OffReason.someSitesOnly, .switchedOff])
+    func narrowedSafariAccessSendsNoHeartbeat(reason: ExtensionStatus.OffReason) async throws {
+        let server = StubServer()
+        server.reply { $0.method == "PATCH" ? Self.ok : Self.profile }
+        let now = Date()
+        let env = environment(
+            server: server, mode: .guardian,
+            extensionStatus: { .off(lastSeen: now.addingTimeInterval(-60), reason: reason) }
+        )
+        await env.sceneBecameActive(now: now)
+        let body = try #require(server.requests.first { $0.method == "PATCH" }?.json)
+        #expect(body["deviceModel"] is String)
+        #expect(body["timeZone"] is String)
+        #expect(body["extensionLastSeenAt"] == nil)
+        // A later activation (device info already sent) still reports no heartbeat.
+        await env.sceneBecameActive(now: now)
+        #expect(server.requests.allSatisfy { $0.json?["extensionLastSeenAt"] == nil })
+        #expect(server.requests.filter { $0.json?["deviceModel"] != nil }.count == 1)
     }
 
     @Test func foregroundBeforeRegistrationCallsNothing() async {
@@ -249,7 +306,10 @@ struct AppEnvironmentSessionTests {
         #expect(AppConfig.apiBaseURL.absoluteString == "http://localhost:8787")
         #else
         #expect(AppConfig.apiBaseURL.absoluteString == "https://shoo-api.afindo-mi01.workers.dev")
+        // PR-03: invite links on the new public host and the old workers.dev one both open the app.
+        #expect(DeepLink.inviteHosts == ["join.shoo.ai.id", "shoo-api.afindo-mi01.workers.dev"])
         #endif
+        #expect(AppConfig.publicBaseURL.absoluteString == "https://join.shoo.ai.id")
         // Only Release builds hand the AI Worker to the extension (#82).
         #if DEBUG
         #expect(AppConfig.aiBaseURL == nil)
@@ -281,6 +341,110 @@ struct AppEnvironmentSessionTests {
         #expect(request.method == "POST")
     }
 
+    private nonisolated static let switched = HostStubProtocol.Reply.json(
+        201, #"{"deviceId":"dev_p","token":"shoo_protected_token","avatarId":"avatar_05","guardian":{"deviceId":"dev_g","name":"Budi","avatarId":"avatar_04"}}"#
+    )
+
+    /// Fase 27h (F-A3, K10): while "Punya kode undangan?" is in flight the server has already swapped the device,
+    /// so another request sent with the old token gets 401. That answer belongs to the old session: the new
+    /// one is saved and "Session expired" never shows.
+    @Test func oldTokenUnauthorizedDuringTheSwitchKeepsTheNewSession() async throws {
+        let server = StubServer()
+        let gate = ReplyGate()
+        server.reply { request in
+            guard request.path == "/devices/me/protected" else { return Self.ok }
+            gate.hold()
+            return Self.switched
+        }
+        let env = environment(server: server, mode: .guardian)
+        defer { gate.open() }
+        let switching = Task { try await env.becomeProtected(code: "123456", name: "Rina") }
+        await gate.arrival()
+        env.handleUnauthorized(usedToken: "shoo_test_token_123")
+        gate.open()
+        _ = try await switching.value
+        #expect(!env.sessionExpired)
+        #expect(server.session.token == "shoo_protected_token")
+        #expect(server.session.defaults.string(forKey: AppGroup.Key.deviceId) == "dev_p")
+        #expect(env.settings.mode == .protected)
+    }
+
+    /// K10: the switch flag lives only while the request runs. A failed switch (here a 500) leaves the old
+    /// session, and its next 401 shows "Session expired" as usual.
+    @Test func failedSwitchStillLetsTheNextUnauthorizedExpire() async throws {
+        let server = StubServer()
+        server.reply { _ in .json(500, #"{"error":{"code":"internal","message":"Something went wrong"}}"#) }
+        let env = environment(server: server, mode: .guardian)
+        await #expect(throws: RepositoryError.self) { try await env.becomeProtected(code: "123456", name: "Rina") }
+        env.handleUnauthorized(usedToken: "shoo_test_token_123")
+        #expect(env.sessionExpired)
+    }
+
+    /// The switch's own 401: the token was dead before the switch and nothing replaces it, so the session
+    /// expires at once (the flag only covers other requests' answers).
+    @Test func switchRequestItselfUnauthorizedExpiresTheSession() async throws {
+        let server = StubServer()
+        server.reply { _ in .json(401, #"{"error":{"code":"unauthorized","message":"Unknown token"}}"#) }
+        let env = environment(server: server, mode: .guardian)
+        await #expect(throws: RepositoryError.self) { try await env.becomeProtected(code: "123456", name: "Rina") }
+        #expect(env.sessionExpired)
+        #expect(server.session.token == nil)
+    }
+
+    /// Fase 27h (F-A8, K10): a second registration in the same launch (after "Delete my data") is a new device on
+    /// the server, so its first activation sends the model, iOS version and time zone again.
+    @Test func registeringAgainInTheSameLaunchSendsTheDeviceInfoAgain() async throws {
+        let server = StubServer(token: nil)
+        server.reply { request in
+            switch (request.method, request.path) {
+            case ("POST", "/devices"): Self.registered
+            case ("GET", _): Self.profile
+            default: Self.ok
+            }
+        }
+        let env = environment(server: server)
+        _ = try await env.register(name: "Rina", mode: .guardian)
+        await env.sceneBecameActive()
+        // "Delete my data" (ProfileModel.deleteMyData): gone on the server, then a fresh install here.
+        try await env.repository.deleteMe()
+        env.settings.reset()
+        _ = try await env.register(name: "Rina", mode: .guardian)
+        let afterSecondRegistration = server.requests.count
+        await env.sceneBecameActive()
+        let sent = server.requests.dropFirst(afterSecondRegistration).filter { $0.method == "PATCH" }.compactMap(\.json)
+        #expect(sent.contains { $0["deviceModel"] is String && $0["osVersion"] is String && $0["timeZone"] is String })
+    }
+
+    /// Fase 27h (F-N7, K10): a 401 for another request with the same token can land before `DELETE /devices/me`
+    /// answers. The delete still ends in onboarding, not on "Session expired".
+    @Test func unauthorizedDuringDeleteEndsInOnboarding() async throws {
+        let server = StubServer()
+        let gate = ReplyGate()
+        server.reply { request in
+            guard request.method == "DELETE" else { return Self.ok }
+            gate.hold()
+            return Self.ok
+        }
+        let env = environment(server: server, mode: .protected)
+        env.settings.onboardingCompleted = true
+        let linkedSuite = "test.linked.\(UUID().uuidString)"
+        defer { UserDefaults.standard.removePersistentDomain(forName: linkedSuite) }
+        let profile = ProfileModel(
+            repository: env.repository, settings: env.settings,
+            linked: LinkedAccountSettings(defaults: UserDefaults(suiteName: linkedSuite)!)
+        )
+        profile.onSessionEnd = { env.returnToOnboardingAfterDelete() }
+        defer { gate.open() }
+        let deleting = Task { await profile.deleteMyData() }
+        await gate.arrival()
+        env.handleUnauthorized(usedToken: "shoo_test_token_123")
+        gate.open()
+        #expect(await deleting.value)
+        #expect(!env.sessionExpired)
+        #expect(env.settings.mode == nil)
+        #expect(!env.settings.onboardingCompleted)
+    }
+
     @Test func joiningWhileProtectingSomeoneKeepsTheGuardianSession() async throws {
         let server = StubServer()
         server.reply { _ in .json(409, #"{"error":{"code":"has_members","message":"Disconnect the people you protect first"}}"#) }
@@ -288,5 +452,53 @@ struct AppEnvironmentSessionTests {
         await #expect(throws: RepositoryError.self) { try await env.becomeProtected(code: "123456", name: "Rina") }
         #expect(server.session.token == "shoo_test_token_123")
         #expect(env.settings.mode == .guardian)
+    }
+
+    /// OPT-06 (fase 28i, K11): coming to the foreground asked `GET /devices/me` twice, once for the App Group sync
+    /// (`sceneBecameActive`) and once for Home, the same answer both times. Home now shares the app's call.
+    @Test func BUG_OPT06_oneProfileRequestPerForeground() async throws {
+        let server = StubServer()
+        server.reply { seen in
+            switch (seen.method, seen.path) {
+            case ("PATCH", _): Self.ok
+            case (_, "/devices/me"): Self.profile
+            case (_, "/family/members"): .json(200, #"{"members":[]}"#)
+            default: .json(200, #"{"items":[],"nextCursor":null}"#)
+            }
+        }
+        let env = environment(server: server, mode: .guardian)
+        let home = GuardianHomeModel(
+            repository: env.repository, settings: env.settings, scope: .family,
+            extensionStatus: { .off(lastSeen: nil) }, profile: { try await env.foregroundProfile() }
+        )
+        async let sync: Void = env.sceneBecameActive()
+        async let shown: Void = home.refresh()
+        _ = await (sync, shown)
+        #expect(home.state == .loaded)
+        #expect(home.profile?.name == "Rina")
+        #expect(server.requests.filter { $0.method == "GET" && $0.path == "/devices/me" }.count == 1)
+
+        // Each side shares once: the next foreground asks again.
+        await env.sceneBecameActive()
+        #expect(server.requests.filter { $0.method == "GET" && $0.path == "/devices/me" }.count == 2)
+    }
+
+    /// OPT-06: a failed `GET /devices/me` is not handed on; the foreground sync asks again.
+    @Test func failedProfileCallIsNotShared() async throws {
+        let server = StubServer()
+        let host = server.host
+        server.reply { seen in
+            let asked = HostStubProtocol.requests(host: host).filter { $0.method == "GET" && $0.path == "/devices/me" }.count
+            return switch (seen.method, seen.path) {
+            case ("PATCH", _): Self.ok
+            case (_, "/devices/me"): asked == 1 ? .json(500, #"{"error":{"code":"internal","message":"x"}}"#) : Self.profile
+            default: .json(200, #"{"items":[],"nextCursor":null}"#)
+            }
+        }
+        let env = environment(server: server, mode: .guardian)
+        await #expect(throws: RepositoryError.self) { _ = try await env.foregroundProfile() }
+        await env.sceneBecameActive()
+        #expect(server.requests.filter { $0.method == "GET" && $0.path == "/devices/me" }.count == 2)
+        #expect(server.session.defaults.string(forKey: AppGroup.Key.deviceName) == "Rina")
     }
 }

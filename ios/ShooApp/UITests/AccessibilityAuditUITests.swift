@@ -16,7 +16,6 @@ final class AccessibilityAuditUITests: XCTestCase {
         ("ON01-consent", ["-UITestReset", "YES", "-debug.askDataConsent", "YES", "-settings.mode", "guardian", "-settings.onboardingCompleted", "YES"]),
         ("ON02-name", ["-UITestReset", "YES", "-debug.onboardingStep", "name"]),
         ("ON03-mode", ["-UITestReset", "YES", "-debug.onboardingStep", "mode"]),
-        ("ON03-connect", ["-UITestReset", "YES", "-settings.mode", "protected", "-debug.onboardingStep", "connect"]),
         ("ON03-invite", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "invite"]),
         ("ON04-extension", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "turnOnExtension"]),
         ("ON04-safari-default", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "safariDefault"]),
@@ -58,7 +57,7 @@ final class AccessibilityAuditUITests: XCTestCase {
     private func audit(language: String) throws {
         for (name, arguments) in Self.screens {
             let app = XCUIApplication()
-            app.launchArguments = ["-UITestMock", "YES", "-settings.language", language] + arguments
+            app.launchArguments = ["-UITestMock", "YES", "-UITestSkipSplash", "YES", "-settings.language", language] + arguments
             app.launch()
             // Let the mock answer and the screen settle.
             _ = app.staticTexts.firstMatch.waitForExistence(timeout: 10)

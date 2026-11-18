@@ -14,6 +14,7 @@
             score: state.score,
             recordId: state.recordId ?? null,
             reportKey: state.reportKey ?? null, // EX-07: blocked.html asks background for the record id
+            remembered: Boolean(state.remembered), // #382: from block memory, the reasons may be another page's
             reasons: [...state.signals]
                 .sort((a, b) => b.weight - a.weight)
                 .slice(0, MAX_REASONS)
@@ -56,7 +57,8 @@
         const reportKey = report?.keyFor(state.scanId) ?? null;
         // #231: next time this site opens straight to the block screen, without asking the server's layers again.
         // Background keeps only the reasons, never their evidence (block-memory.js); never wait on it for long.
-        if (!state.remembered) {
+        // Remembered without a record (its first report failed): sent again, so this report's id is linked to it.
+        if (!state.remembered || !state.recordId) {
             const remember = browser.runtime
                 .sendMessage({ type: "rememberBlock", url: state.url, domain: state.domain, score: state.score, signals: state.signals, reportKey })
                 .catch(() => {});

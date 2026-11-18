@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pushText } from "../src/services/push/messages";
+import { familyPushText, pushText } from "../src/services/push/messages";
 
 describe("pushText (contracts/api.md push payloads, R3 §6)", () => {
   it.each([
@@ -9,5 +9,16 @@ describe("pushText (contracts/api.md push payloads, R3 §6)", () => {
     ["id", "warning", "Mom membuka situs mencurigakan · 41%"],
   ] as const)("%s %s", (lang, status, text) => {
     expect(pushText(lang, status, "Mom", status === "blocked" ? 92 : 41)).toBe(text);
+  });
+});
+
+describe("familyPushText (PF-01, QA 2026-11-10 #6)", () => {
+  it.each([
+    ["en", "disconnected", "Adhella", "Adhella stopped protecting you"],
+    ["id", "disconnected", "Adhella", "Adhella berhenti melindungimu"],
+    ["en", "memberLeft", "Maria", "Maria deleted their Shoo account. You no longer protect them"],
+    ["id", "memberLeft", "Maria", "Maria menghapus akun Shoo-nya. Kamu tidak lagi melindunginya"],
+  ] as const)("%s %s", (lang, kind, name, text) => {
+    expect(familyPushText(lang, kind, name)).toBe(text);
   });
 });

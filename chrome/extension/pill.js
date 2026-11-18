@@ -1,7 +1,6 @@
 // Owner: lead. Live score bubble (EX-03). Plain content script, loaded after pipeline.js.
 // Chrome copy of the Safari pill.js without the card's "See detail" (no Shoo app on Chrome to open).
-// The extension can't drive the Dynamic Island (docs/spikes/dynamic-island.md), so the running
-// score floats on the page instead: a round button the user can drag to either edge (like a chat
+// The running score floats on the page: a round button the user can drag to either edge (like a chat
 // head). It lives in the page: it exists only while a page is open in Safari and goes away with it.
 // Rules: always on screen while a page is open, whatever the score · the number follows every
 // (re)scan live (content.js re-checks the page when it changes) · hidden when blocked (block screen
@@ -15,7 +14,7 @@
     const MARGIN = 10; // gap between bubble and screen edge, px
     const DEFAULT_POS = { side: "right", y: 0.38 }; // clear of the EX-04 warning card, even on an iPhone SE
 
-    /** "safe" < 30 · "warning" 30–49 · "danger" 50–79. Blocked never reaches the bubble. */
+    /** "safe" < firstWarning · "warning" < secondWarning · "danger" below the block threshold (built in: 30 / 50 / 80). Blocked never reaches the bubble. */
     function toneFor(score) {
         if (score >= THRESHOLD.secondWarning) return "danger";
         if (score >= THRESHOLD.firstWarning) return "warning";
@@ -30,8 +29,15 @@
     function decide(memo, state) {
         if (!memo || memo.scanId !== state.scanId) memo = { scanId: state.scanId, dismissed: false };
         if (memo.dismissed || state.status === "blocked") return { memo, view: { visible: false } };
+        // #369: a Guardian vouched for this link. Say so instead of a 0% "low risk" over a page with danger signs.
+        if (state.verdict?.value === "safe") {
+            return { memo, view: { visible: true, score: 0, tone: "safe", analyzing: false, safeBy: state.verdict.byName || "" } };
+        }
 
-        return { memo, view: { visible: true, score: state.score, tone: toneFor(state.score), analyzing: !state.done } };
+        const tone = toneFor(state.score);
+        // #379: without layer 3 a low score is "not checked online", never "low risk".
+        const offline = tone === "safe" && state.done && state.onlineChecked === false;
+        return { memo, view: { visible: true, score: state.score, tone, analyzing: !state.done, ...(offline ? { offline: true } : {}) } };
     }
 
     /** The user tapped Hide: the bubble stays hidden until the next page. */
@@ -325,7 +331,9 @@
         const { state, view } = last;
         const { card, chip, big, list, note } = refs;
         card.dataset.tone = view.tone;
-        chip.textContent = t(view.analyzing ? "pill_status_checking" : `pill_status_${view.tone}`);
+        chip.textContent = view.safeBy !== undefined
+            ? t(view.safeBy ? "pill_status_marked_safe" : "pill_status_marked_safe_anon", [view.safeBy])
+            : t(view.analyzing ? "pill_status_checking" : view.offline ? "pill_status_offline" : `pill_status_${view.tone}`);
         big.textContent = `${view.score}%`;
         card.setAttribute("aria-label", `${chip.textContent} ${big.textContent}`);
 

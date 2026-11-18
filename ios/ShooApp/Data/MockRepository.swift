@@ -26,6 +26,29 @@ actor MockRepository: ShooRepository {
         case allBlocked
         /// Imelda's eval corpus with the detector's real results (`Fixtures/corpus-scans.json`).
         case corpus
+        /// DT-04 (#497): one scan whose address reasons carry `host.marks` and `official`.
+        case addressMarks
+        // Home parity QA (`MockScenarios.home`): one state per Figma HOME frame (Pribadi, protected/Home).
+        case homePribadi
+        case homePribadiAlone
+        case protectedQuiet
+        case protectedBlocked
+        case protectedBlockedScam
+        case protectedBlockedSafe
+        case protectedWarning
+        case protectedWarningScam
+        case protectedWarningSafe
+        case protectedAlone
+
+        /// Draws the Figma "Scam Terbaru" cards on Home.
+        var hasScamCases: Bool {
+            switch self {
+            case .standard, .empty, .unpaired, .oneMember, .threeMembers, .mixedVerdicts, .heavy, .edge, .allSafe,
+                 .allBlocked, .corpus, .addressMarks: false
+            case .figma, .homePribadi, .homePribadiAlone, .protectedQuiet, .protectedBlocked, .protectedBlockedScam,
+                 .protectedBlockedSafe, .protectedWarning, .protectedWarningScam, .protectedWarningSafe, .protectedAlone: true
+            }
+        }
     }
 
     /// Not in contracts/fixtures: only the 3-member UI gate uses it.
@@ -83,6 +106,8 @@ actor MockRepository: ShooRepository {
     /// `-debug.replicaFixture YES`: Detail of a scan with a screenshot gets a page copy link (`FixtureReplicaLoader`).
     /// The contract fixtures have `pageReplicaUrl: null`, so previews and the UI gate need this to show a copy.
     nonisolated let pageCopies: Bool
+    /// See `failIfAsked`.
+    nonisolated let failures: [String: RepositoryError]
 
     /// Link the Detail screen gets for a fixture page copy; `example.invalid` never resolves.
     static func fixtureReplicaURL(scanId: String) -> URL {
@@ -96,8 +121,10 @@ actor MockRepository: ShooRepository {
         pageSize: Int = MockRepository.pageSize,
         bundle: Bundle = .main,
         pageCopies: Bool = false,
+        failures: [String: RepositoryError] = [:],
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
+        self.failures = failures
         let dataset = MockScenarios.dataset(for: scenario, now: now(), bundle: bundle)
         if let dataset {
             profile = mode == .guardian ? dataset.guardian : dataset.protected
@@ -122,7 +149,9 @@ actor MockRepository: ShooRepository {
         case .empty, .unpaired:
             allScans = []
             members = []
-        case .figma, .mixedVerdicts, .heavy, .edge, .allSafe, .allBlocked, .corpus:
+        case .figma, .mixedVerdicts, .heavy, .edge, .allSafe, .allBlocked, .corpus, .addressMarks, .homePribadi, .homePribadiAlone,
+             .protectedQuiet, .protectedBlocked, .protectedBlockedScam, .protectedBlockedSafe, .protectedWarning,
+             .protectedWarningScam, .protectedWarningSafe, .protectedAlone:
             allScans = dataset?.scans ?? []
             members = dataset?.members ?? []
         }
@@ -133,6 +162,7 @@ actor MockRepository: ShooRepository {
 
     func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
         try await pause()
+        try failIfAsked("registerDevice")
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (1...20).contains(trimmed.count) else {
             throw RepositoryError.api(.invalidBody, message: "name must be 1–20 characters")
@@ -149,16 +179,18 @@ actor MockRepository: ShooRepository {
     }
 
     func latestScams() async throws -> [ScamCase] {
-        scenario == .figma ? MockScenarios.scamCases : []
+        scenario.hasScamCases ? MockScenarios.scamCases(now: now()) : []
     }
 
     func me() async throws -> DeviceProfile {
         try await pause()
+        try failIfAsked("me")
         return profile
     }
 
     func updateMe(_ update: DeviceUpdate) async throws {
         try await pause()
+        try failIfAsked("updateMe")
         // Validate everything first: a rejected update changes nothing.
         let trimmed = update.name?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let trimmed, !(1...20).contains(trimmed.count) {
@@ -181,13 +213,14 @@ actor MockRepository: ShooRepository {
 
     func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
         try await pause()
+        try failIfAsked("createFamilyCode")
         try require(.guardian)
         // Same code while more than 5 min is left, like the server (contracts/api.md).
-        if !refresh, let familyCode, familyCode.expiresAt.timeIntervalSince(now()) > 5 * 60 { return familyCode }
+        if !refresh, let familyCode, familyCode.expiresAt.timeIntervalSince(now()) > ApiRepository.codeReuseSeconds { return familyCode }
         let code = String(format: "%06d", Int.random(in: 100_000...599_999))
         let fresh = FamilyCode(
             code: code,
-            expiresAt: now().addingTimeInterval(30 * 60),
+            expiresAt: now().addingTimeInterval(FamilyCodeModel.codeLifetime),
             inviteUrl: AppConfig.publicBaseURL.appending(path: "j/\(code)")
         )
         familyCode = fresh
@@ -196,12 +229,16 @@ actor MockRepository: ShooRepository {
 
     func joinFamily(code: String) async throws -> GuardianInfo {
         try await pause()
+        try failIfAsked("joinFamily")
         try require(.protected)
         switch code {
         case "000000": throw RepositoryError.api(.codeInvalid, message: "No family uses this code")
         case "999999": throw RepositoryError.api(.codeExpired, message: "Code expired")
         case "888888": throw RepositoryError.api(.familyFull, message: "Guardian already has 3 members")
-        case "777777": throw RepositoryError.api(.tooManyAttempts, message: "Too many attempts")
+        // The backend sends `Retry-After` with both 429s (contracts/api.md): the Connect countdown.
+        case "777777": throw RepositoryError.throttled(.tooManyAttempts, message: "Too many attempts", retryAfter: 299)
+        // Really from `POST /devices` in onboarding; here so "Coba lagi dalam 59 menit" can be staged.
+        case "555555": throw RepositoryError.throttled(.rateLimited, message: "Too many requests", retryAfter: 3599)
         case "666666": throw RepositoryError.api(.alreadyConnected, message: "Already connected")
         default: break
         }
@@ -221,6 +258,7 @@ actor MockRepository: ShooRepository {
 
     func becomeProtected(code: String) async throws -> ProtectedSwitch {
         try await pause()
+        try failIfAsked("becomeProtected")
         try require(.guardian)
         guard members.isEmpty else {
             throw RepositoryError.api(.hasMembers, message: "Disconnect the people you protect first")
@@ -244,12 +282,14 @@ actor MockRepository: ShooRepository {
 
     func familyMembers() async throws -> [FamilyMember] {
         try await pause()
+        try failIfAsked("familyMembers")
         try require(.guardian)
         return members
     }
 
     func removeMember(deviceId: String) async throws {
         try await pause()
+        try failIfAsked("removeMember")
         try require(.guardian)
         guard members.contains(where: { $0.deviceId == deviceId }) else {
             throw RepositoryError.api(.notFound, message: "Not your member")
@@ -259,6 +299,7 @@ actor MockRepository: ShooRepository {
 
     func deleteMe() async throws {
         try await pause()
+        try failIfAsked("deleteMe")
         let me = profile.deviceId
         allScans.removeAll { $0.ownerDeviceId == me }
         members = []
@@ -267,6 +308,7 @@ actor MockRepository: ShooRepository {
 
     func setMemberNotify(deviceId: String, notify: Bool) async throws {
         try await pause()
+        try failIfAsked("setMemberNotify")
         try require(.guardian)
         guard let index = members.firstIndex(where: { $0.deviceId == deviceId }) else {
             throw RepositoryError.api(.notFound, message: "Not your member")
@@ -276,6 +318,7 @@ actor MockRepository: ShooRepository {
 
     func remindMember(deviceId: String) async throws {
         try await pause()
+        try failIfAsked("remindMember")
         try require(.guardian)
         guard let index = members.firstIndex(where: { $0.deviceId == deviceId }) else {
             throw RepositoryError.api(.notFound, message: "Not your member")
@@ -288,6 +331,7 @@ actor MockRepository: ShooRepository {
 
     func leaveGuardian() async throws {
         try await pause()
+        try failIfAsked("leaveGuardian")
         try require(.protected)
         guard profile.guardian != nil else {
             throw RepositoryError.api(.notFound, message: "No guardian")
@@ -299,6 +343,7 @@ actor MockRepository: ShooRepository {
 
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
         try await pause()
+        try failIfAsked("scans")
         let owners = try visibleOwners(for: owner)
         let matching = allScans
             .filter { owners.contains($0.ownerDeviceId) && (status == nil || $0.status == status) }
@@ -318,8 +363,14 @@ actor MockRepository: ShooRepository {
         return ScanPage(items: items, nextCursor: end < matching.count ? String(end) : nil)
     }
 
+    /// Adds a scan as if a device had just sent it (tests: rows the scenarios don't have).
+    func insertScan(_ scan: ScanResult) {
+        allScans.append(scan)
+    }
+
     func scan(id: String) async throws -> ScanResult {
         try await pause()
+        try failIfAsked("scan")
         guard let scan = allScans.first(where: { $0.id == id }),
               try visibleOwners(for: profile.mode == .guardian ? .family : .me).contains(scan.ownerDeviceId)
         else {
@@ -331,8 +382,19 @@ actor MockRepository: ShooRepository {
         return copy
     }
 
+    func setVerdict(scanId: String, value: Verdict.Value, notes: String?) async throws -> Verdict {
+        let verdict = try await setVerdict(scanId: scanId, value: value)
+        lastVerdictNotes = notes
+        return verdict
+    }
+
+    /// The `notes` of the last `setVerdict` (tests and the debug flow; the server never returns them).
+    private(set) var lastVerdictNotes: String?
+
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
+        lastVerdictNotes = nil
         try await pause()
+        try failIfAsked("setVerdict")
         guard profile.mode == .guardian else {
             throw RepositoryError.api(.verdictNotAllowed, message: "Only the guardian decides")
         }
@@ -343,13 +405,26 @@ actor MockRepository: ShooRepository {
         }
         // GD-07: warning and blocked alike (Figma 416:9469, backend #191); a new verdict replaces the old.
         let verdict = Verdict(value: value, byDeviceId: profile.deviceId, byName: profile.name, decidedAt: now())
-        // A verdict applies to the scan's domain for that owner (contracts/api.md).
+        // A verdict applies to the scan's link for that owner (contracts/api.md "Verdicts (per link)", #241).
+        let link = Self.link(scan.url)
         for index in allScans.indices
-        where allScans[index].domain == scan.domain
+        where Self.link(allScans[index].url) == link
             && allScans[index].ownerDeviceId == scan.ownerDeviceId {
             allScans[index].verdict = verdict
         }
+        // `setVerdict.lost`: saved, but the answer never arrives (a timeout). A-02 stages the 409 after it with
+        // `-mock.fail setVerdict.lost,setVerdict~1=verdict_locked`.
+        try failIfAsked("setVerdict.lost")
         return verdict
+    }
+
+    /// The backend's link (`verdict_link`, #241) kept simple: origin + path, without query or fragment.
+    nonisolated static func link(_ url: URL) -> String {
+        let scheme = url.scheme?.lowercased() ?? "https"
+        let host = url.host?.lowercased() ?? ""
+        let port = url.port.map { ":\($0)" } ?? ""
+        let path = url.path.isEmpty ? "/" : url.path
+        return "\(scheme)://\(host)\(port)\(path)"
     }
 
     // MARK: Helpers
@@ -378,6 +453,33 @@ actor MockRepository: ShooRepository {
         guard profile.mode == mode else {
             throw RepositoryError.api(.forbidden, message: "Wrong mode")
         }
+    }
+
+    /// Debug: `-mock.fail me,scans,setVerdict=verdict_not_allowed` makes those calls fail (no value = no
+    /// connection; `name=code` = that contract error), to stage the error states in the simulator.
+    /// `name~N` lets the first N calls through (`scans~1`: Activity loads, then its refresh fails).
+    /// `setVerdict.lost` fails after the verdict was saved, like an answer lost to a timeout. It applies to
+    /// every call that gets that far, so pair it with `setVerdict~1=…` to make the second call fail first.
+    private func failIfAsked(_ name: String) throws {
+        let call = (callCounts[name] ?? 0) + 1
+        callCounts[name] = call
+        if let failure = failures[name] { throw failure }
+        for (key, failure) in failures where key.hasPrefix(name + "~") {
+            if let skip = Int(key.dropFirst(name.count + 1)), call > skip { throw failure }
+        }
+    }
+    private var callCounts: [String: Int] = [:]
+
+    /// Parses `-mock.fail`. Every entry is `name` or `name=api_error_code`.
+    static func failures(from argument: String?) -> [String: RepositoryError] {
+        guard let argument else { return [:] }
+        var result: [String: RepositoryError] = [:]
+        for entry in argument.split(separator: ",") {
+            let parts = entry.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+            guard let name = parts.first, !name.isEmpty else { continue }
+            result[name] = parts.count > 1 ? .api(APIErrorCode(rawValue: parts[1]), message: parts[1]) : .network
+        }
+        return result
     }
 
     private func pause() async throws {

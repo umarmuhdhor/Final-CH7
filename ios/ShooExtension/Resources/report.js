@@ -13,7 +13,13 @@
 
     /** Report now? On a finished warning, on blocked, and on blocked after a warning. `reported`: scanId → last status sent. */
     function shouldReport(state, reported) {
-        if (state.remembered) return false; // blocked again from memory (#231): reported the first time, no second push
+        // Blocked again from memory (#231): reported the first time, no second push. Unless that first report never
+        // reached the server (offline, timeout): the memory then has no record id, and without a report the Guardian
+        // never sees the site and the block screen waits for a verdict that can't come. Report it this time.
+        if (state.remembered && state.recordId) return false;
+        // #370: blocked only because a Guardian said not_safe — that scan exists and carries the verdict. A new
+        // report would turn its 40% warning row into a 100% blocked one.
+        if (state.verdict?.value === "not_safe") return false;
         if (state.status === "blocked") return reported.get(state.scanId) !== "blocked";
         return state.status === "warning" && state.done === true && !reported.has(state.scanId);
     }

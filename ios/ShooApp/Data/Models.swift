@@ -96,6 +96,25 @@ extension NotificationSettings {
         if let v = update.quietEnd { s.quietEnd = v }
         return s
     }
+
+    /// A failed update undone: the `keys` it still owns go back to `before`; every other key keeps what is on
+    /// screen now (fase 27i, K11).
+    func reverting(_ keys: Set<NotificationSettingsUpdate.Key>, to before: NotificationSettings) -> NotificationSettings {
+        var s = self
+        for key in keys {
+            switch key {
+            case .warning: s.warning = before.warning
+            case .blocked: s.blocked = before.blocked
+            case .family: s.family = before.family
+            case .protectionOff: s.protectionOff = before.protectionOff
+            case .weeklySummary: s.weeklySummary = before.weeklySummary
+            case .quietHours: s.quietHours = before.quietHours
+            case .quietStart: s.quietStart = before.quietStart
+            case .quietEnd: s.quietEnd = before.quietEnd
+            }
+        }
+        return s
+    }
 }
 
 /// Only the switches that changed; `nil` keys are left out of `PATCH /devices/me`.
@@ -108,6 +127,18 @@ struct NotificationSettingsUpdate: Codable, Hashable, Sendable {
     var quietHours: Bool?
     var quietStart: String?
     var quietEnd: String?
+
+    enum Key: Hashable, CaseIterable { case warning, blocked, family, protectionOff, weeklySummary, quietHours, quietStart, quietEnd }
+
+    /// The keys this update sets.
+    var keys: Set<Key> {
+        let set: [(Key, Bool)] = [
+            (.warning, warning != nil), (.blocked, blocked != nil), (.family, family != nil),
+            (.protectionOff, protectionOff != nil), (.weeklySummary, weeklySummary != nil),
+            (.quietHours, quietHours != nil), (.quietStart, quietStart != nil), (.quietEnd, quietEnd != nil),
+        ]
+        return Set(set.filter(\.1).map(\.0))
+    }
 }
 
 /// `PATCH /devices/me` body. `nil` fields are left out of the request.
@@ -174,19 +205,69 @@ struct FamilyMembersResponse: Codable, Hashable, Sendable {
     var members: [FamilyMember]
 }
 
-/// One line of the Home card "Scam terbaru di pengguna Shoo" (Figma 955:10323). Not in contracts/ yet.
-struct ScamCase: Hashable, Identifiable, Sendable {
+extension FamilyMembersResponse {
+    /// Row by row (#493): a member the app can't read is left out, the rest of the family still shows.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        members = try container.decode(LossyList<FamilyMember>.self, forKey: .members).elements
+    }
+}
+
+/// One card of the Home row "Scam terbaru di pengguna Shoo" (Figma 955:10323): an item of `GET /scams/latest`
+/// (contracts/api.md, fixtures/latest-scams.json). The words are the admin's category label; the card adds
+/// "Hari ini" / "Kemarin" / "3 hari lalu" from `lastSeenAt`. No channel ("lewat WhatsApp"): Shoo only sees the
+/// address, not where the link came from.
+struct ScamCase: Decodable, Hashable, Identifiable, Sendable {
+    /// The category id (`undian_palsu`); one card per category.
     let id: String
-    /// "Situs palsu BCA minta PIN m-banking".
-    let title: String
-    /// "Hari ini · lewat link SMS".
-    let detail: String
+    let title: LocalizedText
+    /// The newest counted scan, server time rounded to the hour.
+    let lastSeenAt: Date
+
+    init(id: String, title: LocalizedText, lastSeenAt: Date) {
+        self.id = id
+        self.title = title
+        self.lastSeenAt = lastSeenAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case category, title, lastSeenAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .category)
+        title = try container.decode(LocalizedText.self, forKey: .title)
+        lastSeenAt = try container.decode(Date.self, forKey: .lastSeenAt)
+    }
+}
+
+/// `GET /scams/latest` response. A broken item is dropped, the rest still show.
+struct LatestScamsPage: Decodable, Sendable {
+    let items: [ScamCase]
+
+    private enum CodingKeys: String, CodingKey { case items }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = try container.decode(LossyList<ScamCase>.self, forKey: .items).elements
+    }
 }
 
 /// `GET /scans` response.
 struct ScanPage: Codable, Hashable, Sendable {
     var items: [ScanResult]
     var nextCursor: String?
+}
+
+extension ScanPage {
+    /// Row by row (#493): a scan the app can't read is left out; the other rows and `nextCursor` stay, so the
+    /// next page still loads. A page whose rows were all left out is empty, not an error.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = try container.decode(LossyList<ScanResult>.self, forKey: .items).elements
+        nextCursor = try container.decodeIfPresent(String.self, forKey: .nextCursor)
+    }
 }
 
 /// `POST /verdicts` response.
@@ -235,6 +316,8 @@ struct APIErrorCode: RawRepresentable, Hashable, Sendable, ExpressibleByStringLi
     static let alreadyConnected: APIErrorCode = "already_connected"
     // Verdicts (GD-07)
     static let verdictNotAllowed: APIErrorCode = "verdict_not_allowed"
+    /// 409: the link has a `safe` verdict that stays until the weekly AI review (#476).
+    static let verdictLocked: APIErrorCode = "verdict_locked"
     // Member reminder (PF-01 proposed)
     static let pushUnavailable: APIErrorCode = "push_unavailable"
     static let remindTooSoon: APIErrorCode = "remind_too_soon"
@@ -260,9 +343,50 @@ enum RepositoryError: Error, Hashable, Sendable {
     case network
     /// The response did not match the contract.
     case decoding
+    /// A 429 (`rate_limited`, `too_many_attempts`) that said how long to wait (`Retry-After`, contracts/api.md).
+    case throttled(APIErrorCode, message: String, retryAfter: TimeInterval)
 
     var apiCode: APIErrorCode? {
-        if case .api(let code, _) = self { return code }
+        switch self {
+        case .api(let code, _), .throttled(let code, _, _): code
+        case .network, .decoding: nil
+        }
+    }
+
+    /// Seconds the server asked to wait before the next try, when it said.
+    var retryAfter: TimeInterval? {
+        if case .throttled(_, _, let seconds) = self { return seconds }
         return nil
     }
+}
+
+/// Why a screen could not load, for the sentence under "Couldn't load" (A-03, fase 28m). Only a request that
+/// never reached the server asks the person to check their connection: a server error (5xx) or an answer the
+/// app can't read is not theirs to fix.
+enum LoadFailure: Equatable, Sendable {
+    /// No connection, timeout, TLS failure; also every error this type does not name.
+    case connection
+    /// A 5xx (`internal`, or a status without a contract body) or a response that broke the contract.
+    case server
+
+    init(_ error: any Error) {
+        switch error as? RepositoryError {
+        case .decoding?, .api(.internal, _)?: self = .server
+        default: self = .connection
+        }
+    }
+
+    /// The screen's own "check your connection" sentence, or the general one.
+    func message(connection: String.LocalizationValue) -> String.LocalizationValue {
+        switch self {
+        case .connection: connection
+        case .server: "Something went wrong. Try again."
+        }
+    }
+}
+
+extension Verdict {
+    /// `nil` when this build does not know the value (`.unknown`, a newer server, #493): screens then treat the scan as
+    /// not decided and show its detection status, so an unreadable verdict never looks safe.
+    var known: Verdict? { value == .unknown ? nil : self }
 }

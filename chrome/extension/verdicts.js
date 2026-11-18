@@ -21,26 +21,32 @@ export function retryAfterMs(header, now) {
  * @param {(url, init) => Promise<object>} deps.fetchJSON  throws an error with `status` / `retryAfter` on HTTP errors
  */
 export function createVerdicts({ getSession, fetchJSON, now = () => Date.now() }) {
-    const cache = new Map(); // domain → { verdict, at }
+    const cache = new Map(); // "domain" or "domain link" → { verdict, at }
     let limitedUntil = 0;
 
     function rateLimited(cached) {
         return { ok: true, verdict: cached?.verdict ?? null, rateLimited: true, retryAfterMs: limitedUntil - now() };
     }
 
-    /** Never rejects. `fresh` skips the cache (block screen polling). */
-    async function lookup(domain, { fresh = false } = {}) {
-        const cached = cache.get(domain);
+    /**
+     * Never rejects. `fresh` skips the cache (block screen polling). `link` (#241): origin + path of the page;
+     * with it the backend answers per link (`?url=&domain=`, contracts/api.md "Verdicts (per link)"),
+     * without it the deprecated per-domain lookup.
+     */
+    async function lookup(domain, { fresh = false, link = null } = {}) {
+        const key = link ? `${domain} ${link}` : domain;
+        const cached = cache.get(key);
         if (!fresh && cached && now() - cached.at < TTL_MS) return { ok: true, verdict: cached.verdict };
         if (now() < limitedUntil) return rateLimited(cached);
 
         const session = await getSession();
         if (!session?.apiBaseURL) return { ok: true, verdict: null, skipped: "no_api_url" };
         try {
-            const url = session.apiBaseURL.replace(/\/+$/, "") + `/verdicts?domain=${encodeURIComponent(domain)}`;
+            const query = (link ? `url=${encodeURIComponent(link)}&` : "") + `domain=${encodeURIComponent(domain)}`;
+            const url = session.apiBaseURL.replace(/\/+$/, "") + `/verdicts?${query}`;
             const body = await fetchJSON(url, { method: "GET", token: session.token, timeoutMs: TIMEOUT_MS });
             const verdict = body?.verdict ?? null;
-            cache.set(domain, { verdict, at: now() });
+            cache.set(key, { verdict, at: now() });
             return { ok: true, verdict };
         } catch (error) {
             if (error?.status === 429) {

@@ -1,5 +1,8 @@
-import type { Sql, TransactionSql } from "postgres";
+import type { PendingQuery, Row, Sql, TransactionSql } from "postgres";
+import { RETENTION_DAYS } from "../../policy";
+import { LOCK } from "../locks";
 import { addTombstones } from "./tombstones";
+import { lockedUntilSql } from "./verdictLock";
 
 export interface NewScan {
   ownerId: string;
@@ -18,41 +21,80 @@ export interface NewScan {
 }
 
 /**
- * One Activity row per site: when the owner still has a scan of this domain, that row is kept
- * (`created: false`) instead of a new one. Its time moves to the newest visit, and a higher score
- * replaces url, title, score, status and signals; its evidence stays. Locked per owner + domain, so
- * two parallel scans of one site cannot both insert. Every scan still counts in the owner's
- * lifetime totals (profile stats, PF-01). `escalated`: this visit moved the kept row from warning to
- * blocked, which the guardian has to hear about.
+ * One Activity row per link (owner + origin + path, `verdict_link`, #241; was one row per site, #248):
+ * when the owner still has a scan of this link, that row is kept (`created: false`) instead of a new
+ * one. Its time moves to the newest visit, and a higher score replaces url, title, score, status and
+ * signals. On a row without a verdict a block replaces a warning at any score, and a warning never
+ * replaces a block (B-02). Its evidence stays. Every scan
+ * still counts in the owner's lifetime totals (profile stats, PF-01).
+ *
+ * `push`: the push stays per site (owner + `domain`: the registrable domain, the full host on a shared
+ * host_path platform, #495), so a scam site with many pages sends
+ * at most two: on the first visit to the site (no other row of the domain), and once more when the
+ * site first reaches `blocked` (no earlier row of the domain was blocked). Locked per owner + domain,
+ * so two parallel scans of one site cannot both insert a link or both count as the first visit.
  */
-export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; created: boolean; escalated: boolean }> {
+export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; created: boolean; push: boolean }> {
   return sql.begin(async (tx) => {
-    await tx`select pg_advisory_xact_lock(7, hashtext(${`${s.ownerId}|${s.domain}`}))`;
-    const [kept] = await tx<{ id: string; escalated: boolean }[]>`
-      with previous as (
-        select id, status from scans where owner_id = ${s.ownerId} and domain = ${s.domain}
-        order by created_at desc, id desc limit 1
-      ), kept as (
-        update scans set
-          detected_at = greatest(detected_at, ${s.detectedAt}::text::timestamptz),
-          rdap_registered_at = coalesce(rdap_registered_at, ${s.rdapRegisteredAt}::date),
-          url = case when ${s.score} > score then ${s.url} else url end,
-          page_title = case when ${s.score} > score then ${s.pageTitle} else page_title end,
-          signals = case when ${s.score} > score then ${tx.json(s.signals as never)} else signals end,
-          status = case when ${s.score} > score then ${s.status} else status end,
-          score = greatest(score, ${s.score})
-        where id = (select id from previous)
-        returning id, status
-      ), counted as (
+    await tx`select pg_advisory_xact_lock(${LOCK.scanSite}, hashtext(${`${s.ownerId}|${s.domain}`}))`;
+    // The site before this scan: any row of the domain, any blocked one, and this link's row. Only rows retention
+    // keeps at least another day: a visit merged into an older row (it keeps that row's `created_at`) vanished at
+    // the next daily run, the Guardian got no push for it (`seen`), and a verdict on it then answered 404. Such a
+    // visit gets a new row and its push; the old row goes with retention as planned.
+    const [site] = await tx<{ seen: boolean; blocked: boolean; linkId: string | null }[]>`
+      select count(*) > 0 as seen, coalesce(bool_or(status = 'blocked'), false) as blocked,
+             (array_agg(id order by created_at desc, id desc)
+                filter (where public.verdict_link(url) = public.verdict_link(${s.url})))[1] as "linkId"
+      from scans where owner_id = ${s.ownerId} and domain = ${s.domain}
+        and created_at > now() - make_interval(days => ${RETENTION_DAYS - 1})`;
+    const push = !site!.seen || (s.status === "blocked" && !site!.blocked);
+    if (site!.linkId) {
+      // `takes_over`: this visit takes over url, title, signals, score and status.
+      // - A row with a verdict: only a higher score, as before. Fase 27 Q4 (27b) decides this case.
+      // - A row without a verdict (B-02, K14 of fase 28; the admins may lower blockAt): a block takes
+      //   over a warning at any score, and a warning never takes over a block. So the row says what
+      //   the member last saw, and the site pushes its block once (the push rule reads row status).
+      // "Has a verdict" is the selectScans rule below: a verdict on this link, or a not_safe on the
+      // domain unless this link or the not_safe's link is on a shared host (#495).
+      await tx`
+        with cur as (
+          select r.id,
+                 case when r.decided then ${s.score} > r.score
+                      when ${s.status} = 'blocked' then r.status = 'warning' or ${s.score} > r.score
+                      else r.status = 'warning' and ${s.score} > r.score
+                 end as takes_over
+          from (
+            select s.id, s.score, s.status, exists (
+                     select 1 from verdicts v, (select public.verdict_link(s.url) as link) k
+                     where v.owner_id = s.owner_id
+                       and (v.url = k.link
+                            or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)
+                                and not public.verdict_shared(v.url, v.domain)))
+                   ) as decided
+            from scans s where s.id = ${site!.linkId}
+          ) r
+        ), kept as (
+          update scans set
+            detected_at = greatest(detected_at, ${s.detectedAt}::text::timestamptz),
+            rdap_registered_at = coalesce(rdap_registered_at, ${s.rdapRegisteredAt}::date),
+            url = case when cur.takes_over then ${s.url} else url end,
+            page_title = case when cur.takes_over then ${s.pageTitle} else page_title end,
+            signals = case when cur.takes_over then ${tx.json(s.signals as never)} else signals end,
+            status = case when cur.takes_over then ${s.status} else status end,
+            score = case when cur.takes_over then ${s.score} else score end,
+            -- The version the status was judged with (as reported), so it follows the status.
+            thresholds_version = case when cur.takes_over then ${s.thresholdsVersion} else thresholds_version end
+          from cur
+          where scans.id = cur.id
+          returning scans.id
+        )
         update devices d set
           blocked_total = d.blocked_total + (${s.status} = 'blocked')::int,
           warning_total = d.warning_total + (${s.status} = 'warning')::int
-        where d.id = ${s.ownerId} and exists (select 1 from kept)
-      )
-      select kept.id, previous.status = 'warning' and kept.status = 'blocked' as escalated
-      from kept join previous using (id)`;
-    if (kept) return { id: kept.id, created: false, escalated: kept.escalated };
-    return { id: await insertScan(tx, s), created: true, escalated: false };
+        where d.id = ${s.ownerId} and exists (select 1 from kept)`;
+      return { id: site!.linkId, created: false, push };
+    }
+    return { id: await insertScan(tx, s), created: true, push };
   });
 }
 
@@ -94,7 +136,7 @@ export async function reserveScreenshot(
   quota: { owner: number; global: number },
 ): Promise<ScreenshotSlot> {
   return sql.begin(async (tx): Promise<ScreenshotSlot> => {
-    await tx`select pg_advisory_xact_lock(3, hashtext(${scan.ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.screenshot}, hashtext(${scan.ownerId}))`;
     const reuse = await recentScreenshot(tx, scan.ownerId, scan.domain);
     const chosen = reuse ?? path;
     if (!reuse) {
@@ -177,12 +219,15 @@ export async function reserveFavicon(
   path: string | null,
 ): Promise<FaviconSlot> {
   return sql.begin(async (tx): Promise<FaviconSlot> => {
-    await tx`select pg_advisory_xact_lock(4, hashtext(${scan.ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.favicon}, hashtext(${scan.ownerId}))`;
     const reuse = await recentFavicon(tx, scan.ownerId, scan.domain);
     const chosen = reuse ?? path;
     if (!chosen) return { none: true };
-    // Zero rows: the scan was deleted meanwhile (DELETE /devices/me), so nothing is uploaded.
-    const updated = await tx`update scans set favicon_path = ${chosen} where id = ${scan.id} returning id`;
+    // Zero rows: the scan was deleted meanwhile (DELETE /devices/me), so nothing is uploaded. A reuse
+    // points at a stored object, so it is ready at once; a new path waits for markFaviconReady.
+    const updated = reuse
+      ? await tx`update scans set favicon_path = ${reuse}, favicon_ready_at = now() where id = ${scan.id} returning id`
+      : await tx`update scans set favicon_path = ${chosen}, favicon_ready_at = null where id = ${scan.id} returning id`;
     if (updated.length === 0) return { gone: true };
     if (reuse) return { reuse };
     await addTombstones(tx, [chosen]);
@@ -190,19 +235,39 @@ export async function reserveFavicon(
   });
 }
 
-/** Clears the path on every scan of the owner that points at it: a reuse may have picked it up meanwhile. */
+/**
+ * Clears the path (and ready) on every scan of the owner that points at it. Under the owner's favicon
+ * lock (as clearReplicaPath), so a reserveFavicon that just picked this path as its reuse cannot
+ * commit after it.
+ */
 export async function clearFaviconPath(sql: Sql, ownerId: string, path: string): Promise<void> {
-  await sql`update scans set favicon_path = null where owner_id = ${ownerId} and favicon_path = ${path}`;
+  await sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(${LOCK.favicon}, hashtext(${ownerId}))`;
+    await tx`update scans set favicon_path = null, favicon_ready_at = null where owner_id = ${ownerId} and favicon_path = ${path}`;
+  });
+}
+
+/**
+ * After the R2 put succeeded (fase 27k F-B8, as markReplicaReady): from now on the scan gets a
+ * faviconUrl, GET /favicons/{id} serves it and a later scan may reuse it. Only while the row still
+ * holds this path; false when the scan was deleted meanwhile (DELETE /devices/me) or its path was
+ * cleared, so the caller removes the object no row points at.
+ */
+export async function markFaviconReady(sql: Sql, id: string, path: string): Promise<boolean> {
+  const rows = await sql`update scans set favicon_ready_at = now() where id = ${id} and favicon_path = ${path} returning id`;
+  return rows.length > 0;
 }
 
 /**
  * Reuse: a favicon of the same owner + domain from the last 24 h. Only the scan that uploaded it
- * counts, so an object is gone at most 15 days after upload, as for screenshots.
+ * counts, so an object is gone at most 15 days after upload, as for screenshots. Only a stored one
+ * (favicon_ready_at): an upload still in flight is no source (fase 27k F-B8).
  */
 export async function recentFavicon(sql: Q, ownerId: string, domain: string): Promise<string | undefined> {
   const [row] = await sql<{ path: string }[]>`
     select favicon_path as path from scans
     where owner_id = ${ownerId} and domain = ${domain} and favicon_path is not null
+      and favicon_ready_at is not null
       and ${sql.unsafe(ORIGINAL_FAVICON)}
       and created_at > now() - interval '24 hours'
     order by created_at desc limit 1`;
@@ -238,24 +303,24 @@ export interface ReplicaQuota {
 
 /**
  * EX-07 pre-check before the IP limit and the inflate (cheap first, K5): the owner's replica of this
- * domain from the last 24 h to reuse. A device without a family link keeps its replicas too: Detail
+ * link from the last 24 h to reuse. A device without a family link keeps its replicas too: Detail
  * shows the owner the evidence in Personal mode (5 Nov 2026; was dropped as no_family), and its quota
  * family is the device itself (replicaCountsQuery).
  * Fase 22 K12 (D-alief-B15): in the same statement, the quota counts of reserveReplica; when a quota
  * is already full for an upload of `bytes`, `quota` names it, so the caller drops the replica before
- * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (6, 0) stays the final
- * word, so a race costs at most one inflate, as before.
+ * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (LOCK.replica, 0)
+ * stays the final word, so a race costs at most one inflate, as before.
  * Not under the owner lock: family_links changes under other locks (families.ts), so a pairing at
  * the same moment may keep or drop one replica.
  */
 export async function precheckReplica(
   sql: Sql,
-  scan: { ownerId: string; domain: string },
+  scan: { id: string; ownerId: string; domain: string },
   bytes: number,
   quota: ReplicaQuota,
 ): Promise<{ reuse: string | undefined; quota: ReplicaQuotaReason | undefined }> {
   const [row] = await sql<({ reuse: string | null } & ReplicaCounts)[]>`
-    select (${recentReplicaQuery(sql, scan.ownerId, scan.domain)}) as reuse, c.*
+    select (${recentReplicaQuery(sql, scan)}) as reuse, c.*
     from (${replicaCountsQuery(sql, scan.ownerId)}) c`;
   // An aggregate without group by: always exactly one row. The counts also run for a reuse, where
   // they are not used: one index-only pass, cheaper than a second trip.
@@ -265,12 +330,12 @@ export async function precheckReplica(
 }
 
 /**
- * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner (advisory
- * class 6; 3–5 are taken), reuse the owner's replica of this domain from the last 24 h, else reserve
+ * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner
+ * (LOCK.replica, db/locks.ts), reuse the owner's replica of this link from the last 24 h, else reserve
  * `upload.path` if every quota of the last 24 h has room (original rows only, index scans_original_replica).
  * Fase 19 (D-alief-B14): the counts for owner, family and everyone are one statement under the global
- * key (6, 0). Every new upload takes that key, so uploads by different members of one family cannot
- * overshoot the family quota either (a pairing or unpairing at the same moment does not take the key,
+ * key (LOCK.replica, 0). Every new upload takes that key, so uploads by different members of one family
+ * cannot overshoot the family quota either (a pairing or unpairing at the same moment does not take the key,
  * so the family may still change by one member in between); held for milliseconds, the R2 put runs
  * after commit. Order of the checks (fase 19 K4): owner → family → family_bytes → global →
  * global_bytes → reserve; the first that applies is the reason.
@@ -290,19 +355,21 @@ export async function reserveReplica(
   quota: ReplicaQuota,
 ): Promise<ReplicaSlot> {
   return sql.begin(async (tx): Promise<ReplicaSlot> => {
-    await tx`select pg_advisory_xact_lock(6, hashtext(${scan.ownerId}))`;
-    const [found] = await tx<{ path: string }[]>`select (${recentReplicaQuery(tx, scan.ownerId, scan.domain)}) as path`;
+    await tx`select pg_advisory_xact_lock(${LOCK.replica}, hashtext(${scan.ownerId}))`;
+    const [found] = await tx<{ path: string }[]>`select (${recentReplicaQuery(tx, scan)}) as path`;
     const reuse = found?.path ?? undefined;
     if (!reuse && !upload) return { none: true };
     if (!reuse) {
-      await tx`select pg_advisory_xact_lock(6, 0)`;
+      await tx`select pg_advisory_xact_lock(${LOCK.replica}, 0)`;
       const full = quotaFull(await replicaCounts(tx, scan.ownerId), upload!.bytes, quota);
       if (full) return { quota: full };
     }
     // Zero rows: the scan was deleted meanwhile (DELETE /devices/me), so nothing is uploaded.
+    // A reuse source is ready (recentReplicaQuery), so the reuse row is ready at once; a new upload
+    // becomes ready only after its put (markReplicaReady, fase 22 fix 8 Nov 2026).
     const updated = reuse
-      ? await tx`update scans set replica_path = ${reuse}, replica_bytes = null where id = ${scan.id} returning id`
-      : await tx`update scans set replica_path = ${upload!.path}, replica_bytes = ${upload!.bytes} where id = ${scan.id} returning id`;
+      ? await tx`update scans set replica_path = ${reuse}, replica_bytes = null, replica_ready_at = now() where id = ${scan.id} returning id`
+      : await tx`update scans set replica_path = ${upload!.path}, replica_bytes = ${upload!.bytes}, replica_ready_at = null where id = ${scan.id} returning id`;
     if (updated.length === 0) return { gone: true };
     if (reuse) return { reuse };
     await addTombstones(tx, [upload!.path]);
@@ -403,15 +470,21 @@ export async function replicaUsage(sql: Sql, q: ReplicaQuota, maxBytes: number):
 }
 
 /**
- * Reuse source: the newest original replica (replica_bytes set) of the owner + domain from the last
- * 24 h. Only originals count, so reuse never chains and an object is gone 15 days after upload.
+ * Reuse source: the newest original replica (replica_bytes set) of the owner + this scan's link
+ * (`verdict_link`: origin + path, #241) from the last 24 h. Per link, not per domain (BH-15): each
+ * page has its own Activity row, so another page of the site must show its own copy, never the first
+ * page's. Only originals count, so reuse never chains and an object is gone 15 days after upload.
+ * Only a stored one (replica_ready_at): an upload still in flight is no source (fase 22 fix, 8 Nov
+ * 2026); a scan of the same link meanwhile uploads its own copy, counted by the quotas as usual.
  */
-function recentReplicaQuery(sql: Q, ownerId: string, domain: string) {
+function recentReplicaQuery(sql: Q, scan: { id: string; ownerId: string; domain: string }) {
   return sql`
-    select replica_path from scans
-    where owner_id = ${ownerId} and domain = ${domain} and replica_bytes is not null
-      and created_at > now() - interval '24 hours'
-    order by created_at desc limit 1`;
+    select r.replica_path from scans r
+    where r.owner_id = ${scan.ownerId} and r.domain = ${scan.domain} and r.replica_bytes is not null
+      and r.replica_ready_at is not null
+      and r.created_at > now() - interval '24 hours'
+      and public.verdict_link(r.url) = (select public.verdict_link(s.url) from scans s where s.id = ${scan.id})
+    order by r.created_at desc limit 1`;
 }
 
 /**
@@ -420,9 +493,21 @@ function recentReplicaQuery(sql: Q, ownerId: string, domain: string) {
  */
 export async function clearReplicaPath(sql: Sql, ownerId: string, path: string): Promise<void> {
   await sql.begin(async (tx) => {
-    await tx`select pg_advisory_xact_lock(6, hashtext(${ownerId}))`;
-    await tx`update scans set replica_path = null, replica_bytes = null where owner_id = ${ownerId} and replica_path = ${path}`;
+    await tx`select pg_advisory_xact_lock(${LOCK.replica}, hashtext(${ownerId}))`;
+    await tx`update scans set replica_path = null, replica_bytes = null, replica_ready_at = null
+             where owner_id = ${ownerId} and replica_path = ${path}`;
   });
+}
+
+/**
+ * After the R2 put succeeded (fase 22 fix, 8 Nov 2026): from now on the scan gets a pageReplicaUrl,
+ * GET /replicas/{id} serves it and a later scan may reuse it. Only while the row still holds this
+ * path; false when the scan was deleted meanwhile (DELETE /devices/me) or its path was cleared, so
+ * the caller removes the object no row points at.
+ */
+export async function markReplicaReady(sql: Sql, id: string, path: string): Promise<boolean> {
+  const rows = await sql`update scans set replica_ready_at = now() where id = ${id} and replica_path = ${path} returning id`;
+  return rows.length > 0;
 }
 
 export interface ScanRow {
@@ -436,35 +521,59 @@ export interface ScanRow {
   status: "warning" | "blocked";
   signals: unknown[];
   screenshotPath: string | null;
-  /** The stored favicon (PR-05). The scam site's own favicon_url is never read back. */
+  /** The stored favicon (PR-05). Null until its upload finished (favicon_ready_at, F-B8). The scam site's own favicon_url is never read back. */
   faviconPath: string | null;
-  /** The stored page replica (EX-07), in R2. */
+  /** The stored page replica (EX-07), in R2. Null until its upload finished (replica_ready_at). */
   replicaPath: string | null;
   detectedAt: string;
   /** detected_at with microseconds, for the cursor. */
   cursorAt: string;
-  verdict: { value: "safe" | "not_safe"; byDeviceId: string; byName: string; decidedAt: string } | null;
+  verdict: { value: "safe" | "not_safe"; byDeviceId: string; byName: string; decidedAt: string; lockedUntil?: string } | null;
 }
 
 export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 
-// Columns shared by list and detail. ownerName is the owner's current name; the verdict
-// (per owner + domain) is joined for warning and blocked scans alike (GD-07).
-function selectScans(sql: Sql) {
+// Columns shared by list and detail. ownerName is the owner's current name; the verdict is joined
+// for warning and blocked scans alike (GD-07), by the GET /verdicts?url= rule (#241): this link,
+// else a not_safe on the domain unless this link or the not_safe's link is on a shared host (#495).
+// recordScan repeats this rule
+// ("has a verdict", B-02): change both together.
+// `from` yields the scan rows as `s`: the table for a detail, the already-cut page for a list
+// (fase 28o, OPT-01), so devices and the verdict lateral only run for rows that are returned.
+// A new `s.` column here must also be added to the page's column list in listScans.
+// The link is computed once per row: `offset 0` keeps the planner from inlining verdict_link into
+// every verdict comparison. And only when the owner has a verdict at all: without one nothing can
+// match, and the regexp costs about 45 µs per row (S17b median owner: 0.97 ms → 0.09 ms).
+function selectScans(sql: Sql, from: PendingQuery<Row[]>) {
   return sql`
     select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain,
            s.page_title as "pageTitle", s.score, s.status, s.signals,
-           s.screenshot_path as "screenshotPath", s.favicon_path as "faviconPath",
-           s.replica_path as "replicaPath",
+           s.screenshot_path as "screenshotPath", case when s.favicon_ready_at is not null then s.favicon_path end as "faviconPath",
+           case when s.replica_ready_at is not null then s.replica_path end as "replicaPath",
            to_char(s.detected_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "detectedAt",
            to_char(s.detected_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
-           case when v.owner_id is not null then json_build_object(
+           case when v.owner_id is not null then jsonb_build_object(
              'value', v.value, 'byDeviceId', v.by_device_id, 'byName', v.by_name,
-             'decidedAt', to_char(v.decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)})
-           ) end as verdict
-    from scans s
+             'decidedAt', to_char(v.decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}), 'url', v.url
+           ) || jsonb_strip_nulls(jsonb_build_object(
+             'lockedUntil', ${lockedUntilSql(sql, "v.value", "v.decided_at")}
+           )) end as verdict
+    from ${from} s
     join devices d on d.id = s.owner_id
-    left join verdicts v on v.owner_id = s.owner_id and v.domain = s.domain`;
+    cross join lateral (
+      select case when exists (select 1 from verdicts x where x.owner_id = s.owner_id)
+                  then public.verdict_link(s.url) end as link
+      offset 0
+    ) k
+    left join lateral (
+      select v.* from verdicts v
+      where v.owner_id = s.owner_id
+        and (v.url = k.link
+             or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)
+                 and not public.verdict_shared(v.url, v.domain)))
+      order by (v.url = k.link) desc, v.decided_at desc
+      limit 1
+    ) v on true`;
 }
 
 export interface ListQuery {
@@ -474,21 +583,42 @@ export interface ListQuery {
   limit: number;
 }
 
-/** Newest first, keyset paging on (detected_at, id). Returns up to limit + 1 rows. */
+/**
+ * Newest first, keyset paging on (detected_at, id). Returns up to limit + 1 rows.
+ *
+ * The page is cut before anything is joined (fase 28o, OPT-01): per owner the newest limit + 1 rows
+ * after the cursor and with the status, through scans_owner_time, then the newest limit + 1 of those.
+ * Status and cursor sit inside the per-owner subquery: outside it, an owner's limit + 1 rows could be
+ * spent on rows the filter drops. Owners come from devices, so a repeated id counts once (as `in`).
+ */
 export async function listScans(sql: Sql, q: ListQuery): Promise<ScanRow[]> {
+  const n = q.limit + 1;
+  const page = sql`(
+    select t.* from devices o
+    cross join lateral (
+      -- Every s. column selectScans reads, no more.
+      select s.id, s.owner_id, s.url, s.domain, s.page_title, s.score, s.status, s.signals, s.screenshot_path,
+             s.favicon_path, s.favicon_ready_at, s.replica_path, s.replica_ready_at, s.detected_at
+      from scans s
+      where s.owner_id = o.id
+        ${q.status ? sql`and s.status = ${q.status}` : sql``}
+        ${q.cursor ? sql`and (s.detected_at, s.id) < (${q.cursor.at}::text::timestamptz, ${q.cursor.id})` : sql``}
+      order by s.detected_at desc, s.id desc
+      limit ${n}
+    ) t
+    where o.id in ${sql(q.owners)}
+    order by t.detected_at desc, t.id desc
+    limit ${n}
+  )`;
   return sql<ScanRow[]>`
-    ${selectScans(sql)}
-    where s.owner_id in ${sql(q.owners)}
-      ${q.status ? sql`and s.status = ${q.status}` : sql``}
-      ${q.cursor ? sql`and (s.detected_at, s.id) < (${q.cursor.at}::text::timestamptz, ${q.cursor.id})` : sql``}
-    order by s.detected_at desc, s.id desc
-    limit ${q.limit + 1}`;
+    ${selectScans(sql, page)}
+    order by s.detected_at desc, s.id desc`;
 }
 
 /** A scan the viewer may see: their own, or a member's while the family link exists (T1, T12). */
 export async function findVisibleScan(sql: Sql, id: string, viewerId: string): Promise<ScanRow | undefined> {
   const [row] = await sql<ScanRow[]>`
-    ${selectScans(sql)}
+    ${selectScans(sql, sql`scans`)}
     where s.id = ${id}
       and (s.owner_id = ${viewerId}
            or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
@@ -510,21 +640,27 @@ export async function screenshotPathForViewer(sql: Sql, id: string, viewerId: st
   return row?.path;
 }
 
-/** The favicon path while the viewer owns the scan or is the owner's current guardian (as screenshots). */
+/**
+ * The favicon path while the viewer owns the scan or is the owner's current guardian (as screenshots),
+ * once its upload finished (favicon_ready_at, fase 27k F-B8).
+ */
 export async function faviconPathForViewer(sql: Sql, id: string, viewerId: string): Promise<string | undefined> {
   const [row] = await sql<{ path: string }[]>`
     select s.favicon_path as path from scans s
-    where s.id = ${id} and s.favicon_path is not null
+    where s.id = ${id} and s.favicon_path is not null and s.favicon_ready_at is not null
       and (s.owner_id = ${viewerId}
            or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
   return row?.path;
 }
 
-/** The replica path while the viewer owns the scan or is the owner's current guardian (as screenshots). */
+/**
+ * The replica path while the viewer owns the scan or is the owner's current guardian (as screenshots),
+ * once its upload finished (replica_ready_at, fase 22 fix 8 Nov 2026).
+ */
 export async function replicaPathForViewer(sql: Sql, id: string, viewerId: string): Promise<string | undefined> {
   const [row] = await sql<{ path: string }[]>`
     select s.replica_path as path from scans s
-    where s.id = ${id} and s.replica_path is not null
+    where s.id = ${id} and s.replica_path is not null and s.replica_ready_at is not null
       and (s.owner_id = ${viewerId}
            or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
   return row?.path;

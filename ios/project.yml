@@ -19,9 +19,9 @@ configFiles:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    # Read by CFBundleShortVersionString/CFBundleVersion in all three targets, which must match (#301).
-    MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "6"         # 1-5 are taken on App Store Connect; testflight.yml overrides it per run
+    # Read by CFBundleShortVersionString/CFBundleVersion in the app and the extension, which must match (#301).
+    MARKETING_VERSION: "1.1"           # 1.0 passed App Review (Ready for Distribution), so its TestFlight train is closed
+    CURRENT_PROJECT_VERSION: "8"         # 1-7 are taken on App Store Connect; testflight.yml overrides it per run
     TARGETED_DEVICE_FAMILY: "1"          # iPhone only (iPad/Mac out of scope)
     CODE_SIGN_STYLE: Automatic
 
@@ -43,7 +43,6 @@ targets:
         ShooAppGroup: $(SHOO_APP_GROUP)   # read by ShooShared/AppGroup.swift
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
-        NSSupportsLiveActivities: true    # EX-03
         CFBundleURLTypes:                 # PR-03 invite link: shoo://join?code=1234
           - CFBundleURLName: com.shoo.app
             CFBundleURLSchemes: [shoo]
@@ -58,16 +57,23 @@ targets:
         # signs it as production. Needs a paid team — a free Personal Team can't sign this.
         aps-environment: development
         # Universal Link for the invite link `/j/<code>` (PR-03, #129). The Worker serves the AASA with
-        # `DWTZNGA7Y8.com.umarmuhdhor.shoo`. Moves to our own domain later (TODO E6).
+        # `DWTZNGA7Y8.com.umarmuhdhor.shoo`, on our own domain join.shoo.ai.id (Custom Domain of shoo-api).
         com.apple.developer.associated-domains:
+          - applinks:join.shoo.ai.id
+          # Invite links handed out before PR-03 point at the Worker's workers.dev host (AppConfig.cloudAPIURL),
+          # which serves the same AASA: they keep opening the app.
           - applinks:shoo-api.afindo-mi01.workers.dev
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID)
         TARGETED_DEVICE_FAMILY: "1"   # the iOS target preset sets 1,2; App Store rejects iPad without all orientations
+      configs:
+        # Mock data only MockRepository/MockScenarios read, under -UITestMock in Debug. Keeps sample
+        # scam domains and ~100 KB out of the shipped app (#288).
+        Release:
+          EXCLUDED_SOURCE_FILE_NAMES: "*/Data/Fixtures/*.json"
     dependencies:
       - target: ShooExtension
-      - target: ShooLiveActivity
     # Debug only: AppConfig points at http://localhost:8787 (wrangler dev), which ATS would block.
     # Release keeps ATS untouched (HTTPS only). XcodeGen has no per-configuration Info.plist keys,
     # so the key is added to the built Info.plist before signing.
@@ -118,35 +124,6 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"   # the iOS target preset sets 1,2; App Store rejects iPad without all orientations
     dependencies:
       - sdk: SafariServices.framework
-
-  ShooLiveActivity:
-    type: app-extension
-    platform: iOS
-    sources:
-      - path: ShooLiveActivity
-        excludes: ["CLAUDE.md"]
-      - path: ShooShared
-        excludes: ["CLAUDE.md", "Tests/**"]
-    info:
-      path: ShooLiveActivity/Info.plist
-      properties:
-        CFBundleDisplayName: Shoo
-        CFBundleShortVersionString: $(MARKETING_VERSION)
-        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        ShooAppGroup: $(SHOO_APP_GROUP)   # read by ShooShared/AppGroup.swift
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.widgetkit-extension
-    entitlements:
-      path: ShooLiveActivity/ShooLiveActivity.entitlements
-      properties:
-        com.apple.security.application-groups: [$(SHOO_APP_GROUP)]
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID).liveactivity
-        TARGETED_DEVICE_FAMILY: "1"   # the iOS target preset sets 1,2; App Store rejects iPad without all orientations
-    dependencies:
-      - sdk: WidgetKit.framework
-      - sdk: SwiftUI.framework
 
   ShooAppTests:
     type: bundle.unit-test

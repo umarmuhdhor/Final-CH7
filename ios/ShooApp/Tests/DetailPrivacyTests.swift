@@ -193,3 +193,28 @@ struct ScreenshotLoaderTests {
         #expect(StubURLProtocol.requests.isEmpty)
     }
 }
+
+/// The Detail link pill (BH-13, BH-36): where the Guardian decides, the registrable domain is always the
+/// readable part (#382), and the path is shown encoded so it cannot reorder what is on screen.
+struct DetailLinkTextTests {
+    @Test func theRegistrableDomainComesFirstNotTheDeceivingSubdomain() throws {
+        let url = try #require(URL(string: "https://klikbca.co.id.secure-login.verifikasi-akun.xyz/klikbca.co.id/login?x=1"))
+        #expect(DetailView.shownLink(url, domain: "verifikasi-akun.xyz") == "verifikasi-akun.xyz/klikbca.co.id/login")
+    }
+
+    @Test func rootLinkIsTheDomainOnly() throws {
+        let url = try #require(URL(string: "https://bca-verifikasi.site/?ref=wa"))
+        #expect(DetailView.shownLink(url, domain: "bca-verifikasi.site") == "bca-verifikasi.site")
+        let login = try #require(URL(string: "https://bca-verifikasi.site/login"))
+        #expect(DetailView.shownLink(login, domain: "bca-verifikasi.site") == "bca-verifikasi.site/login")
+    }
+
+    @Test func bidiAndInvisibleCharactersInThePathStayEncoded() throws {
+        let url = try #require(URL(string: "https://x.site/%E2%80%AEdi.oc.acb"))
+        #expect(DetailView.shownLink(url, domain: "x.site") == "x.site/%E2%80%AEdi.oc.acb")
+    }
+
+    @Test func thePillCutsTheTailSoTheDomainStays() {
+        #expect(DetailLinkPill.truncation == .tail)
+    }
+}

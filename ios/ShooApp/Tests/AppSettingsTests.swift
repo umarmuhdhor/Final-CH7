@@ -42,6 +42,39 @@ struct AppSettingsTests {
         #expect(second.familyModeOn)
     }
 
+    /// Fase 27d (K6): Back or "Not now" after a failed invite join deleted the device. The mode goes, so
+    /// onboarding can register again; the language and the consent answer were the person's, so they stay.
+    @Test func forgetInviteRegistrationKeepsLanguageAndConsent() throws {
+        let defaults = try freshDefaults()
+        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        settings.language = .indonesian
+        settings.dataConsent = .declined
+        #expect(settings.chooseMode(.protected))
+        settings.onboardingConnectPassed = true
+        settings.inviteRegistrationPending = true
+        settings.forgetInviteRegistration()
+        for read in [settings, AppSettings(defaults: defaults, preferredLanguages: ["en"])] {
+            #expect(read.mode == nil)
+            #expect(!read.onboardingConnectPassed)
+            #expect(!read.inviteRegistrationPending)
+            #expect(read.language == .indonesian)
+            #expect(read.dataConsent == .declined)
+        }
+        // The mode can be chosen again.
+        #expect(settings.chooseMode(.guardian))
+    }
+
+    @Test func inviteRegistrationFlagPersistsAndResetClearsIt() throws {
+        let defaults = try freshDefaults()
+        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        settings.inviteRegistrationPending = true
+        #expect(AppSettings(defaults: defaults, preferredLanguages: ["en"]).inviteRegistrationPending)
+        #expect(AppSettings.Keys.all.contains(AppSettings.Keys.inviteRegistrationPending))
+        settings.reset()
+        #expect(!settings.inviteRegistrationPending)
+        #expect(!AppSettings(defaults: defaults, preferredLanguages: ["en"]).inviteRegistrationPending)
+    }
+
     @Test func routerPushesDetailOnSelectedTab() {
         let router = Router()
         router.selectedTab = .activity

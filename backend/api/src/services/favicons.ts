@@ -1,6 +1,6 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
-import { clearFaviconPath, reserveFavicon, scanExists } from "../db/repo/scans";
+import { clearFaviconPath, markFaviconReady, reserveFavicon } from "../db/repo/scans";
 import { usableSecret } from "../http/crypto";
 import { ApiError } from "../http/errors";
 import { errorInfo } from "../http/logError";
@@ -10,7 +10,7 @@ import { archiveFavicon } from "./fragments";
 import { faviconLink } from "./screenshotLinks";
 import { abandonUpload, r2Store } from "./screenshots";
 
-type Drop = FetchFail | "quota" | "no_storage" | "scan_gone" | "upload_failed";
+type Drop = FetchFail | "quota" | "no_storage" | "scan_gone" | "upload_failed" | "ready_failed";
 
 // Reason only: the URL is a page the user visited (SECURITY §3 P6).
 const dropped = (reason: Drop) => console.log(JSON.stringify({ event: "favicon_dropped", reason }));
@@ -21,8 +21,8 @@ const dropped = (reason: Drop) => console.log(JSON.stringify({ event: "favicon_d
  * external subrequest per view); old `-favicon.<ext>` objects stay in Supabase until they expire.
  * Runs in waitUntil after POST /scans answered; any failure drops the favicon only. Order: reuse the owner's favicon of this domain from the last 24 h (no download),
  * else spend the download quota, download with the guards of faviconFetch, reserve + tombstone the
- * path (D-alief-B12), upload. Same cleanup as attachScreenshot when the upload fails or the scan
- * was deleted meanwhile.
+ * path (D-alief-B12), upload, mark it ready (F-B8: only then a link or a reuse). Same cleanup as
+ * attachScreenshot when the upload fails or the scan was deleted meanwhile.
  */
 export async function attachFavicon(
   sql: Sql,
@@ -65,7 +65,18 @@ export async function attachFavicon(
     await abandonUpload(sql, store, path);
     return;
   }
-  if (!(await scanExists(sql, scan.id))) return abandonUpload(sql, store, path);
+  // Ready only now (fase 27k F-B8): until here the path had no link and no reuse. False: the scan was
+  // deleted or its path cleared meanwhile, so no row points at the object.
+  let ready: boolean;
+  try {
+    ready = await markFaviconReady(sql, scan.id, path);
+  } catch (err) {
+    console.error(JSON.stringify({ event: "favicon_dropped", reason: "ready_failed", error: errorInfo(err) }));
+    await clearFaviconPath(sql, scan.ownerId, path).catch(() => undefined);
+    await abandonUpload(sql, store, path);
+    return;
+  }
+  if (!ready) return abandonUpload(sql, store, path);
   // ADM-07 (07a K7): the admin archive keeps one copy per domain.
   await archiveFavicon(env, scan.domain, bytes, FAVICON_CONTENT_TYPE[type]);
 }

@@ -14,6 +14,8 @@ All bodies are JSON. Times are ISO 8601 UTC. Errors: `{ "error": { "code": strin
 Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `internal`, `unauthorized` (401: token missing or unknown), `forbidden` (403: not allowed for this device or mode), `not_found` (404). Endpoint-specific codes are listed per section.
 `rate_limited` = HTTP 429 with a `Retry-After` header (seconds). Clients retry after it; it is **not** an empty answer (e.g. not `verdict: null`).
 
+**New enum values (#493).** The server may add a value to a string enum it sends (e.g. ScanResult `status`, Verdict `value`). Clients must accept a value they don't know: show it as unknown (e.g. "unknown status"), never drop the row or fail the whole response. The iOS models decode it to `.unknown`. Clients never send `unknown` back. A new value is still added to this folder first.
+
 ## Backend (Team App)
 
 ### Devices
@@ -27,6 +29,8 @@ Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `in
 `avatarId` (ON-02, #120): optional, one of `avatar_01`…`avatar_12`. The 4 memoji in the ON-02 picker are `avatar_01`…`avatar_04`; `avatar_05`…`avatar_12` stay for the random pick. Missing or unknown → the server picks at random, as before. The response `avatarId` is the source of truth. Chosen once at registration: `PATCH /devices/me` does not change it (not in the MVP).
 
 `extensionLastSeenAt` (ISO): sent by the **extension** at most once per hour with its heartbeat, and by the app when it comes to the foreground. The backend uses it for `extensionActive` in `GET /family/members` ("Not connected", GD-03). No data yet → `extensionActive: true` (never "Not connected" without evidence).
+
+`liveActivityStartToken` / `liveActivityUpdateToken`: **removed** (EX-03 Dynamic Island dropped 17 Nov 2026, #555). They were the Dynamic Island's APNs tokens. The app no longer sends them; builds from before #555 still do, and the backend answers `200` and stores them nowhere (their columns were dropped).
 
 ### Family (max 3 protected per guardian)
 | Method | Path | Body | Response | PRD |
@@ -44,15 +48,30 @@ Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` 
 ### Scans (Activity)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` + `evidenceFragmentsBase64?` + `thresholdsVersion?` + `rdapRegisteredAt?` (`screenshotBase64?` deprecated). Body ≤ 1 MiB | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
+| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` + `evidenceFragmentsBase64?` + `thresholdsVersion?` + `rdapRegisteredAt?` (`screenshotBase64?` deprecated). Body ≤ 1 MiB | `{ id, notified? }` — sends push to guardian if owner is protected. `notified` (#377): `{ name }` of the Guardian who got this scan's push, or `null` when nobody did (no Guardian, Guardian gone, push off). The block page shows "Link sent to <name>" only from it; a response without the field (older backend) keeps the session's Guardian name. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
 | GET | `/scans?owner=me\|family\|{deviceId}&status=warning\|blocked&cursor=` | — | `{ items: ScanResult[], nextCursor }` newest first. `owner=family` = the guardian's own scans **plus** their protected members' (as in `fixtures/activity-family.json`). `screenshotUrl` and `pageReplicaUrl` are always `null` in lists | PR-05, GD-05 |
 | GET | `/scans/{id}` | — | ScanResult, `pageReplicaUrl` (and `screenshotUrl` for older scans) = short-lived URL valid 1 h, re-checked on every request (404 once the scan is deleted or the family link is gone). Load it as-is, without `Authorization` | DT-* |
 
 Only score ≥ 30 is ever sent. Scans auto-delete after 14 days (PRD §10).
 
-The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. The backend keeps one row per site (`backend/API.md`, #248), so one site (owner + domain) = one Activity item. The Guardian's push goes out on the first visit, and once more if that site goes from `warning` to `blocked`.
+The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. The backend keeps **one row per link** (owner + link, link = origin + path, #241; was one row per site, #248), so each page is its own Activity item and the Guardian can decide on `/b` after marking `/a` safe. The Guardian's **push stays per site** (owner + `domain`, see below): once on the first visit to the site, and once more when that site first reaches `blocked`. A scam site with many pages sends at most two pushes.
+
+#### `domain` (#487, #495)
+
+The `domain` of a page, the same value in `POST /scans`, `GET /verdicts?url=&domain=`, the extension's block memory and every screen that names the site (block chip, Home card, Activity, Detail). The extension works it out from the page URL's host:
+
+1. The host is normalised first: lowercase, a trailing dot dropped (`bca-verifikasi.site.` → `bca-verifikasi.site`, #450), an IPv6 literal in brackets.
+2. **Shared `host_path` platform** (anyone publishes a page under a path: `admin.domain_lists` rows with `hosting = 'host_path'`, e.g. `sites.google.com`, `docs.google.com` (Google Forms), `forms.office.com`, `cloud.microsoft`) → the **full host**, without a leading `www.`: `https://sites.google.com/view/x` → `sites.google.com`, `https://docs.google.com/forms/d/x` → `docs.google.com`, `https://sway.cloud.microsoft/AbC` → `sway.cloud.microsoft` (a host under a `host_path` row counts too). A page there is one person's page, not the platform's, so the real host is what the Guardian sees.
+3. Otherwise the **registrable domain** (Public Suffix List, private suffixes included): `https://login.bca.co.id/` → `bca.co.id`, `https://www.bca.co.id/` → `bca.co.id`, `https://scam.vercel.app/` → `scam.vercel.app`, `https://accounts.google.com/` → `google.com`.
+4. **No registrable domain** → the **full host**: IPv4 `192.168.1.1`, IPv6 `[2001:db8::1]`, a single label `router`, a public suffix `co.id`, a name that is literally `www.<public suffix>` (`www.co.id`, `www.com`; here the `www.` stays, since it is the only label left).
+
+So `domain` is always the url's host or a parent of it, lowercase, with no trailing dot and no port. The backend accepts exactly these values on every route that takes `domain` (the url host check of #375 stays) and stores them as sent. Layer-1 list matching is separate: `ShooLists.match` still checks the host down to its registrable domain (detector-interface.md).
 
 `faviconUrl`: in `POST /scans` it is the site's own icon URL (or `null`); the server downloads it once. In responses (lists and `GET /scans/{id}`) it is a 1-hour signed link to the server's stored copy (`GET /favicons/{scanId}`, see `backend/API.md`), or `null`; never the site's own URL, so the app never contacts the scam host (#166).
+
+`signals[].host` (optional, #497): `{ marks?: string[], official?: string }` on layer 1–2 address signals, for the DT-04
+address card (rules: detector-interface.md "host"). `POST /scans` accepts it and every scan response returns it unchanged;
+absent on older scans. `localSignals` on `POST /analyze` may carry it too; the AI service ignores it.
 
 #### Page replica (evidence, EX-07)
 
@@ -102,18 +121,18 @@ What the **app must do anyway** (a replica comes from a device, so the backend c
 | GET | `/verdicts?url=&domain=` | — | `{ verdict: Verdict \| null }` | EX-06 auto-open |
 | GET | `/verdicts?domain=` | — | `{ verdict: Verdict \| null }` — **deprecated**, for builds from before #241 | EX-06 auto-open |
 
-A **link** is origin + path, with no query or fragment (`shareableUrl` in the extension). `domain` is the registrable domain, as on a scan: the backend can't derive it from the link.
+A **link** is origin + path, with no query or fragment (`shareableUrl` in the extension); its host has no trailing dot (#450). `domain` follows the rule in Scans "`domain`", as on a scan: the backend can't derive it from the link.
 
 Lookup (#241), first match wins:
 1. A verdict on exactly this link, `safe` or `not_safe`.
-2. A `not_safe` by this owner on another link of the same domain, unless the domain is a shared host (`ai/data/shared-hosts.json`): one page there says nothing about the others.
+2. A `not_safe` by this owner on another link of the same domain, unless **either** link is on a shared host (`backend/API.md`: on or under a `hosting = 'host_path'` row, or a domain with `hosting = 'subdomains'`): one page there says nothing about the others. That holds for the link being asked about **and** for the link the `not_safe` was made on (#495): a `not_safe` made on a shared host covers **only that link** and never reaches another host or page of the same registrable domain (a scam Google Form on `docs.google.com` never answers for `accounts.google.com`).
 3. Otherwise `null`. A `safe` never reaches past its own link.
 
 A scan's `verdict` in Activity follows the same rule. `?domain=` alone answers with any `not_safe` on that domain, else the newest `safe`. It goes once the last older build is gone.
 
 `notes` (optional, at most 280 characters): why the Guardian decided. The app requires it on `not_safe`; the backend accepts a verdict without it, because older builds don't send it. It is never returned in a `Verdict`. It is cleared after 14 days and the decision stays, otherwise the link would be blocked again on day 15.
 
-Extension polls `GET /verdicts?url=&domain=` every 5 s while the block screen is open, for **both modes**: Protected waits for the guardian, Guardian reopens the page after marking it safe for themselves (PRD §5 Validasi). Also polls once when the user comes back from the app. Realtime instead of polling: propose via PR.
+Extension polls `GET /verdicts?url=&domain=` while the block screen is open (#350): every 2 s for the first 2 minutes, every 5 s up to 10 minutes, then every 15 s (a `429` waits out `Retry-After`), for **both modes**: Protected waits for the guardian, Guardian reopens the page after marking it safe for themselves (PRD §5 Validasi). Also polls once when the user comes back from the app. Realtime instead of polling: propose via PR.
 
 The extension only asks for a verdict once a page reaches score 30 — the point where the page would be sent with `POST /scans` anyway. Low-score browsing never reaches the backend.
 
@@ -123,7 +142,7 @@ The extension only asks for a verdict once a page reaches score 30 — the point
 | GET | `/blocklist?since=` | — | `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }` — domains **approved** into the global list (see below) | §5 Layer 1 |
 
 A `not_safe` verdict always applies at once **for that family** (`GET /verdicts`). It reaches the **global** list only after review, because anyone can register without login and could otherwise get a real bank's domain blocked for every user (blocklist poisoning):
-1. Eligible: the verdict is on a scan owned by a **connected Protected** member, and the domain is not on the official/popular allowlist → it goes into a review queue.
+1. Eligible: the verdict is on a scan owned by a **connected Protected** member, and the domain is not on the official/popular allowlist → it goes into a review queue. A `domain` that is a shared host (on or under a `host_path` row, e.g. `sites.google.com`, #495) or has no registrable domain (an IP, `router`, `www.co.id`, #487) is never eligible: on the global list it would block every page of the platform, or a name that is not a site.
 2. Published: only after manual approval by Alief/Umar. `addedAt` = approval time; `nextSince` follows it.
 3. Removed: optional `removed[]` lists domains taken off the list since `since`. Until clients handle it, do a full refresh (no `since`) once a day.
 
@@ -135,6 +154,33 @@ A `not_safe` verdict always applies at once **for that family** (`GET /verdicts`
 - A `since` that is not a valid ISO 8601 timestamp (or is out of range) → HTTP 422 `invalid_body`, the same code as a bad body. The client only ever sends back a `nextSince` it was given, so this only happens on a client bug.
 
 The extension's `background.js` downloads this list and refreshes it (incremental `since` hourly, full daily); the visited URL is never sent to check one domain. Design: `docs/design/blocklist.md`.
+
+### Latest scams (Home card)
+| Method | Path | Body | Response | PRD |
+|---|---|---|---|---|
+| GET | `/scams/latest` | — (either mode) | `{ items: [{ category, title: { en, id }, lastSeenAt }] }` — kinds of scam several Shoo users were blocked from in the last 7 days, newest first, at most 4 (`fixtures/latest-scams.json`) | PR-04, GD-01 |
+
+The Home card "Scam terbaru di pengguna Shoo" (#558). `Cache-Control: private, max-age=600`: no user data, a client may keep it 10 minutes.
+
+- `category`: an admin category id (`undian_palsu`), one item per category. Open-ended: the admin can add one at any time, so a client shows `title` and never needs to know the id (like the enum rule above).
+- `title`: the admin's label for that category in English and Indonesian. The client picks its language. It never holds text from a page, URL or domain.
+- `lastSeenAt` (ISO): the newest counted scan, server time, rounded down to the hour. The client turns it into "Hari ini" / "Kemarin" / "N hari lalu" by calendar day on the phone; a time slightly ahead of the phone's clock is still today.
+- `items: []` when nothing passes the gates below: the client hides the card. A failed request also hides it; Home never waits on it.
+
+Anyone can make devices and send scans, so nothing a client sends decides what the card says. An item appears only when all of these hold (`backend/API.md` "Latest scams"):
+1. The domain is on the global blocklist, approved by an admin, not removed, and not on the trusted/protected lists. The category is the one the admin chose when approving; `lainnya` (Other) never shows.
+2. The scan is `blocked`, timed by server `created_at` (not the client's `detectedAt`), within the last 7 days.
+3. A device counts once per category, and only once it is 24 h old.
+4. At least 3 different devices hit the category. No domain, URL, count or device is ever returned.
+
+Nothing is stored for the card: it is counted from live scans, so a deleted device or a scan past 14 days stops counting at once.
+
+### Live score (Dynamic Island) — removed
+**Removed** (17 Nov 2026, decision Umar + Alief, #555): EX-03's Dynamic Island / Live Activity (path C, #49) is dropped. The live score stays in the in-page pill only (`pill.js`), which never leaves the phone.
+
+- `POST /live` is no longer part of the contract and answers `404`. The extension does not call it; the backend removed the route and its Live Activity push sender (#563). No client may depend on it.
+- No `apns-push-type: liveactivity` pushes. `ScoreActivityAttributes` is gone from `ios/ShooShared/`.
+- The old spec (body, timing, APNs payload) is in git history and `docs/spikes/dynamic-island.md`.
 
 ### Push payloads (APNs)
 ```json

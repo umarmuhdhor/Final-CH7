@@ -122,6 +122,7 @@ struct MockRepositoryTests {
         ("999999", .codeExpired),
         ("888888", .familyFull),
         ("777777", .tooManyAttempts),
+        ("555555", .rateLimited),
         ("666666", .alreadyConnected),
         ("12a456", .codeInvalid),
         ("4821", .codeInvalid),
@@ -171,7 +172,7 @@ struct MockRepositoryTests {
         let code = try await repo.createFamilyCode(refresh: false)
         #expect(DeepLink.isCode(code.code))
         #expect(code.expiresAt == now.addingTimeInterval(30 * 60))
-        #expect(code.inviteUrl.absoluteString == "https://shoo-api.afindo-mi01.workers.dev/j/\(code.code)")
+        #expect(code.inviteUrl.absoluteString == "https://join.shoo.ai.id/j/\(code.code)")
     }
 
     /// Like the server: the same code while more than 5 min is left, a new one on refresh.
@@ -240,20 +241,80 @@ struct MockRepositoryTests {
         #expect(try await repo.me().name == "Adhella")
     }
 
-    @Test func verdictCoversSameDomainAndOwnerAndCanBeReplaced() async throws {
+    @Test func verdictCoversTheLinkForThatOwnerAndCanBeReplaced() async throws {
         let repo = guardian()
         let blocked = "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
         _ = try await repo.setVerdict(scanId: blocked, value: .notSafe)
         let replaced = try await repo.setVerdict(scanId: blocked, value: .safe)
         #expect(try await repo.scan(id: blocked).verdict == replaced)
-        // Other scans (other domains) keep their own verdicts.
+        // Other scans (other links) keep their own verdicts.
         let others = try await repo.scans(owner: .family, status: nil, cursor: nil).items.filter { $0.id != blocked }
         #expect(others.allSatisfy { $0.verdict != replaced })
+    }
+
+    /// Per link like the backend (#241, contracts/api.md "Verdicts (per link)"): link = origin + path.
+    /// Another page of the same site waits for its own verdict; the same page again (query aside) shares it.
+    @Test func verdictIsPerLinkNotPerDomain() async throws {
+        let repo = guardian()
+        let decided = try await repo.scan(id: "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03")
+        func copy(_ id: String, _ url: String) throws -> ScanResult {
+            var scan = decided
+            scan.id = id
+            scan.url = try #require(URL(string: url))
+            scan.verdict = nil
+            return scan
+        }
+        var components = try #require(URLComponents(url: decided.url, resolvingAgainstBaseURL: false))
+        components.query = "ref=wa"
+        let otherPage = try copy("other-page", "https://\(decided.domain)/another-page")
+        let samePage = try copy("same-page", try #require(components.url).absoluteString)
+        await repo.insertScan(otherPage)
+        await repo.insertScan(samePage)
+
+        let verdict = try await repo.setVerdict(scanId: decided.id, value: .notSafe)
+
+        #expect(try await repo.scan(id: samePage.id).verdict == verdict)
+        #expect(try await repo.scan(id: otherPage.id).verdict == nil)
     }
 
     @Test func emptyScenarioHasNothing() async throws {
         let repo = MockRepository(mode: .guardian, scenario: .empty, latency: .zero)
         #expect(try await repo.scans(owner: .family, status: nil, cursor: nil).items.isEmpty)
         #expect(try await repo.familyMembers().isEmpty)
+    }
+}
+
+/// Debug `-mock.fail`: stages the error states in the simulator.
+struct MockFailureArgumentTests {
+    @Test func parsesNamesAndCodes() {
+        let failures = MockRepository.failures(from: "me,setVerdict=verdict_not_allowed,,=x")
+        #expect(failures["me"] == .network)
+        #expect(failures["setVerdict"] == .api("verdict_not_allowed", message: "verdict_not_allowed"))
+        #expect(failures.count == 2)
+        #expect(MockRepository.failures(from: nil).isEmpty)
+    }
+
+    @Test func aSkipCountLetsTheFirstCallsThrough() async throws {
+        let repository = MockRepository(mode: .protected, latency: .zero, failures: MockRepository.failures(from: "me~1"))
+        _ = try await repository.me()
+        await #expect(throws: RepositoryError.network) { try await repository.me() }
+    }
+
+    /// A-02: `setVerdict.lost` saves the verdict, then fails as if the answer was lost; the next call can be a 409.
+    @Test func aLostVerdictIsSavedThenTheNextCallIsLocked() async throws {
+        let repository = MockRepository(
+            latency: .zero, failures: MockRepository.failures(from: "setVerdict.lost,setVerdict~1=verdict_locked")
+        )
+        let id = "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+        await #expect(throws: RepositoryError.network) { try await repository.setVerdict(scanId: id, value: .safe) }
+        #expect(try await repository.scan(id: id).verdict?.value == .safe)
+        await #expect(throws: RepositoryError.api(.verdictLocked, message: "verdict_locked")) {
+            try await repository.setVerdict(scanId: id, value: .safe)
+        }
+    }
+
+    @Test func aListedCallFails() async {
+        let repository = MockRepository(mode: .protected, latency: .zero, failures: ["me": .network])
+        await #expect(throws: RepositoryError.network) { try await repository.me() }
     }
 }

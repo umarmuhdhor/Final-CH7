@@ -77,7 +77,7 @@ Track **app** dan **be** jalan paralel di worktree terpisah. Track **c** (sambun
 | 14 | Pairing | c | `feat/GD-04-PR-01-03-pairing` | Family code, Connect, Protected by, deep link | GD-04, PR-01, 02, 03 | Opus 5.5 |
 | 15 | Push + validasi live | c | `feat/GD-06-07-push-validation` | tap push → Detail, It's safe / Not safe live | GD-06, GD-07 | Opus 5.5 |
 | 16 | QA-E2E | c | `fix/QA-*` per bug | `qa/QA-E2E-<tanggal>.md`, retest | semua P0 | Sonnet 5.5 (Opus untuk fix keamanan) |
-| 17 | Ditahan | – | nanti | Live Activity lewat push | EX-03 | – |
+| 17 | Live Activity push | c | `feat/EX-03-live-activity-push`, `fix/EX-03-live-activity-tokens`, `fix/EX-03-live-status` | `POST /live`, token Live Activity di `PATCH /devices/me`, app mengirim token push-to-start + update (path C, issue #49; awalnya ditahan sampai spike S3 Umar) | EX-03 | Opus 5.5 |
 | 18 | Page replica | c | `feat/EX-07-replica-backend` (dari `main`, sekarang) → `fix/EX-07-app-fixtures` (ke #177, setelah #175) → `feat/DT-04-page-replica` (D-alief-C24) | `pageReplicaBase64` di `POST /scans`, R2 `shoo-replicas`, `GET /replicas/{id}`, Detail merender salinan halaman (issue #176) | EX-07, DT-04 | Opus 5.5 |
 | 19 | Kuota salinan halaman per keluarga + log alert | be | `feat/EX-07-replica-family-quota` | kuota 24 jam per keluarga (Guardian + Protected), cadangan global, gauge `replica_quota_usage` | TODO E8, SECURITY P13 | Opus 5.5 |
 | 20 | Sunset screenshot (18c) + cabut service_role | c | `fix/EX-07-ignore-screenshot-upload` → `feat/EX-07-screenshot-sunset` → `feat/EX-07-drop-screenshot-columns` + `feat/DT-04-screenshot-sunset` | backend berhenti menerima/menyimpan screenshot, kolom + bucket dihapus, kunci `SUPABASE_SERVICE_ROLE_KEY` dicabut | TODO E1, D-alief-C23/C27 | Opus 5.5 |
@@ -87,6 +87,8 @@ Track **app** dan **be** jalan paralel di worktree terpisah. Track **c** (sambun
 | 24 | Privasi & siklus data | c | `feat/E7-inactive-devices`(`-on`), `feat/C22-shared-keychain`, sisa 24c | hapus device tidak aktif (dry-run dulu), token di Keychain bersama, kontak + App Privacy | TODO E6, E7, C22 | Opus 5.5 |
 | 25 | Verdict realtime | be | `feat/EX-06-verdict-latency-log` → spike DO | polling adaptif (Umar) + spike WebSocket Durable Object di balik flag | TODO E3 | Opus 5.5 |
 | 26 | Undangan setelah install | c | `feat/PR-03-deferred-invite-app`, `feat/PR-03-deferred-invite-page` | tombol Tempel undangan di splash + Connect, parser link ketat | TODO E4, PR-03 | Opus 5.5 |
+| 27 | Audit state machine tersirat + perbaikan | c | `docs/alief-fase-27-state-machines` → `fix/<PRD-ID>-…` per sub-fase (27a–27k), `docs/alief-R4-state-machine` (27z) | temuan + test repro, perbaikan per state machine, `ref/R4-state-machine.md` ditulis ulang | PF-01, ON-04, GD-01, GD-04, GD-06, GD-07, PR-05, DT-06 | Opus 5.5 |
+| 28 | Truth hunt + perbaikan | c | `docs/alief-fase-28-truth-hunt` → `fix/<PRD-ID>-…` per sub-fase (28a–28p; 28n = `docs/alief-fase-28n-ax3`; 28p hanya kalau 28n memintanya) | temuan terverifikasi (P0 0, P1 2), matriks edge case `qa/edge-matrix-2026-11-13.md`, tabel optimasi, review produk, 37 draf pertanyaan; perbaikan merah → hijau untuk bug milik Alief | ON-02/04, PR-01/02/03/04, GD-01/03/04/05/06/07, DT-01, PF-01, EX-06/07 | Opus 5.5 |
 
 **Gate:** Fondasi app (01) dan fondasi backend (07) boleh mulai bersamaan · Track c mulai setelah semua PR 01–06Q dan 07–12 **di-merge** (`[x]` = merged, PROGRESS legenda) · Deploy cloud pertama di akhir fase 07 supaya Imelda bisa memakai `GET /blocklist` · QA-E2E butuh TestFlight (TODO B6–B8). · Fase 19–26 (ditulis + diverifikasi 31 Okt–1 Nov 2026): urutan dan issue ke Umar di [`ref/R8-fase-19-26-lintas.md`](ref/R8-fase-19-26-lintas.md); jalur kritis G2 → 20a → 15 hari → 20b (±16 Nov) → 20c.
 
@@ -147,7 +149,7 @@ Garis putus-putus = endpoint yang dipakai tim lain sebelum app kita tersambung.
 
 Diambil dari mandat:
 1. Semua requirement P0 di PRD 8.1–8.4 dan 8.6 lolos "Selesai kalau", dengan bukti di log fase, termasuk ON-04 (fase 02, fallback PRD §10 + hasil spike 01S). Spike S1 dan S2 selesai (fase 01S).
-2. Keluarga terhubung lewat kode 4 digit atau QR, dan Guardian menerima push saat orang tuanya membuka situs berbahaya.
+2. Keluarga terhubung lewat kode 6 digit (30 menit), QR, atau link undangan `/j/<kode>`, dan Guardian menerima push saat orang tuanya membuka situs berbahaya.
 3. Guardian menekan **It's safe** → layar blokir di HP orang tua terbuka (EX-06) tanpa layar konfirmasi.
 4. Semua teks tersedia EN + ID.
 5. QA-E2E tanpa temuan P0/P1 terbuka (retest LULUS).

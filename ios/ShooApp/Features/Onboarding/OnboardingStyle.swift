@@ -117,6 +117,19 @@ struct OnboardingCapsuleButtonStyle: ButtonStyle {
     }
 }
 
+/// A `.plain` button that gives under the finger like the pill (splash Next, the avatar picker). The look
+/// and hit area are the label's own. Reduce Motion: it dims instead of shrinking.
+struct OnboardingPressButtonStyle: ButtonStyle {
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.94 : 1)
+            .opacity(configuration.isPressed && reduceMotion ? 0.8 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
 /// Round 50 pt back button over the header gradient (Liquid Glass on iOS 26+).
 struct OnboardingBackButton: View {
     var identifier = "onboarding.back"
@@ -139,6 +152,24 @@ struct OnboardingBackButton: View {
     }
 }
 
+/// A page shown in a sheet has no status bar above it: its top safe area is 0, so a back button pinned to the
+/// safe area sat on the sheet's rounded corner (Connect from Profile, Turn on from Activity). There the page
+/// gets 16 pt of top room; full screen it already sits under the status bar and nothing changes.
+struct SheetTopClearance: ViewModifier {
+    @State private var outerTop: CGFloat = 0
+    @State private var measured = false
+
+    func body(content: Content) -> some View {
+        content
+            .safeAreaPadding(.top, measured && outerTop < 20 ? 16 : 0)
+            // Read outside the padding, so the padding never feeds back into the measurement.
+            .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: {
+                outerTop = $0
+                measured = true
+            }
+    }
+}
+
 private struct GlassCircle: ViewModifier {
     @Environment(\.shooReduceGlass) private var reduceGlass
 
@@ -157,9 +188,11 @@ private struct GlassCircle: ViewModifier {
 /// Blue gradient behind the title that fades into the page colour (Figma "Gradient-classic-2 lighter" + "box").
 struct OnboardingHeaderBackground: View {
     var height: CGFloat = 252
+    /// `OnboardingHeaderGradientTeal` on Figma "To be guardian".
+    var image = "OnboardingHeaderGradient"
 
     var body: some View {
-        Image("OnboardingHeaderGradient")
+        Image(image)
             .resizable()
             .scaledToFill()
             .frame(height: height, alignment: .bottom)
@@ -187,6 +220,11 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer
     @State private var footerHeight: CGFloat = 92
+    /// The page between the safe areas, keyboard left out: the hero scales with it, and it decides `footerScrolls`.
+    /// It only grows: a sheet can still shrink with the keyboard, and the footer must not move while the user types.
+    @State private var pageHeight: CGFloat = 0
+    /// The footer's top padding, where the page fades out under it.
+    private static var footerFade: CGFloat { 24 }
     /// Figma "Footer": a lone button ends 68 pt above the screen bottom (34 over the home indicator inset);
     /// a button + text link ends 40 pt above it. See `footerEndsWithLink()`.
     private var footerBottom: CGFloat = 34
@@ -195,6 +233,7 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     private var largeHeadline = false
     private var messageLineHeight: CGFloat = 23.8
     private var messageSpacing: CGFloat?
+    private var headerImage = "OnboardingHeaderGradient"
 
     init(
         title: LocalizedStringKey,
@@ -241,13 +280,16 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
 
                     content
                         .padding(.horizontal, 24)
+
+                    if footerScrolls { footerStack }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.bottom, 16)
+                // A scrolling footer brings its own bottom padding.
+                .padding(.bottom, footerScrolls ? 0 : 16)
             }
             // The footer is an overlay, not `safeAreaInset`: with the keyboard up, a ScrollView ignores the
             // inset and the field ends up under the button. This margin keeps the last content above it.
-            .contentMargins(.bottom, footerHeight, for: .scrollContent)
+            .contentMargins(.bottom, footerScrolls ? 0 : footerHeight, for: .scrollContent)
             .scrollBounceBehavior(.basedOnSize)
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: scrollTarget) { _, target in
@@ -260,9 +302,17 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
             }
             .mask { scrollMask }
         }
+        .environment(\.onboardingPageHeight, pageHeight)
+        .background {
+            // The keyboard is left out, so it never shrinks the hero or moves the footer into the page.
+            // `onGeometryChange` reports before the first frame: the page never opens with the 300 pt hero on SE.
+            Color.clear
+                .ignoresSafeArea(.keyboard)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pageHeight = max(pageHeight, $0) }
+        }
         .background(alignment: .top) {
             // Figma "box": 252 pt, 345 where an illustration sits on it.
-            OnboardingHeaderBackground(height: Hero.self == EmptyView.self ? 252 : 345).ignoresSafeArea(edges: .top)
+            OnboardingHeaderBackground(height: Hero.self == EmptyView.self ? 252 : 345, image: headerImage).ignoresSafeArea(edges: .top)
         }
         .background(OnboardingTheme.background.ignoresSafeArea())
         // Outside the scroll view: with the keyboard up the page scrolls and Back has to stay reachable.
@@ -274,32 +324,44 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
             }
         }
         .overlay(alignment: .bottom) {
-            // Figma "Footer": 16 between the button and the text link under it.
-            VStack(spacing: 16) { footer }
-                .padding(.horizontal, 24)
-                .padding(.top, 24)
-                .padding(.bottom, footerBottom)
-                .background {
-                    LinearGradient(
-                        stops: [
-                            .init(color: OnboardingTheme.background.opacity(0), location: 0),
-                            .init(color: OnboardingTheme.background.opacity(0.96), location: 0.3),
-                            .init(color: OnboardingTheme.background, location: 1),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea(edges: .bottom)
-                }
-                .background {
-                    GeometryReader { geometry in
-                        Color.clear
-                            .onAppear { footerHeight = geometry.size.height }
-                            .onChange(of: geometry.size.height) { _, height in footerHeight = height }
+            if !footerScrolls {
+                footerStack
+                    .background {
+                        // Only the 24 pt above the first row fades; behind the rows it is solid. A fade that
+                        // scaled with the footer let a tall one (ON-04's consent box) show the steps scrolled
+                        // under it through its own text (QA 2026-11-11 #7).
+                        VStack(spacing: 0) {
+                            LinearGradient(
+                                colors: [OnboardingTheme.background.opacity(0), OnboardingTheme.background],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            .frame(height: Self.footerFade)
+                            OnboardingTheme.background
+                        }
+                        .ignoresSafeArea(edges: .bottom)
                     }
-                }
+            }
         }
+        .modifier(SheetTopClearance())
         .environment(\.colorScheme, .light)
+    }
+
+    /// U-06 (fase 28h): at large text the pinned footer can cover most of the page (ON-04 at AX3 on iPhone SE:
+    /// from y 221 of 667, so step 1, 265 pt tall, never fit above it). Past half the page it scrolls after the
+    /// content instead (the button is then reached by scrolling, like the rest of the page). It stays pinned at the
+    /// sizes Figma draws, and `pageHeight` leaves the keyboard out, so a keyboard never moves it (the reason it is
+    /// an overlay).
+    private var footerScrolls: Bool { pageHeight > 0 && footerHeight > pageHeight / 2 }
+
+    /// Figma "Footer": 16 between the button and the text link under it. Same padding pinned or scrolling, so
+    /// its measured height (and `footerScrolls`) does not change when it moves.
+    private var footerStack: some View {
+        VStack(spacing: 16) { footer }
+            .padding(.horizontal, 24)
+            .padding(.top, Self.footerFade)
+            .padding(.bottom, footerBottom)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
     }
 
     /// A scrolled headline fades out under the back button instead of running through it and the status
@@ -343,6 +405,13 @@ extension OnboardingFormPage {
         return page
     }
 
+    /// The teal header of Figma "To be guardian" (1229:1904).
+    func tealHeader() -> Self {
+        var copy = self
+        copy.headerImage = "OnboardingHeaderGradientTeal"
+        return copy
+    }
+
     /// The 34 pt headline and 22 pt message lines of "Lindungi dirimu dan orang terdekat".
     func largeHeadline(_ large: Bool = true) -> Self {
         var page = self
@@ -373,6 +442,7 @@ extension OnboardingFormPage where Hero == EmptyView {
 /// 300 pt illustration at the top of an onboarding page (Figma "image 1").
 struct OnboardingHeroImage: View {
     let name: String
+    @Environment(\.onboardingPageHeight) private var pageHeight
     /// From the top safe area (62 on the 402 × 874 Figma iPhone) to the image.
     var top: CGFloat = 0
     /// From the image to the headline.
@@ -382,10 +452,29 @@ struct OnboardingHeroImage: View {
         Image(name)
             .resizable()
             .scaledToFit()
-            .frame(width: 300, height: 300)
+            .frame(width: side, height: side)
             .padding(.top, top)
             .padding(.bottom, bottom)
             .accessibilityHidden(true)
+    }
+
+    /// U-06 (fase 28h): 300 pt on Figma's page (874 − 62 − 34 = 778 pt between the safe areas), the same share of a
+    /// shorter one, never more. On iPhone SE (647 pt) that is 249 pt, so step 1 of ON-04 opens above the footer.
+    private var side: CGFloat {
+        guard pageHeight > 0 else { return 300 }
+        return min(300, (pageHeight * 300 / 778).rounded())
+    }
+}
+
+private struct OnboardingPageHeightKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    /// The onboarding page's height between the safe areas, keyboard left out (0 until measured).
+    var onboardingPageHeight: CGFloat {
+        get { self[OnboardingPageHeightKey.self] }
+        set { self[OnboardingPageHeightKey.self] = newValue }
     }
 }
 
@@ -427,6 +516,197 @@ struct OnboardingLinkButtonStyle: ButtonStyle {
     }
 }
 
+/// The success text rises 8 pt into place 0.15 s after the step slides in. Reduce Motion: a fade only.
+private struct SuccessTextEntrance: ViewModifier {
+    let isOn: Bool
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isOn && !shown ? 0 : 1)
+            .offset(y: isOn && !shown && !reduceMotion ? 8 : 0)
+            .onAppear {
+                guard isOn, !shown else { return }
+                withAnimation(.smooth(duration: 0.4).delay(0.15)) { shown = true }
+            }
+    }
+}
+
+/// The celebrated success text (`OnboardingSuccessPage.celebrates`): the title rises 16 pt and grows from 94 %
+/// on a light spring, the message follows without bounce. Reduce Motion: a 0.2 s fade at the same moment.
+private struct CelebrationTextEntrance: ViewModifier {
+    let isOn: Bool
+    let delay: Double
+    let bounces: Bool
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        let waiting = isOn && !shown
+        content
+            .opacity(waiting ? 0 : 1)
+            .offset(y: waiting && !reduceMotion ? 16 : 0)
+            .scaleEffect(waiting && !reduceMotion && bounces ? 0.94 : 1)
+            .onAppear {
+                guard isOn, !shown else { return }
+                let animation: Animation = reduceMotion
+                    ? .easeInOut(duration: 0.2)
+                    : bounces ? .spring(duration: 0.45, bounce: 0.25) : .smooth(duration: 0.45)
+                withAnimation(animation.delay(delay)) { shown = true }
+            }
+    }
+}
+
+private struct SuccessCelebrationKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// Set by `OnboardingSuccessPage(celebrates: true)` for its hero.
+    var successCelebration: Bool {
+        get { self[SuccessCelebrationKey.self] }
+        set { self[SuccessCelebrationKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// The hero's centre piece on a celebrated success page: it pops in, two white rings ripple out behind it
+    /// and one confetti burst leaves its centre. Does nothing on a page that doesn't celebrate.
+    /// `ringSize`: the rings' starting diameter, about the piece's visible width.
+    func successCelebrationHero(ringSize: CGFloat) -> some View {
+        modifier(SuccessCelebrationHero(ringSize: ringSize))
+    }
+}
+
+/// One shot, about 1.2 s: the piece scales 0.6 → 1 on a bouncy spring from 0.1 s; when it lands (0.35 s) two
+/// rings grow 0.8 → 2.2 and fade (0.8 s, the second 0.12 s later) and ~28 confetti bits fall away. Transform and
+/// opacity only, so the layout is the same as without it. Reduce Motion: a 0.2 s fade, no rings or confetti.
+private struct SuccessCelebrationHero: ViewModifier {
+    let ringSize: CGFloat
+    @Environment(\.successCelebration) private var isOn
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var landed = false
+    @State private var ringsArmed = false
+    @State private var firstRingOut = false
+    @State private var secondRingOut = false
+    @State private var confettiStart: Date?
+
+    func body(content: Content) -> some View {
+        let waiting = isOn && !landed
+        content
+            .scaleEffect(waiting && !reduceMotion ? 0.6 : 1)
+            .opacity(waiting ? 0 : 1)
+            // Behind the piece: the bits burst out from under its edges instead of clumping on its face.
+            .background {
+                if isOn, !reduceMotion, ringsArmed {
+                    ZStack {
+                        if let confettiStart { ConfettiBurst(start: confettiStart) }
+                        ring(out: firstRingOut)
+                        ring(out: secondRingOut)
+                    }
+                }
+            }
+            .onAppear(perform: play)
+    }
+
+    private func ring(out: Bool) -> some View {
+        Circle()
+            .strokeBorder(.white, lineWidth: 3)
+            .frame(width: ringSize, height: ringSize)
+            .scaleEffect(out ? 2.2 : 0.8)
+            .opacity(out ? 0 : 0.5)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    private func play() {
+        guard isOn, !landed else { return }
+        if reduceMotion {
+            withAnimation(.easeInOut(duration: 0.2)) { landed = true }
+            return
+        }
+        withAnimation(.spring(duration: 0.5, bounce: 0.35).delay(0.1)) { landed = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            ringsArmed = true
+            confettiStart = .now
+            // Let the rings draw once at their start before they grow.
+            try? await Task.sleep(for: .milliseconds(16))
+            withAnimation(.easeOut(duration: 0.8)) { firstRingOut = true }
+            try? await Task.sleep(for: .milliseconds(120))
+            withAnimation(.easeOut(duration: 0.8)) { secondRingOut = true }
+            try? await Task.sleep(for: .milliseconds(Int(ConfettiBurst.life * 1000)))
+            // Burst over: drop the canvas so its timeline stops.
+            confettiStart = nil
+            ringsArmed = false
+        }
+    }
+}
+
+/// ~28 white, teal and yellow bits thrown up from the centre that fall under gravity and fade; gone after `life`.
+/// Drawn in one `Canvas`; the `TimelineView` stops when the view is removed.
+private struct ConfettiBurst: View {
+    let start: Date
+
+    static let life: Double = 0.85
+    private static let gravity: Double = 1400
+
+    private struct Bit {
+        let velocity: CGVector
+        let size: CGSize
+        let spin: Double
+        let color: Color
+    }
+
+    /// The same throw every time (a fixed-seed generator), so the burst looks designed, not noisy.
+    private static let bits: [Bit] = {
+        var seed: UInt64 = 0x5EED_5100
+        func random() -> Double {
+            seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return Double(seed >> 11) / Double(1 << 53)
+        }
+        let colors = [Color.white, Color(hex: 0x5FE3D6), Color(hex: 0xFFD84A)]
+        return (0..<28).map { index in
+            // Up and out: −165° … −15°, 340–640 pt/s.
+            let angle = (-165 + 150 * random()) * .pi / 180
+            let speed = 340 + 300 * random()
+            return Bit(
+                velocity: CGVector(dx: cos(angle) * speed, dy: sin(angle) * speed),
+                size: CGSize(width: 5 + 3 * random(), height: 7 + 4 * random()),
+                spin: (random() - 0.5) * 16,
+                color: colors[index % colors.count]
+            )
+        }
+    }()
+
+    var body: some View {
+        TimelineView(.animation) { context in
+            Canvas { canvas, size in
+                let t = context.date.timeIntervalSince(start)
+                guard t >= 0, t < Self.life else { return }
+                let centre = CGPoint(x: size.width / 2, y: size.height / 2)
+                let fade = min(1, (Self.life - t) / 0.3)
+                for bit in Self.bits {
+                    var piece = canvas
+                    piece.opacity = fade
+                    piece.translateBy(
+                        x: centre.x + bit.velocity.dx * t,
+                        y: centre.y + bit.velocity.dy * t + 0.5 * Self.gravity * t * t
+                    )
+                    piece.rotate(by: .radians(bit.spin * t))
+                    let rect = CGRect(x: -bit.size.width / 2, y: -bit.size.height / 2, width: bit.size.width, height: bit.size.height)
+                    piece.fill(Path(roundedRect: rect, cornerRadius: 1.5), with: .color(bit.color))
+                }
+            }
+        }
+        // Wider than the hero so the bits can fly out; a background, so the layout doesn't change.
+        .frame(width: 640, height: 720)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
 /// Blue success screen: illustration, white title + message, "Next" at the bottom
 /// (Figma "Berhasil Terhubung", "Yeay, kamu berhasil"). Ids: `<idPrefix>.title`, `<idPrefix>.continue`.
 struct OnboardingSuccessPage<Hero: View>: View {
@@ -438,27 +718,50 @@ struct OnboardingSuccessPage<Hero: View>: View {
     var background = "SuccessBackground"
     /// Figma "Berhasil Terhubung" has a 34 pt headline, "Yeay, kamu berhasil" a 28 pt one.
     var largeTitle = true
+    /// The title and message rise in a moment after the step slides in (ON-04 passed).
+    var revealsText = false
+    /// A one-shot celebration (~1.2 s): the hero's `successCelebrationHero` piece pops in with rings and confetti,
+    /// the title and message come in one after the other, a heavy tap as the hero lands and a success tap with
+    /// the title. "Next" works from the start. Replaces `revealsText`.
+    var celebrates = false
     /// Brings the headline to Figma's y under the hero.
     @ViewBuilder let hero: Hero
+
+    @State private var heroLanded = 0
+    @State private var titleLanded = 0
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 hero
+                    .environment(\.successCelebration, celebrates)
 
                 // Figma "Frame 2": Large Title, 8, Body; or Title 1, 4, Subhead.
                 VStack(spacing: largeTitle ? 8 : 4) {
                     styledTitle
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("\(idPrefix).title")
+                        .modifier(CelebrationTextEntrance(isOn: celebrates, delay: 0.3, bounces: true))
                     styledMessage
                         .foregroundStyle(Color(hex: 0xFAF9FB))
+                        .modifier(CelebrationTextEntrance(isOn: celebrates, delay: 0.42, bounces: false))
                 }
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 24)
+                .modifier(SuccessTextEntrance(isOn: revealsText && !celebrates))
             }
             .frame(maxWidth: .infinity)
+        }
+        .sensoryFeedback(.impact(weight: .heavy), trigger: heroLanded)
+        .sensoryFeedback(.success, trigger: titleLanded)
+        .task {
+            // The two taps of the celebration, with Reduce Motion too: the hero lands, then the title.
+            guard celebrates, heroLanded == 0 else { return }
+            try? await Task.sleep(for: .milliseconds(350))
+            heroLanded += 1
+            try? await Task.sleep(for: .milliseconds(300))
+            titleLanded += 1
         }
         .scrollBounceBehavior(.basedOnSize)
         .contentMargins(.bottom, 104, for: .scrollContent)

@@ -5,10 +5,11 @@ import UIKit
 
 /// Fase 14: invite links, Connect (PR-01/02/03) and Family code (GD-04).
 struct DeepLinkTests {
-    private static let hosts: Set<String> = ["shoo-api.afindo-mi01.workers.dev", "localhost"]
+    private static let hosts: Set<String> = ["join.shoo.ai.id", "shoo-api.afindo-mi01.workers.dev", "localhost"]
 
     @Test(arguments: [
         "shoo://join?code=482193",
+        "https://join.shoo.ai.id/j/482193",
         "https://shoo-api.afindo-mi01.workers.dev/j/482193",
         "https://SHOO-API.afindo-mi01.workers.dev/j/482193",
         "SHOO://JOIN?code=482193",
@@ -91,7 +92,6 @@ struct ConnectModelTests {
         ("000000", ConnectModel.Problem.invalid),
         ("999999", .expired),
         ("888888", .full),
-        ("777777", .tooManyAttempts),
         ("666666", .alreadyConnected),
     ])
     func everyJoinErrorHasItsMessage(code: String, problem: ConnectModel.Problem) async {
@@ -104,13 +104,89 @@ struct ConnectModelTests {
         #expect(model.problem == nil)
     }
 
+    /// Figma "Terlalu banyak percobaan" (1681:4787): the server's `Retry-After` holds Connect, editing the code
+    /// keeps the line, and the end of the wait brings Connect back.
+    @Test func aWaitHoldsConnectUntilRetryAfterEnds() async {
+        let start = Date()
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "482193") { _ in
+            throw RepositoryError.throttled(.tooManyAttempts, message: "Too many join attempts", retryAfter: 299)
+        }
+        await model.join()
+        #expect(model.problem == .tooManyAttempts)
+        #expect(!model.canJoin)
+        #expect((298...300).contains(model.secondsToWait(now: start) ?? 0))
+        model.code = "48219"
+        model.code = "482190"
+        #expect(model.problem == .tooManyAttempts, "the server still refuses: the line stays")
+        #expect(!model.canJoin)
+        model.retype()
+        #expect(model.code == "482190", "no retyping during a wait")
+        model.waitEnded(now: start.addingTimeInterval(100))
+        #expect(model.retryAt != nil, "too early")
+        model.waitEnded(now: start.addingTimeInterval(301))
+        #expect(model.retryAt == nil)
+        #expect(model.problem == nil)
+        #expect(model.canJoin)
+    }
+
+    /// A 429 without `Retry-After` (a proxy) shows the line but never locks the button.
+    @Test func aWaitWithoutRetryAfterDoesNotLock() async {
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "482193") { _ in
+            throw RepositoryError.api(.rateLimited, message: "HTTP 429")
+        }
+        await model.join()
+        #expect(model.problem == .signUpLimit)
+        #expect(model.retryAt == nil)
+        #expect(model.canJoin)
+    }
+
+    /// Figma "Kode salah" (1681:4712): "Ketik ulang kode" empties the boxes and the line.
+    @Test func retypeClearsAWrongCode() async {
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "000000")
+        await model.join()
+        #expect(model.problem == .invalid)
+        model.retype()
+        #expect(model.code.isEmpty)
+        #expect(model.problem == nil)
+    }
+
+    /// Edge-case QA 2026-11-11 #2: `rate_limited` comes from registering (`POST /devices`, per IP), not from
+    /// join attempts, so it must not say "too many tries ... a few minutes".
+    @Test func rateLimitedIsTheSignUpLimitNotTooManyTries() {
+        #expect(ConnectModel.Problem(RepositoryError.api(.rateLimited, message: "Too many requests")) == .signUpLimit)
+        #expect(ConnectModel.Problem(RepositoryError.api(.tooManyAttempts, message: "Too many join attempts")) == .tooManyAttempts)
+        #expect(L10n.string(ConnectModel.Problem.signUpLimit.message, language: .indonesian)
+            == "Terlalu banyak pendaftaran dari jaringan ini. Coba lagi dalam 1 jam.")
+    }
+
+    /// U-18 (fase 28m): the sign-up limit says "1 hour" above the wait button, so the button starts at "1 hour" too,
+    /// not "60 minutes". Under an hour it counts minutes, under 10 minutes mm:ss.
+    @Test(arguments: AppLanguage.allCases)
+    func signUpLimitMessageAndWaitButtonUseOneUnit(_ language: AppLanguage) {
+        let english = language == .english
+        let message = L10n.string(ConnectModel.Problem.signUpLimit.message, language: language)
+        #expect(message.hasSuffix(english ? "Try again in 1 hour." : "Coba lagi dalam 1 jam."))
+        #expect(L10n.string(ConnectModel.waitLabel(seconds: 3600), language: language)
+            == (english ? "Try again in 1 hour" : "Coba lagi dalam 1 jam"))
+        // Still the hour for the last seconds of it, and a longer wait rounds up to whole hours.
+        #expect(L10n.string(ConnectModel.waitLabel(seconds: 3541), language: language)
+            == (english ? "Try again in 1 hour" : "Coba lagi dalam 1 jam"))
+        #expect(L10n.string(ConnectModel.waitLabel(seconds: 7200), language: language)
+            == (english ? "Try again in 2 hours" : "Coba lagi dalam 2 jam"))
+        // Guard: below the hour the button keeps counting down in minutes, then mm:ss.
+        #expect(L10n.string(ConnectModel.waitLabel(seconds: 3540), language: language)
+            == (english ? "Try again in 59 minutes" : "Coba lagi dalam 59 menit"))
+        #expect(L10n.string(ConnectModel.waitLabel(seconds: 299), language: language)
+            == (english ? "Try again in 04:59" : "Coba lagi dalam 04:59"))
+    }
+
     @Test func offlineIsItsOwnProblem() async {
         let model = ConnectModel(repository: FailingRepository(), code: "482193")
         await model.join()
         #expect(model.problem == .offline)
     }
 
-    @Test(arguments: [ConnectModel.Problem.invalid, .expired, .full, .tooManyAttempts, .alreadyConnected, .offline, .other])
+    @Test(arguments: [ConnectModel.Problem.invalid, .expired, .full, .tooManyAttempts, .signUpLimit, .alreadyConnected, .offline, .other])
     func messagesExistInBothLanguages(problem: ConnectModel.Problem) {
         let english = L10n.string(problem.message, language: .english)
         let indonesian = L10n.string(problem.message, language: .indonesian)
@@ -149,6 +225,8 @@ struct FamilyCodeModelTests {
         private(set) var codeCalls = 0
         private(set) var refreshes: [Bool] = []
         var codeFailure: RepositoryError?
+        /// Hold the next `createFamilyCode` answers, in order (each code already numbered), until their gates open.
+        private var heldNext: [CodeGate] = []
 
         init(members: MockRepository.Scenario = .standard, clock: Clock, validFor: TimeInterval = 30 * 60) {
             base = MockRepository(mode: .guardian, scenario: members, latency: .zero)
@@ -157,12 +235,17 @@ struct FamilyCodeModelTests {
         }
 
         func failCodes(with error: RepositoryError?) { codeFailure = error }
+        func holdNextCode(_ gate: CodeGate) { heldNext.append(gate) }
 
         func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
             codeCalls += 1
             refreshes.append(refresh)
+            let number = codeCalls
+            if !heldNext.isEmpty {
+                await heldNext.removeFirst().hold()
+            }
             if let codeFailure { throw codeFailure }
-            let code = String(format: "%06d", 100_000 + codeCalls)
+            let code = String(format: "%06d", 100_000 + number)
             return FamilyCode(
                 code: code, expiresAt: clock.now.addingTimeInterval(validFor),
                 inviteUrl: URL(string: "https://shoo-api.afindo-mi01.workers.dev/j/\(code)")!
@@ -189,6 +272,122 @@ struct FamilyCodeModelTests {
         func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
             try await base.setVerdict(scanId: scanId, value: value)
         }
+    }
+
+    /// Holds one call until the test opens it; the test awaits its arrival (no sleeps).
+    @MainActor
+    final class CodeGate {
+        private var arrived = false
+        private var opened = false
+        private var arrivalWaiter: CheckedContinuation<Void, Never>?
+        private var openWaiter: CheckedContinuation<Void, Never>?
+
+        func hold() async {
+            arrived = true
+            arrivalWaiter?.resume()
+            arrivalWaiter = nil
+            guard !opened else { return }
+            precondition(openWaiter == nil, "CodeGate holds one call")
+            await withCheckedContinuation { openWaiter = $0 }
+        }
+
+        func arrival() async {
+            guard !arrived else { return }
+            precondition(arrivalWaiter == nil, "CodeGate has one waiter")
+            await withCheckedContinuation { arrivalWaiter = $0 }
+        }
+
+        func open() {
+            opened = true
+            openWaiter?.resume()
+            openWaiter = nil
+        }
+    }
+
+    /// Fase 27k (F-A10): two code requests overlap (the countdown's and "Refresh code"). The older one answers
+    /// last with the code that "Refresh code" just killed on the server: the new code stays on screen.
+    @Test func olderCodeAnswerArrivingLastDoesNotReplaceTheNewCode() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
+        let gate = CodeGate()
+        defer { gate.open() }
+        await repository.holdNextCode(gate)
+        let older = Task { await model.refreshCode() }
+        await gate.arrival()
+        await model.refreshCode(replace: true)
+        #expect(model.code?.code == "100002")
+        gate.open()
+        await older.value
+        #expect(model.code?.code == "100002", "the replaced code came back")
+        #expect(model.secondsLeft == 1800)
+    }
+
+    /// The older request fails while the newer one is still on its way: no "Try again" flashes up, and the
+    /// newer answer decides.
+    @Test func olderFailureWhileANewerRequestRunsWaitsForIt() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
+        let olderGate = CodeGate()
+        let newerGate = CodeGate()
+        defer { olderGate.open(); newerGate.open() }
+        await repository.holdNextCode(olderGate)
+        await repository.holdNextCode(newerGate)
+        let older = Task { await model.refreshCode() }
+        await olderGate.arrival()
+        let newer = Task { await model.refreshCode(replace: true) }
+        await newerGate.arrival()
+        await repository.failCodes(with: .network)
+        olderGate.open()
+        await older.value
+        #expect(model.codeState == .loading, "the older failure showed Try again over a request still running")
+        await repository.failCodes(with: nil)
+        newerGate.open()
+        await newer.value
+        #expect(model.code?.code == "100002")
+    }
+
+    /// The newest request is cancelled (screen task ended): an older live answer still fills the screen
+    /// instead of leaving it loading.
+    @Test func cancelledNewerRequestLetsTheOlderAnswerShow() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
+        let olderGate = CodeGate()
+        let newerGate = CodeGate()
+        defer { olderGate.open(); newerGate.open() }
+        await repository.holdNextCode(olderGate)
+        await repository.holdNextCode(newerGate)
+        let older = Task { await model.refreshCode() }
+        await olderGate.arrival()
+        let newer = Task { await model.refreshCode(replace: true) }
+        await newerGate.arrival()
+        newer.cancel()
+        newerGate.open()
+        await newer.value
+        olderGate.open()
+        await older.value
+        #expect(model.code?.code == "100001")
+    }
+
+    /// While "Refresh code" is on its way, an ordinary request (countdown at zero) asks nothing: it could only
+    /// bring back the code the refresh kills.
+    @Test func ordinaryRequestWaitsForARefreshOnItsWay() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
+        let gate = CodeGate()
+        defer { gate.open() }
+        await repository.holdNextCode(gate)
+        let refresh = Task { await model.refreshCode(replace: true) }
+        await gate.arrival()
+        await model.refreshCode()
+        #expect(await repository.codeCalls == 1)
+        gate.open()
+        await refresh.value
+        #expect(model.code?.code == "100001")
+        #expect(await repository.refreshes == [true])
     }
 
     @Test func countdownRunsAndANewCodeComesAtZero() async {
@@ -368,6 +567,8 @@ struct FamilyCodeModelTests {
         ("https://shoo-api.afindo-mi01.workers.dev/j/111111", false),
         ("https://shoo-api.afindo-mi01.workers.dev/join?code=482193", false),
         ("https://shoo-api.afindo-mi01.workers.dev/j/482193", true),
+        ("https://join.shoo.ai.id/j/482193", true),
+        ("https://join.shoo.ai.id/j/111111", false),
     ])
     func inviteURLMustBeOursForThisCode(link: String, accepted: Bool) {
         let code = FamilyCode(code: "482193", expiresAt: Date(), inviteUrl: URL(string: link)!)
@@ -419,65 +620,149 @@ struct FamilyCodeModelTests {
 
 @MainActor
 struct DeepLinkRoutingTests {
-    private func environment(mode: UserMode?, onboarded: Bool) -> AppEnvironment {
+    private func environment(
+        mode: UserMode?, onboarded: Bool, scenario: MockRepository.Scenario = .standard
+    ) -> AppEnvironment {
         let settings = AppSettings(defaults: UserDefaults(suiteName: "test.links.\(UUID().uuidString)")!)
         if let mode { settings.chooseMode(mode) }
         settings.onboardingCompleted = onboarded
-        return AppEnvironment(repository: MockRepository(mode: mode ?? .protected, latency: .zero), settings: settings)
+        let repository = MockRepository(mode: mode ?? .protected, scenario: scenario, latency: .zero)
+        return AppEnvironment(repository: repository, settings: settings)
     }
 
-    @Test func protectedAfterOnboardingOpensConnectWithTheCode() {
-        let env = environment(mode: .protected, onboarded: true)
+    /// `open` hands the invite to a task (it asks the server first); the tests wait for it.
+    private func open(_ link: String, in env: AppEnvironment) async {
+        env.open(URL(string: link)!)
+        await env.inviteTask?.value
+    }
+
+    @Test func protectedWithoutAGuardianOpensConnectWithTheCode() async {
+        let env = environment(mode: .protected, onboarded: true, scenario: .unpaired)
         env.router.selectedTab = .activity
-        env.open(URL(string: "shoo://join?code=482193")!)
+        await open("shoo://join?code=482193", in: env)
         #expect(env.router.isConnectPresented)
         #expect(env.router.pendingJoinCode == "482193")
         #expect(env.router.selectedTab == .shield)
+        #expect(env.router.inviteNotice == nil)
     }
 
-    @Test func beforeRegistrationTheCodeWaitsForConnect() {
-        let env = environment(mode: nil, onboarded: false)
-        env.open(URL(string: "shoo://join?code=482193")!)
+    @Test func protectedWithAGuardianIsToldAndTheCodeIsDropped() async {
+        let env = environment(mode: .protected, onboarded: true)
+        await open("shoo://join?code=482193", in: env)
         #expect(!env.router.isConnectPresented)
+        #expect(env.router.pendingJoinCode == nil)
+        #expect(env.router.inviteNotice == .alreadyProtected(guardian: MockRepository.protectedProfile.guardian?.name ?? ""))
+    }
+
+    @Test func beforeRegistrationTheCodeWaitsForOnboarding() async {
+        let env = environment(mode: nil, onboarded: false)
+        await open("shoo://join?code=482193", in: env)
+        #expect(!env.router.isConnectPresented)
+        #expect(!env.router.isJoinFamilyPresented)
+        #expect(env.router.inviteNotice == nil)
         #expect(env.router.takePendingJoinCode() == "482193")
         #expect(env.router.pendingJoinCode == nil)
     }
 
-    @Test func guardianLandsOnShield() {
-        let env = environment(mode: .guardian, onboarded: true)
+    @Test func personalWithoutMembersGetsTheInviteNotice() async {
+        let env = environment(mode: .guardian, onboarded: true, scenario: .empty)
         env.router.selectedTab = .activity
-        env.open(URL(string: "shoo://join?code=482193")!)
-        #expect(!env.router.isConnectPresented)
-        #expect(env.router.pendingJoinCode == nil)
+        env.router.activityPath = [.profile]
+        await open("shoo://join?code=482193", in: env)
+        #expect(env.router.inviteNotice == .invited)
+        #expect(env.router.pendingJoinCode == "482193")
+        #expect(!env.router.isJoinFamilyPresented, "a link never joins or opens the sheet by itself (T11)")
         #expect(env.router.selectedTab == .shield)
+        #expect(env.router.activityPath.isEmpty)
+    }
+
+    @Test func guardianWithMembersIsToldAndTheCodeIsDropped() async {
+        let env = environment(mode: .guardian, onboarded: true)
+        await open("shoo://join?code=482193", in: env)
+        #expect(env.router.inviteNotice == .hasMembers)
+        #expect(env.router.pendingJoinCode == nil)
+    }
+
+    @Test func viewingTheInviteOpensTheJoinSheetWithTheCode() async {
+        let env = environment(mode: .guardian, onboarded: true, scenario: .empty)
+        await open("shoo://join?code=482193", in: env)
+        env.router.acceptInvite()
+        #expect(env.router.inviteNotice == nil)
+        #expect(env.router.isJoinFamilyPresented)
+        #expect(env.router.takePendingJoinCode() == "482193")
+    }
+
+    @Test func notNowDropsTheCode() async {
+        let env = environment(mode: .guardian, onboarded: true, scenario: .empty)
+        await open("shoo://join?code=482193", in: env)
+        env.router.dismissInviteNotice()
+        #expect(env.router.inviteNotice == nil)
+        #expect(env.router.pendingJoinCode == nil)
+        #expect(!env.router.isJoinFamilyPresented)
     }
 
     /// Profile is a pushed screen (PF-01): the link pops it and Connect opens at once.
-    @Test func linkWhileProfileIsOpenClosesItAndShowsConnect() {
-        let env = environment(mode: .protected, onboarded: true)
+    @Test func linkWhileProfileIsOpenClosesItAndShowsConnect() async {
+        let env = environment(mode: .protected, onboarded: true, scenario: .unpaired)
         env.router.selectedTab = .activity
         env.router.activityPath = [.profile, .profilePage(.connection)]
-        env.open(URL(string: "shoo://join?code=482193")!)
+        await open("shoo://join?code=482193", in: env)
         #expect(env.router.activityPath.isEmpty)
         #expect(env.router.selectedTab == .shield)
         #expect(env.router.isConnectPresented)
         #expect(env.router.pendingJoinCode == "482193")
     }
 
-    @Test func secondLinkWhileConnectIsOpenOnlyRefillsTheCode() {
-        let env = environment(mode: .protected, onboarded: true)
-        env.open(URL(string: "shoo://join?code=482193")!)
+    @Test func secondLinkWhileConnectIsOpenOnlyRefillsTheCode() async {
+        let env = environment(mode: .protected, onboarded: true, scenario: .unpaired)
+        await open("shoo://join?code=482193", in: env)
         _ = env.router.takePendingJoinCode()
-        env.open(URL(string: "shoo://join?code=123456")!)
+        await open("shoo://join?code=123456", in: env)
         #expect(env.router.isConnectPresented)
         #expect(env.router.pendingJoinCode == "123456")
     }
 
-    @Test func guardianRegistrationDropsAWaitingCode() async throws {
+    @Test func secondLinkWhileTheJoinSheetIsOpenOnlyRefillsTheCode() async {
+        let env = environment(mode: .guardian, onboarded: true, scenario: .empty)
+        env.router.isJoinFamilyPresented = true
+        await open("shoo://join?code=123456", in: env)
+        #expect(env.router.inviteNotice == nil)
+        #expect(env.router.pendingJoinCode == "123456")
+    }
+
+    /// Everyone registers as Pribadi now (PR-03): the code must survive it for the join sheet.
+    @Test func personalRegistrationKeepsAWaitingCode() async throws {
         let env = environment(mode: nil, onboarded: false)
-        env.open(URL(string: "shoo://join?code=482193")!)
+        await open("shoo://join?code=482193", in: env)
         _ = try await env.register(name: "Rina", mode: .guardian)
-        #expect(env.router.pendingJoinCode == nil)
+        #expect(env.router.pendingJoinCode == "482193")
+    }
+
+    /// BH-28: a scan push or `shoo://scan/{id}` closes the "Become supervised" sheet and the Guardian intro
+    /// cover too, so Detail is not pushed underneath them.
+    @Test func scanLinkClosesEverySheetAndCover() {
+        let env = environment(mode: .guardian, onboarded: true)
+        env.router.isJoinFamilyPresented = true
+        env.router.isGuardianIntroPresented = true
+        env.router.isTurnOnPresented = true
+        env.open(URL(string: "shoo://scan/6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03")!)
+        #expect(!env.router.isJoinFamilyPresented)
+        #expect(!env.router.isGuardianIntroPresented)
+        #expect(!env.router.isTurnOnPresented)
+        #expect(env.router.activityPath == [.detail(scanId: "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03")])
+        env.router.isJoinFamilyPresented = true
+        env.open(URL(string: "shoo://activity")!)
+        #expect(!env.router.isJoinFamilyPresented)
+    }
+
+    /// Sheets a screen owns itself (Home's "Why is it safe?", Activity's "Turn on") hear it too.
+    @Test func scanLinkTellsScreensToCloseTheirOwnSheets() {
+        let env = environment(mode: .guardian, onboarded: true)
+        let before = env.router.screenSheetsClosed
+        env.open(URL(string: "shoo://scan/6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03")!)
+        #expect(env.router.screenSheetsClosed == before + 1)
+        env.open(URL(string: "shoo://activity")!)
+        #expect(env.router.screenSheetsClosed == before + 2)
     }
 
     @Test func brokenLinkLandsOnShield() {
@@ -583,5 +868,57 @@ struct InviteShareTests {
         let text = "code=1234&x"
         let url = try #require(InviteShare.messagesURL(body: text))
         #expect(url.absoluteString == "sms:&body=code%3D1234%26x")
+    }
+}
+
+/// The invite code waits in memory across the trip to Settings (ON-04), never longer than a code lives.
+@MainActor
+struct PendingInviteTests {
+    final class Clock: @unchecked Sendable { var now = Date(timeIntervalSince1970: 1_000_000) }
+
+    @Test func theCodeSurvivesUntilItWouldHaveExpired() {
+        let clock = Clock()
+        let router = Router(now: { clock.now })
+        router.pendingJoinCode = "482193"
+        clock.now += FamilyCodeModel.codeLifetime - 1
+        router.dropExpiredInvite()
+        #expect(router.takePendingJoinCode() == "482193")
+    }
+
+    @Test func anExpiredCodeIsGone() {
+        let clock = Clock()
+        let router = Router(now: { clock.now })
+        router.pendingJoinCode = "482193"
+        router.inviteNotice = .invited
+        clock.now += FamilyCodeModel.codeLifetime + 1
+        router.dropExpiredInvite()
+        #expect(router.pendingJoinCode == nil)
+        #expect(router.inviteNotice == nil)
+    }
+
+    @Test func takingAnExpiredCodeGivesNothing() {
+        let clock = Clock()
+        let router = Router(now: { clock.now })
+        router.pendingJoinCode = "482193"
+        clock.now += FamilyCodeModel.codeLifetime + 1
+        #expect(router.takePendingJoinCode() == nil)
+    }
+
+    @Test func aNewCodeRestartsTheClock() {
+        let clock = Clock()
+        let router = Router(now: { clock.now })
+        router.pendingJoinCode = "482193"
+        clock.now += FamilyCodeModel.codeLifetime - 10
+        router.pendingJoinCode = "123456"
+        clock.now += 20
+        #expect(router.takePendingJoinCode() == "123456")
+    }
+
+    @Test func openProfileFromTheMembersNotice() {
+        let router = Router()
+        router.inviteNotice = .hasMembers
+        router.openProfileFromInviteNotice()
+        #expect(router.inviteNotice == nil)
+        #expect(router.shieldPath == [.profile])
     }
 }

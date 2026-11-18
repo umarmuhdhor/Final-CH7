@@ -31,42 +31,74 @@ final class GuardianHomeModel {
     static let pendingWindow: TimeInterval = 24 * 60 * 60
     /// Statuses whose card shows Danger / Safe. Product decision: warning too.
     /// contracts/api.md still allows verdicts on `blocked` only (`verdict_not_allowed`) — raised with the lead.
-    static let verdictStatuses: Set<ScanStatus> = [.warning, .blocked]
+    /// `unknown` (#493): its card looks like a warning, so it gets the buttons too; the server decides.
+    static let verdictStatuses: Set<ScanStatus> = [.warning, .blocked, .unknown]
     /// Enough for 14 days of a family of 4; stops a runaway cursor.
     static let maxPages = 10
     static let recentCount = 3
 
     private(set) var state: State = .loading
     private(set) var extensionStatus: ExtensionStatus = .off(lastSeen: nil)
+    /// `false` until the first read of the extension's status: Pribadi's hero stays neutral instead of guessing
+    /// "You're not protected yet" (A-06, fase 28a K3; `ShieldModel.extensionChecked`).
+    private(set) var extensionChecked = false
+    /// A refresh after a successful load failed: the screen keeps what it shows and says it may be old
+    /// (D-alief-A12, A-01, fase 28a K1). The next successful load clears it.
+    private(set) var refreshFailed = false
+    /// Why the first load failed (`state == .failed`): picks the sentence under "Couldn't load" (A-03).
+    private(set) var loadFailure: LoadFailure = .connection
     private(set) var profile: DeviceProfile?
     private(set) var members: [FamilyMember] = []
     private(set) var scans: [ScanResult] = []
     /// The card under the personal activity; empty hides it.
     private(set) var scamCases: [ScamCase] = []
+    /// Personal: the family list answered (it only decides the "Mode Terawasi" card).
+    private(set) var personalMembersKnown = false
     private(set) var isSubmittingVerdict = false
-    private(set) var verdictFailed = false
-    /// The server refused this verdict (`verdict_not_allowed`), e.g. a warning site while the contract allows blocked only.
-    private(set) var verdictNotAllowed = false
+    /// The site whose verdict could not be saved ("Couldn't save"), and the one the server refused
+    /// (`verdict_not_allowed`, e.g. a warning site while the contract allows blocked only). Per site: after a refresh
+    /// another site's card takes the place, and it must not show the old card's error or retry its verdict.
+    private var verdictFailedScanId: String?
+    private var verdictNotAllowedScanId: String?
+    /// "Couldn't save" on the card shown now.
+    var verdictFailed: Bool { verdictFailedScanId != nil && verdictFailedScanId == pendingScan?.id }
+    /// "Can't be marked yet" on the card shown now.
+    var verdictNotAllowed: Bool { verdictNotAllowedScanId != nil && verdictNotAllowedScanId == pendingScan?.id }
+    /// Counts Home verdicts the server confirmed: drives the success haptic and the card's hand-over animation.
+    private(set) var verdictSaves = 0
 
     let scope: Scope
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let readExtensionStatus: () async -> ExtensionStatus
     @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored private let now: () -> Date
+    /// `GET /devices/me`. The app passes `AppEnvironment.foregroundProfile`, shared with the foreground sync (OPT-06).
+    @ObservationIgnored private let loadProfile: () async throws -> DeviceProfile
+    /// Told after every verdict the server confirmed (`AppEnvironment.verdictSaves`, K8).
+    @ObservationIgnored private let onVerdictSaved: @MainActor () -> Void
     @ObservationIgnored private var generation = 0
+    /// Bumped by every verdict the server confirmed, like Detail's `verdictEpoch` (fase 27 K7).
+    @ObservationIgnored private var verdictEpoch = 0
+    /// Verdicts confirmed on Home by scan id, with the epoch they were saved in. A refresh that started
+    /// before one of them read an older list; the verdict is put back on it.
+    @ObservationIgnored private var savedVerdicts: [String: (epoch: Int, verdict: Verdict)] = [:]
 
     init(
         repository: any ShooRepository,
         settings: AppSettings,
         scope: Scope = .family,
         extensionStatus: @escaping () async -> ExtensionStatus = { await ExtensionStatus.load() },
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        profile: (() async throws -> DeviceProfile)? = nil,
+        onVerdictSaved: @escaping @MainActor () -> Void = {}
     ) {
         self.repository = repository
         self.settings = settings
         self.scope = scope
         readExtensionStatus = extensionStatus
         self.now = now
+        loadProfile = profile ?? { [repository] in try await repository.me() }
+        self.onVerdictSaved = onVerdictSaved
     }
 
     // MARK: Derived
@@ -77,7 +109,8 @@ final class GuardianHomeModel {
         let since = now().addingTimeInterval(-Self.pendingWindow)
         let dismissed = Set(settings.dismissedHomeScanIds)
         return scans.first { scan in
-            scan.verdict == nil
+            // #493: a verdict this build can't read counts as none, so the site keeps its card.
+            scan.verdict?.known == nil
                 && scan.ownerDeviceId != profile?.deviceId
                 && scan.detectedAt >= since
                 && !dismissed.contains(scan.id)
@@ -91,6 +124,8 @@ final class GuardianHomeModel {
             case nil: .normal
             case .warning: .warning
             case .blocked: .danger
+            // #493: a status this build does not know is shown as a warning, never as normal.
+            case .unknown: .warning
             }
         case .personal:
             personalLevel
@@ -99,7 +134,7 @@ final class GuardianHomeModel {
 
     private var personalLevel: Level {
         let since = now().addingTimeInterval(-Self.pendingWindow)
-        let open = scans.filter { $0.verdict == nil && $0.detectedAt >= since }
+        let open = scans.filter { $0.verdict?.known == nil && $0.detectedAt >= since }
         if open.contains(where: { $0.status == .blocked }) { return .danger }
         return open.isEmpty ? .normal : .warning
     }
@@ -118,8 +153,21 @@ final class GuardianHomeModel {
     /// At most 3 people are shown (PRD GD-03).
     var shownMembers: [FamilyMember] { Array(members.prefix(FamilyShieldModel.maxMembers)) }
 
+    /// The avatar of a scan's owner: the guardian's own scans use their own avatar, a member's scans the
+    /// member's. `nil` when the owner is not known (yet): the view draws the neutral person.
+    func avatarId(forOwner deviceId: String) -> String? {
+        if let profile, profile.deviceId == deviceId { return profile.avatarId }
+        return members.first { $0.deviceId == deviceId }?.avatarId
+    }
+
     /// Family Home with no one to look after: the invite takes the sheet.
     var hasNoFamily: Bool { scope == .family && state == .loaded && members.isEmpty }
+
+    /// Pribadi with nobody to look after ("Pribadi/Home kalau belum setting guardian or protected" 1382:10567): the
+    /// "Mode Terawasi" card, until it is closed. Unknown members (their call failed) hide it.
+    var showsSupervisedCard: Bool {
+        scope == .personal && state == .loaded && personalMembersKnown && members.isEmpty && !settings.supervisedCardDismissed
+    }
 
     // MARK: Actions
 
@@ -128,25 +176,53 @@ final class GuardianHomeModel {
     func refresh() async {
         generation += 1
         let request = generation
+        let epoch = verdictEpoch
         extensionStatus = await readExtensionStatus()
+        extensionChecked = true
         guard request == generation else { return }
         do {
-            async let me = repository.me()
+            async let me = loadProfile()
             async let family: [FamilyMember] = scope == .family ? repository.familyMembers() : []
-            async let all = allScans()
-            let (loadedProfile, loadedMembers, loadedScans) = try await (me, family, all)
+            async let firstPage = repository.scans(owner: scope == .family ? .family : .me, status: nil, cursor: nil)
+            // Family's paging tells the members' rows from the guardian's own: it needs the profile after page 1.
+            let loadedProfile = try await me
+            let loadedScans = try await allScans(from: firstPage, ownDeviceId: loadedProfile.deviceId)
+            let loadedMembers = try await family
             guard request == generation else { return }
             profile = loadedProfile
-            members = loadedMembers
-            scans = loadedScans
+            // Personal reads the family on its own, after the screen (`refreshPersonalMembers`).
+            if scope == .family { members = loadedMembers }
+            scans = merged(loadedScans, readAt: epoch)
             state = .loaded
+            refreshFailed = false
         } catch {
             guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Guardian Home load failed", error)
-            if state != .loaded { state = .failed }
+            // A failed refresh keeps what is on screen, with the "Couldn't refresh" notice (D-alief-A12).
+            if state == .loaded {
+                refreshFailed = true
+            } else {
+                loadFailure = LoadFailure(error)
+                state = .failed
+            }
             return
         }
-        if scope == .personal { await refreshScamCases(request: request) }
+        if scope == .personal {
+            await refreshPersonalMembers(request: request)
+            await refreshScamCases(request: request)
+        }
+    }
+
+    /// Personal Home only needs to know whether anyone is looked after; a failure never fails the screen.
+    private func refreshPersonalMembers(request: Int) async {
+        guard let loaded = try? await repository.familyMembers(), request == generation else { return }
+        members = loaded
+        personalMembersKnown = true
+    }
+
+    /// X on the "Mode Terawasi" card: gone for good on this iPhone.
+    func dismissSupervisedCard() {
+        settings.supervisedCardDismissed = true
     }
 
     /// A bonus on Home: loaded after the screen, never fails it, and a failed call keeps the card on screen.
@@ -155,55 +231,108 @@ final class GuardianHomeModel {
         scamCases = cases
     }
 
+    /// "Try again" on the error card: the card stays (its button spins) until the answer is in.
     func retry() async {
-        state = .loading
         await refresh()
+    }
+
+    /// The last Safe / Dangerous tapped on the card: "Try again" under "Couldn't save" sends it again.
+    private(set) var lastDecision: Verdict.Value?
+    /// The reasons sent with the last "Safe" (SafeReasonSheet), so "Try again" sends them again.
+    @ObservationIgnored private var lastNotes: String?
+    /// The site the last answer was for, so "Try again" never lands on the next card.
+    @ObservationIgnored private var lastScanId: String?
+
+    /// "Try again" on "Couldn't save" (Figma 1665:3183).
+    func retryDecision() async {
+        guard let lastDecision else { return }
+        await decide(lastDecision, notes: lastNotes, scanId: lastScanId)
     }
 
     /// X on the card: hidden on this iPhone, the next pending site (if any) takes its place.
     func dismissPending() {
         guard let scan = pendingScan else { return }
-        verdictFailed = false
-        verdictNotAllowed = false
+        verdictFailedScanId = nil
+        verdictNotAllowedScanId = nil
         settings.dismissHomeScan(scan.id)
     }
 
     /// GD-07 from Home: applies at once, no confirmation. On success the card moves on to the next site.
-    func decide(_ value: Verdict.Value) async {
-        guard canDecide, !isSubmittingVerdict, let scan = pendingScan else { return }
+    /// `notes`: why (the "Aman" reason sheet). `scanId`: the site the answer was given for (the sheet keeps it, so a
+    /// card that moved on while the sheet was open never gets the answer); `nil` is the card shown now.
+    /// `true` when the sheet can close: saved, the scan is gone, or this viewer may not decide (the card says so).
+    @discardableResult
+    func decide(_ value: Verdict.Value, notes: String? = nil, scanId: String? = nil) async -> Bool {
+        let target = scanId.map { id in scans.first { $0.id == id } } ?? pendingScan
+        guard let scan = target else { return scanId != nil }
+        guard Self.verdictStatuses.contains(scan.status), !isSubmittingVerdict else { return false }
         isSubmittingVerdict = true
-        verdictFailed = false
-        verdictNotAllowed = false
+        lastDecision = value
+        lastNotes = notes
+        lastScanId = scan.id
+        verdictFailedScanId = nil
+        verdictNotAllowedScanId = nil
         defer { isSubmittingVerdict = false }
         do {
-            let verdict = try await repository.setVerdict(scanId: scan.id, value: value)
-            // A verdict applies to the domain for that owner (contracts/api.md).
-            for index in scans.indices where scans[index].domain == scan.domain && scans[index].ownerDeviceId == scan.ownerDeviceId {
+            let verdict = try await repository.setVerdict(scanId: scan.id, value: value, notes: notes)
+            // Only the decided scan (K7): the server applies it per link (contracts/api.md, #241), and other
+            // rows of that link get it from the next refresh. A refresh running now may have replaced `scans`.
+            verdictEpoch += 1
+            savedVerdicts[scan.id] = (verdictEpoch, verdict)
+            if let index = scans.firstIndex(where: { $0.id == scan.id }) {
                 scans[index].verdict = verdict
             }
+            verdictSaves += 1
+            onVerdictSaved()
+            return true
         } catch RepositoryError.api(.verdictNotAllowed, _) {
-            verdictNotAllowed = true
+            verdictNotAllowedScanId = scan.id
+            return true
+        } catch RepositoryError.api(.verdictLocked, _) {
+            // #476: the link already has a safe verdict (another device, or Detail) that stays until the weekly
+            // review. The card is stale: reload, so the site shows as decided and the next one takes its place.
+            await refresh()
+            return true
+        } catch RepositoryError.api(.notFound, _) {
+            // BH-27: the scan was deleted (14 days, a disconnect): no verdict can ever be saved on it, so the
+            // card moves on to the next site, as Detail shows "This item is gone".
+            scans.removeAll { $0.id == scan.id }
+            return true
         } catch {
-            guard !error.isCancellation else { return }
+            guard !error.isCancellation else { return false }
             Log.ui.error("Home verdict failed", error)
-            verdictFailed = true
+            verdictFailedScanId = scan.id
+            return false
         }
     }
 
-    /// Pages arrive newest first. Personal needs only the last day (the hero) and the list's rows: it stops once
-    /// a page reaches past the window with enough rows. Family reads every page (members' sites, pending card).
-    private func allScans() async throws -> [ScanResult] {
+    /// A list read when the epoch was `epoch`: verdicts saved after that are newer than the list, so they
+    /// win for their scan. Older ones are in the list already (the server had them) and are forgotten.
+    private func merged(_ loaded: [ScanResult], readAt epoch: Int) -> [ScanResult] {
+        savedVerdicts = savedVerdicts.filter { $0.value.epoch > epoch }
+        guard !savedVerdicts.isEmpty else { return loaded }
+        return loaded.map { scan in
+            guard let saved = savedVerdicts[scan.id] else { return scan }
+            var scan = scan
+            scan.verdict = saved.verdict
+            return scan
+        }
+    }
+
+    /// Pages arrive newest first. Home needs only the last day (the hero, the pending card) and the list's rows: it
+    /// stops once a page reaches past the window with enough rows. Family counts the members' rows only, the ones
+    /// `recent` lists (OPT-02, fase 28i K11); before, it read every page.
+    private func allScans(from firstPage: ScanPage, ownDeviceId: String) async throws -> [ScanResult] {
         let owner: ScanOwnerFilter = scope == .family ? .family : .me
         let since = now().addingTimeInterval(-Self.pendingWindow)
         var items: [ScanResult] = []
-        var cursor: String?
-        for _ in 0..<Self.maxPages {
-            let page = try await repository.scans(owner: owner, status: nil, cursor: cursor)
+        var page = firstPage
+        for read in 1...Self.maxPages {
             items += page.items
-            guard let next = page.nextCursor else { break }
-            if scope == .personal, let oldest = page.items.last, oldest.detectedAt < since,
-               items.count >= Self.recentCount { break }
-            cursor = next
+            guard let next = page.nextCursor, read < Self.maxPages else { break }
+            let listed = scope == .family ? items.filter { $0.ownerDeviceId != ownDeviceId }.count : items.count
+            if let oldest = page.items.last, oldest.detectedAt < since, listed >= Self.recentCount { break }
+            page = try await repository.scans(owner: owner, status: nil, cursor: next)
         }
         return items
     }

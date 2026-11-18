@@ -40,11 +40,18 @@ protocol ShooRepository: AnyObject, Sendable {
     func scan(id: String) async throws -> ScanResult
     /// `POST /verdicts` — guardian, blocked scans only (GD-07).
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict
-    /// The Home card "Scam terbaru di pengguna Shoo". No endpoint in contracts/ yet.
+    /// `POST /verdicts` with `notes` (≤ 280 characters): why the Guardian decided. Team AI learns from it (#241).
+    func setVerdict(scanId: String, value: Verdict.Value, notes: String?) async throws -> Verdict
+    /// `GET /scams/latest`: the Home card "Scam terbaru di pengguna Shoo" (contracts/api.md, PR-04, GD-01). Empty = no card.
     func latestScams() async throws -> [ScamCase]
 }
 
 extension ShooRepository {
-    /// Nothing to show until there is an endpoint: Home hides the card rather than make cases up.
+    /// Test doubles without notes: the verdict goes through, the note is not recorded.
+    func setVerdict(scanId: String, value: Verdict.Value, notes: String?) async throws -> Verdict {
+        try await setVerdict(scanId: scanId, value: value)
+    }
+
+    /// Test doubles: no card.
     func latestScams() async throws -> [ScamCase] { [] }
 }

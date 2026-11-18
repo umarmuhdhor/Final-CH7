@@ -42,19 +42,6 @@ enum ProfileStyle {
     /// Screen side margin for section titles and cards; the profile card sits closer (16).
     static let margin: CGFloat = 24
 
-    /// Initials avatars on member rows and the member detail (Figma gradients, picked by avatar id).
-    static let initialsGradients: [[Color]] = [
-        [Color(hex: 0x7DE49C), Color(hex: 0x54CAE8)],
-        [Color(hex: 0xFFBE8C), Color(hex: 0xFF7896)],
-        [Color(hex: 0xAFA5FF), Color(hex: 0x6E8CFA)],
-    ]
-
-    static func initialsGradient(avatarId: String) -> LinearGradient {
-        let number = Int(avatarId.filter(\.isNumber)) ?? 0
-        let colors = initialsGradients[(max(number, 1) - 1) % initialsGradients.count]
-        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-
     /// `arrow.left.arrow.right` stands in for Figma's "icon/switch".
     static let switchSymbol = "arrow.left.arrow.right"
 
@@ -92,6 +79,24 @@ extension View {
         }
         return figmaFont(size, weight: weight, design: rounded ? .rounded : .default, tracking: tracking, relativeTo: style)
     }
+
+    /// Figma (1115:14392) row titles, section titles, "Hapus Akun": SF Pro Rounded 17, -1 %, 22 pt line.
+    func profileBody(_ weight: Font.Weight = .regular) -> some View {
+        profileFont(17, weight, rounded: true, tracking: -0.17)
+            .figmaLineHeight(22, relativeTo: .body)
+    }
+
+    /// Row values ("Pribadi", "Indonesia"), the handle, "Ingatkan": SF Pro Rounded 17 at 140 %.
+    func profileValue() -> some View {
+        profileFont(17, rounded: true)
+            .figmaLineHeight(23.8, relativeTo: .body)
+    }
+
+    /// Subtitles, captions and the stats labels: SF Pro Rounded 13, -0.08, 18 pt line.
+    func profileCaption() -> some View {
+        profileFont(13, rounded: true, tracking: -0.08)
+            .figmaLineHeight(18, relativeTo: .footnote)
+    }
 }
 
 // MARK: Screen
@@ -100,24 +105,43 @@ extension View {
 /// The navigation bar is hidden; the swipe back still works (`SwipeBackEnabler`).
 struct ProfileScreen<Content: View>: View {
     let title: String.LocalizationValue
+    /// Figma "Judul": 20 pt on Profile and Pengaturan, 17 on the member detail.
+    var titleSize: CGFloat = 20
     @ViewBuilder var content: Content
     @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
 
+    /// Figma puts the back button 48 pt from the top of the frame, inside the 62 pt status bar area of
+    /// a Dynamic Island iPhone. Other iPhones keep it 4 pt under the status bar.
+    private static func headerTop(safeTop: CGFloat) -> CGFloat {
+        safeTop >= 54 ? 48 : safeTop + 4
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                header
-                content
+        GeometryReader { proxy in
+            let safeTop = proxy.safeAreaInsets.top
+            let headerTop = Self.headerTop(safeTop: safeTop)
+            ScrollView {
+                VStack(spacing: 0) {
+                    header
+                    content
+                }
+                .padding(.top, headerTop)
+                .padding(.bottom, 32)
             }
-            .padding(.bottom, 32)
+            .scrollIndicators(.hidden)
+            .ignoresSafeArea(.container, edges: .top)
+            // Content scrolling under the status bar stays readable; the band stops above the back button.
+            .overlay(alignment: .top) {
+                ProfileStyle.topWash.opacity(0.96)
+                    .frame(height: min(safeTop, headerTop))
+                    // The overlay is laid out under the status bar; move it up to the screen's top edge.
+                    .offset(y: -safeTop)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
         }
-        .scrollIndicators(.hidden)
-        // Content scrolling under the status bar stays readable.
-        .safeAreaInset(edge: .top, spacing: 0) {
-            Color.clear.frame(height: 0)
-                .background(ProfileStyle.topWash.opacity(0.96).ignoresSafeArea(edges: .top))
-        }
+        // The reader itself stays inside the safe area, so `safeAreaInsets.top` reports the status bar.
         .background(alignment: .top) {
             ZStack(alignment: .top) {
                 ProfileStyle.background
@@ -128,6 +152,9 @@ struct ProfileScreen<Content: View>: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
+        // The page draws its own back button. A hidden bar can come back during the push (iOS 26), and its
+        // system chevron then sat on top of ours: never show it.
+        .navigationBarBackButtonHidden(true)
         .background(SwipeBackEnabler())
         .accessibilityAction(.escape) { env.router.pop() }
     }
@@ -135,7 +162,9 @@ struct ProfileScreen<Content: View>: View {
     private var header: some View {
         ZStack {
             Text(verbatim: L10n.string(title, language: AppLanguage(locale: locale)))
-                .profileFont(17, .semibold, tracking: -0.17)
+                // Figma: SF Pro Display Semibold 20, -0.45, 25 pt line (17 / 0 / 22 on the member detail).
+                .profileFont(titleSize, .semibold, tracking: titleSize >= 20 ? -0.45 : 0)
+                .figmaLineHeight(titleSize >= 20 ? 25 : 22, relativeTo: titleSize >= 20 ? .title3 : .body)
                 .foregroundStyle(ProfileStyle.ink)
                 .accessibilityAddTraits(.isHeader)
                 .padding(.horizontal, 60)
@@ -155,7 +184,6 @@ struct ProfileScreen<Content: View>: View {
         }
         .frame(minHeight: 44)
         .padding(.horizontal, ProfileStyle.margin)
-        .padding(.top, 4)
         .padding(.bottom, 16)
     }
 }
@@ -186,15 +214,16 @@ struct ProfileSection<Content: View>: View {
     var trailing: AnyView?
     /// Space above the title: 28 on most screens, 15 between the Protected profile's sections (Figma).
     var top: CGFloat = 28
-    /// Title to card: 12, 24 above the Protected profile's "Terhubung" card (Figma 455:10275).
-    var spacing: CGFloat = 12
+    /// Title to card: 10 under the 22 pt title line (Figma 1115:14392), 24 above the Protected
+    /// profile's "Terhubung" card (Figma 455:10275).
+    var spacing: CGFloat = 10
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
-                    .profileFont(17, .medium, tracking: -0.17)
+                    .profileBody()
                     .foregroundStyle(ProfileStyle.secondary)
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
@@ -244,7 +273,7 @@ struct ProfileIcon: View {
     var body: some View {
         Group {
             if symbol == "Aa" {
-                Text(verbatim: "Aa").profileFont(14, .semibold)
+                Text(verbatim: "Aa").profileFont(15, .semibold, rounded: true, tracking: -0.23)
             } else {
                 Image(systemName: symbol).font(.system(size: 16 * size / 36, weight: .semibold, design: .rounded))
             }
@@ -261,6 +290,8 @@ enum ProfileRowAccessory {
     case none
     case chevron
     case value(String, color: Color = ProfileStyle.secondary, chevron: Bool = true)
+    /// Figma "Status" on Ekstensi Safari: an 8 pt dot and the word, no chevron ("● Terhubung").
+    case status(String, dot: Color, color: Color)
 }
 
 /// One 58 pt row: icon, title (+ optional grey subtitle), value / chevron. No icon when `symbol` is nil.
@@ -281,23 +312,16 @@ struct ProfileRow: View {
     var body: some View {
         HStack(spacing: 12) {
             if let symbol { ProfileIcon(symbol: symbol, tint: iconTint, fill: iconFill) }
-            VStack(alignment: .leading, spacing: style == .settings ? 2 : 1) {
+            // Figma: title and subtitle 2 pt apart, both SF Pro Rounded.
+            VStack(alignment: .leading, spacing: 2) {
                 title
-                    .profileFont(17, titleWeight, tracking: -0.17)
+                    .profileBody(titleWeight)
                     .foregroundStyle(titleColor)
                 if let subtitle {
-                    switch style {
-                    case .profile:
-                        subtitle
-                            .profileFont(13, rounded: true)
-                            .foregroundStyle(ProfileStyle.secondary)
-                    case .settings:
-                        subtitle
-                            .profileFont(13)
-                            .foregroundStyle(ProfileStyle.secondary)
-                            .lineSpacing(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    subtitle
+                        .profileCaption()
+                        .foregroundStyle(ProfileStyle.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -318,10 +342,17 @@ struct ProfileRow: View {
         case .value(let text, let color, let showsChevron):
             HStack(spacing: 12) {
                 Text(verbatim: text)
-                    .profileFont(15, tracking: -0.15)
+                    .profileValue()
                     .foregroundStyle(color)
                     .multilineTextAlignment(.trailing)
                 if showsChevron { chevron }
+            }
+        case .status(let text, let dot, let color):
+            HStack(spacing: 6) {
+                Circle().fill(dot).frame(width: 8, height: 8).accessibilityHidden(true)
+                Text(verbatim: text)
+                    .profileBody()
+                    .foregroundStyle(color)
             }
         }
     }
@@ -353,24 +384,15 @@ struct ProfileToggleRow: View {
         Toggle(isOn: $isOn) {
             HStack(spacing: 12) {
                 if let symbol { ProfileIcon(symbol: symbol) }
-                VStack(alignment: .leading, spacing: style == .settings ? 2 : 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     title
-                        .profileFont(17, tracking: -0.17)
+                        .profileBody()
                         .foregroundStyle(ProfileStyle.ink)
                     if let subtitle {
-                        switch style {
-                        case .profile:
-                            subtitle
-                                .profileFont(13, rounded: true)
-                                .foregroundStyle(ProfileStyle.secondary)
-                                .padding(.vertical, 2)
-                        case .settings:
-                            subtitle
-                                .profileFont(13)
-                                .foregroundStyle(ProfileStyle.secondary)
-                                .lineSpacing(2)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                        subtitle
+                            .profileCaption()
+                            .foregroundStyle(ProfileStyle.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
@@ -404,10 +426,11 @@ struct ProfileStatsStrip: View {
                 }
                 VStack(spacing: 2) {
                     Text(verbatim: stat.value)
-                        .profileFont(20, .semibold, tracking: -0.4)
+                        .profileFont(20, .semibold, tracking: -0.45)
+                        .figmaLineHeight(25, relativeTo: .title3)
                         .foregroundStyle(ProfileStyle.nameInk)
                     Text(stat.label)
-                        .profileFont(13, rounded: true)
+                        .profileCaption()
                         .foregroundStyle(ProfileStyle.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -438,6 +461,8 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
     let name: String
     let handle: String
     let stats: [ProfileStat]
+    /// Figma "Pesan ekstensi mati" (1681:6718): a strip across the card's foot.
+    var attachment: AnyView?
     @ViewBuilder var avatar: Avatar
     @ViewBuilder var badge: Badge
 
@@ -463,28 +488,39 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
             }
             .padding(.horizontal, 12)
             .padding(.top, -52)
-            VStack(alignment: .leading, spacing: 3) {
+            // Figma (1115:14392): SF Pro Display Bold 22 on a 28 pt line, the handle 4 pt under it.
+            VStack(alignment: .leading, spacing: 4) {
                 Text(verbatim: name)
-                    .profileFont(24, .semibold, tracking: -0.48)
+                    .profileFont(22, .bold, tracking: -0.26)
+                    .figmaLineHeight(28, relativeTo: .title2)
                     .foregroundStyle(ProfileStyle.nameInk)
                     .accessibilityAddTraits(.isHeader)
                 if !handle.isEmpty {
                     Text(verbatim: handle)
-                        .profileFont(14, rounded: true)
+                        .profileValue()
                         .foregroundStyle(ProfileStyle.secondary)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.top, 12)
             if !stats.isEmpty {
-                // Figma: 17 under the handle; 12 under the name when there is no handle (Protected).
+                // Figma: 10 under the handle; 12 under the name when there is no handle (Protected).
                 ProfileStatsStrip(stats: stats)
-                    .padding(.top, handle.isEmpty ? 12 : 17)
+                    .padding(.top, handle.isEmpty ? 12 : 10)
+            }
+            if let attachment {
+                // Edge to edge at the card's foot, under the stats (Figma: 12 under them).
+                attachment
+                    .padding(.horizontal, -12)
+                    .padding(.top, 12)
+                    .padding(.bottom, -(stats.isEmpty ? 10 : 9))
             }
         }
-        .padding(12)
-        // Without stats Figma keeps 17 pt under the handle (480:5353), not the 12 pt inset.
-        .padding(.bottom, stats.isEmpty ? 5 : 0)
+        .padding(.horizontal, 12)
+        .padding(.top, 12)
+        // Figma: 9 under the stats, 10 under the handle when the stats are hidden.
+        .padding(.bottom, stats.isEmpty ? 10 : 9)
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
         .background(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
                 .fill(ProfileStyle.card)
@@ -504,16 +540,31 @@ struct ProfilePillButtonStyle: ButtonStyle {
 
     static let invitePadding = EdgeInsets(top: 10, leading: 13, bottom: 10, trailing: 17)
 
+    /// Figma 1115:14655 "Ingatkan": SF Pro Rounded 17 at 140 % (88 × 38). `false`: the older 14 pt pills.
+    var large = false
+
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .profileFont(14, .medium, tracking: -0.14)
+        label(configuration)
             .foregroundStyle(tint)
             .padding(padding)
             .background(ProfileStyle.card, in: Capsule())
             .overlay(Capsule().strokeBorder(ProfileStyle.pillStroke))
             .opacity(configuration.isPressed ? 0.6 : 1)
+            // Gives under the finger like the onboarding pill; Reduce Motion: the dim alone.
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
+    }
+
+    @ViewBuilder private func label(_ configuration: Configuration) -> some View {
+        if large {
+            configuration.label.profileValue()
+        } else {
+            configuration.label.profileFont(14, .medium, tracking: -0.14)
+        }
     }
 }
 
@@ -533,22 +584,6 @@ struct QRGlyph: View {
         }
         .frame(width: 16, height: 16)
         .accessibilityHidden(true)
-    }
-}
-
-/// A member's initial on its gradient (Figma "Inisial").
-struct InitialsAvatar: View {
-    let name: String
-    let avatarId: String
-    var size: CGFloat = 44
-
-    var body: some View {
-        Text(verbatim: String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
-            .font(FigmaFont.font(size: size * 0.41, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(ProfileStyle.initialsGradient(avatarId: avatarId), in: Circle())
-            .accessibilityHidden(true)
     }
 }
 
@@ -641,13 +676,17 @@ struct ProfileConfirmSheet<Avatar: View>: View {
                     HStack(spacing: 8) {
                         if isWorking {
                             ProgressView().tint(.white)
+                                .transition(.opacity)
                         } else {
                             Image(systemName: "exclamationmark.circle.fill").font(.system(size: 19, weight: .semibold))
                                 .frame(width: 22, height: 22)
                                 .accessibilityHidden(true)
+                                .transition(.opacity)
                         }
                         Text(verbatim: confirmTitle).profileFont(17, .semibold, tracking: -0.21)
                     }
+                    // Icon ↔ spinner: a 0.2 s cross-fade like "Remind".
+                    .animation(.easeInOut(duration: 0.2), value: isWorking)
                     .foregroundStyle(.white)
                     // Figma: icon and label cast black 20 %, y 4, blur 4.
                     .shadow(color: .black.opacity(0.2), radius: 2, y: 4)

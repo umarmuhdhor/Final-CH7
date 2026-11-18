@@ -13,53 +13,114 @@ struct ConnectedPillButtonStyle: ButtonStyle {
             .init(color: Color(hex: 0xFD8F7F), location: 0.68),
             .init(color: Color(hex: 0xFF6F5B), location: 0.99),
         ],
-        startPoint: .leading, endPoint: .trailing
+        // Figma's transform stretches the gradient to 2.67 × the pill (x scale 0.374): only its
+        // orange-to-salmon start shows.
+        startPoint: .leading, endPoint: UnitPoint(x: 1 / 0.37387, y: 0.5)
     )
 
-    /// Figma 131 × 35: 5 / 15 inside a 3.5 pt white ring that counts in the layout.
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    /// Figma 455:10289, 138.6 × 41: 5 / 15 inside a 3.5 pt white ring that counts in the layout,
+    /// "Terhubung" in SF Pro Rounded 17 on a 140 % line.
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .profileFont(15, .medium, tracking: -0.15)
+            .profileValue()
             .foregroundStyle(.white)
             .padding(.horizontal, 18.5)
             .padding(.vertical, 8.5)
             .background(Self.gradient, in: Capsule())
             .overlay(Capsule().strokeBorder(ProfileStyle.card, lineWidth: 3.5))
             .opacity(configuration.isPressed ? 0.7 : 1)
+            // Reduce Motion: the dim alone.
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
     }
 
-    /// Figma's glyph is a phone beside a stack; `iphone.motion` is the closest SF Symbol on iOS 17.
-    static var symbol: String {
-        UIImage(systemName: "iphone.motion") != nil ? "iphone.motion" : "iphone"
+    /// Figma's glyph (455:10401), exported from the design: a phone beside a stack.
+    static var glyph: some View {
+        Image("ProfileConnectedGlyph")
+            .renderingMode(.template)
+            .resizable()
+            .frame(width: 44 / 3, height: 47 / 3)
+            .frame(width: 19, height: 18)
+            .accessibilityHidden(true)
     }
 }
 
-/// The guardian's initial at the avatar's lower right (Figma "Avatar/S", 42 pt, white ring).
+/// The guardian's avatar at the avatar's lower right (Figma "Avatar/S", 42 pt, white ring).
 struct GuardianBadge: View {
-    let name: String
     let avatarId: String
 
     var body: some View {
-        InitialsAvatar(name: name, avatarId: avatarId, size: 42)
-            .overlay(Circle().stroke(ProfileStyle.card, lineWidth: 2.5))
+        AvatarView(id: avatarId, size: 42, ring: .init(color: ProfileStyle.card, width: 2.5))
     }
 }
 
 // MARK: Mode Guardian (Pribadi)
 
-/// Figma "CTA Jadi Guardian": invites a Pribadi user to protect their family. X hides it for good.
+/// Figma "CTA Jadi Guardian" (1205:6288): invites a Pribadi user to protect their family. X hides it for good.
 struct GuardianModeCard: View {
     let onBecomeGuardian: () -> Void
     let onDismiss: () -> Void
+
+    var body: some View {
+        ModeOfferCard(
+            eyebrow: "GUARDIAN MODE",
+            title: "Protect the people closest to you",
+            message: "Help check suspicious sites your family opens.",
+            action: "Become a Guardian",
+            identifier: "profile.guardianCard",
+            onAction: onBecomeGuardian,
+            onDismiss: onDismiss
+        )
+        .padding(.horizontal, ProfileStyle.margin)
+        .padding(.top, 32)
+    }
+}
+
+/// Figma "Mode Terawasi" (Home Pribadi 1253:8803, Guardian Home 1279:9544): connect to a guardian, who then
+/// double-checks risky sites. On Home Pribadi X hides it for good; the Guardian Home one has no X.
+struct BecomeSupervisedCard: View {
+    /// "Hubungkan" on Home Pribadi, "Menjadi yang Terawasi" on the empty Guardian Home.
+    var action: LocalizedStringKey = "Connect"
+    let onConnect: () -> Void
+    var onDismiss: (() -> Void)?
+
+    var body: some View {
+        ModeOfferCard(
+            eyebrow: "SUPERVISED MODE",
+            title: "Not sure?",
+            message: "Connect so someone you love can double-check for you",
+            action: action,
+            identifier: "home.becomeSupervised",
+            onAction: onConnect,
+            onDismiss: onDismiss
+        )
+    }
+}
+
+/// The card both offers share: eyebrow, title, two lines, a dark pill, the teal glass shield on the right.
+struct ModeOfferCard: View {
+    let eyebrow: LocalizedStringKey
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+    let action: LocalizedStringKey
+    let identifier: String
+    let onAction: () -> Void
+    var onDismiss: (() -> Void)?
 
     private static let fill = LinearGradient(
         colors: [Color.dynamic(0xF3F8FF, dark: 0x16222E), Color.dynamic(0xE2F8F5, dark: 0x12302E)],
         startPoint: .leading, endPoint: .trailing
     )
-    private static let eyebrow = Color.dynamic(0x0D8F93, dark: 0x4FD1D1, contrastLight: 0x08686B, contrastDark: 0x7FE3E3)
-    private static let button = LinearGradient(colors: [Color(hex: 0x191C25), Color(hex: 0x3C435A)], startPoint: .leading, endPoint: .trailing)
+    private static let eyebrowInk = Color.dynamic(0x0D8F93, dark: 0x4FD1D1, contrastLight: 0x08686B, contrastDark: 0x7FE3E3)
+    /// Figma "Tombol / Jadi Guardian" (1115:14386): #446EB4 at the top to #214889 three quarters down.
+    static let button = LinearGradient(
+        colors: [Color(hex: 0x446EB4), Color(hex: 0x214889)],
+        startPoint: UnitPoint(x: 0.5, y: -0.05), endPoint: UnitPoint(x: 0.5, y: 0.75)
+    )
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -70,29 +131,33 @@ struct GuardianModeCard: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 .accessibilityHidden(true)
 
+            // Figma 1115:14373: eyebrow, title 7 under it, body 5 under the title, the button 16 under the body.
             VStack(alignment: .leading, spacing: 0) {
-                Text("GUARDIAN MODE")
-                    .profileFont(11, .semibold, tracking: 0.66)
-                    .foregroundStyle(Self.eyebrow)
-                Text("Protect the people closest to you")
-                    .profileFont(20, .semibold, tracking: -0.2)
+                Text(eyebrow)
+                    .profileFont(11, .semibold, rounded: true, tracking: 0.06)
+                    .figmaLineHeight(13, relativeTo: .caption2)
+                    .foregroundStyle(Self.eyebrowInk)
+                Text(title)
+                    .profileFont(20, .semibold, tracking: -0.45)
+                    .figmaLineHeight(25, relativeTo: .title3)
                     .foregroundStyle(ProfileStyle.nameInk)
                     // One line in Figma; may reach under the shield's glow rather than wrap early.
                     .frame(width: 230, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                     .padding(.top, 7)
-                Text("Help check suspicious sites your family opens.")
-                    .profileFont(14)
+                Text(message)
+                    .profileFont(16, rounded: true, tracking: -0.31)
+                    .figmaLineHeight(21, relativeTo: .callout)
                     .foregroundStyle(ProfileStyle.secondary)
-                    .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 206, alignment: .leading)
-                    .padding(.top, 6)
-                Spacer(minLength: 18)
-                Button(action: onBecomeGuardian) {
-                    Text("Become a Guardian")
-                        .profileFont(15, .semibold, tracking: -0.15)
+                    .padding(.top, 5)
+                Spacer(minLength: 13)
+                Button(action: onAction) {
+                    Text(action)
+                        .profileFont(17, .semibold)
+                        .figmaLineHeight(22, relativeTo: .body)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 18)
                         .frame(minHeight: 38)
@@ -101,38 +166,38 @@ struct GuardianModeCard: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("profile.guardianCard.become")
+                .accessibilityIdentifier(identifier + ".action")
             }
             .padding(.leading, 20)
             .padding(.top, 22)
-            .padding(.bottom, 17)
+            .padding(.bottom, 19)
 
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(ProfileStyle.secondary)
-                    .frame(width: 28, height: 28)
-                    .background(ProfileStyle.card.opacity(0.75), in: Circle())
-                    .overlay(Circle().stroke(ProfileStyle.card))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+            if let onDismiss {
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(ProfileStyle.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(ProfileStyle.card.opacity(0.75), in: Circle())
+                        .overlay(Circle().stroke(ProfileStyle.card))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Close"))
+                .accessibilityIdentifier(identifier + ".close")
+                .frame(maxWidth: .infinity, alignment: .topTrailing)
+                .padding(.top, 4)
+                .padding(.trailing, 4)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Close"))
-            .accessibilityIdentifier("profile.guardianCard.close")
-            .frame(maxWidth: .infinity, alignment: .topTrailing)
-            .padding(.top, 4)
-            .padding(.trailing, 4)
         }
-        .frame(minHeight: 188)
+        .frame(minHeight: 205)
         .background(Self.fill)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(ProfileStyle.card.opacity(0.9)))
         .figmaCardShadow()
-        .padding(.horizontal, ProfileStyle.margin)
-        .padding(.top, 32)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("profile.guardianCard")
+        .accessibilityIdentifier(identifier)
     }
 }
 
@@ -146,7 +211,11 @@ struct FamilyEmptyCard: View {
     private static let slotPerson = Color.dynamic(0xCDD5DF, dark: 0x5B6470)
     private static let teal = Color.dynamic(0x0FB3B5, dark: 0x3FD3D4)
     private static let tealFill = Color.dynamic(0xE6F9F8, dark: 0x123332)
-    private static let button = LinearGradient(colors: [Color(hex: 0x136CB7), Color(hex: 0x68CDFA)], startPoint: .leading, endPoint: .trailing)
+    /// Figma "Button" (1115:14537): #68CDFA at the top to #136CB7 three quarters down.
+    private static let button = LinearGradient(
+        colors: [Color(hex: 0x68CDFA), Color(hex: 0x136CB7)],
+        startPoint: UnitPoint(x: 0.5, y: -0.05), endPoint: UnitPoint(x: 0.5, y: 0.75)
+    )
 
     var body: some View {
         VStack(spacing: 0) {
@@ -169,27 +238,28 @@ struct FamilyEmptyCard: View {
             // Figma "Slot Kosong" is 64 pt tall with the circles centred.
             .frame(height: 64)
             .accessibilityHidden(true)
+            // Figma 1115:14533: SF Pro Display Semibold 17, then SF Pro Rounded 17 at 140 %.
             Text("No one protected yet")
-                .profileFont(18, .semibold, tracking: -0.18)
+                .profileFont(17, .semibold)
+                .figmaLineHeight(22, relativeTo: .body)
                 .foregroundStyle(ProfileStyle.nameInk)
                 .multilineTextAlignment(.center)
                 .padding(.top, 14)
             Text("Send an invite to your family. Once they join, their status shows up here.")
-                .profileFont(14)
+                .profileValue()
                 .foregroundStyle(ProfileStyle.secondary)
                 .multilineTextAlignment(.center)
-                .lineSpacing(3)
-                // Figma's 140 % line height also pads above the first and below the last line.
-                .padding(.vertical, 1.5)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: 280)
                 .padding(.top, 6)
             Button(action: onInvite) {
                 Text("Invite family")
-                    .profileFont(15, .semibold, tracking: -0.19)
+                    .profileFont(17, .semibold)
+                    .figmaLineHeight(22, relativeTo: .body)
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.2), radius: 2, y: 4)
                     .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
                     .frame(minHeight: 46)
                     .background(Self.button, in: Capsule())
                     .overlay(Capsule().stroke(Color(hex: 0x0098D7), lineWidth: 1.5))
@@ -211,10 +281,104 @@ struct FamilyEmptyCard: View {
         ZStack {
             Circle().fill(ProfileStyle.background)
             Circle().strokeBorder(Self.slotStroke, style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
-            Image(systemName: "person.fill")
-                .font(.system(size: 17))
-                .foregroundStyle(Self.slotPerson)
+            SlotPerson().fill(Self.slotPerson).frame(width: 20, height: 20)
         }
         .frame(width: 48, height: 48)
+    }
+}
+
+/// Figma "Ikon Orang" (1115:14523), 20 pt: an 8.4 pt head over a 15.2 × 8.8 body (radius 7.6 on top, 1.6 below).
+private struct SlotPerson: Shape {
+    func path(in rect: CGRect) -> Path {
+        let s = rect.width / 20
+        var path = Path(ellipseIn: CGRect(x: 5.8 * s, y: 0.8 * s, width: 8.4 * s, height: 8.4 * s))
+        path.addPath(UnevenRoundedRectangle(
+            topLeadingRadius: 7.6 * s, bottomLeadingRadius: 1.6 * s, bottomTrailingRadius: 1.6 * s, topTrailingRadius: 7.6 * s
+        ).path(in: CGRect(x: 2.4 * s, y: 11.2 * s, width: 15.2 * s, height: 8.8 * s)))
+        return path
+    }
+}
+
+// MARK: Couldn't load
+
+/// Figma "Card · Gagal memuat" (Profile/Pribadi 1681:6986, the Guardian family list 1681:7088): the red
+/// circular arrow (SF Pro Rounded Bold 34, #E5483B), "Profil belum bisa dimuat" (SF Pro Display Semibold 20 / 26),
+/// the line (SF Pro Rounded 17 / 22, #6A717E), then a 56 pt outlined "Coba Lagi" 40 below.
+/// The rest of Profile stays usable. The symbol bounces once on arrival and again after a failed try;
+/// the button shows a spinner while it retries.
+struct ProfileLoadFailed: View {
+    var identifier = "profile.retry"
+    /// Only a failure to reach the server asks to check the connection (A-03).
+    var failure: LoadFailure = .connection
+    let retry: () async -> Void
+
+    @Environment(\.locale) private var locale
+
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var isRetrying = false
+    @State private var nudge = 0
+
+    private static let red = Color(hex: 0xE5483B)
+    /// Figma "Gradient/Primary Button" stroke: #136CB7 to #68CDFA.
+    private static let stroke = LinearGradient(colors: [Color(hex: 0x136CB7), Color(hex: 0x68CDFA)], startPoint: .leading, endPoint: .trailing)
+
+    var body: some View {
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Image(systemName: "exclamationmark.arrow.circlepath")
+                    .font(.system(size: 34.3, weight: .bold, design: .rounded))
+                    .foregroundStyle(Self.red)
+                    .symbolEffect(.bounce, options: .nonRepeating, value: reduceMotion ? 0 : nudge)
+                    .frame(width: 50, height: 50)
+                    .accessibilityHidden(true)
+                VStack(spacing: 4) {
+                    Text("Couldn't load the profile")
+                        .profileFont(20, .semibold)
+                        .figmaLineHeight(26, relativeTo: .title3)
+                        .foregroundStyle(Color(hex: 0x151617))
+                        .accessibilityAddTraits(.isHeader)
+                    Text(verbatim: L10n.string(
+                        failure.message(connection: "Check your internet connection, then try again."), language: AppLanguage(locale: locale)
+                    ))
+                        .onboardingFont(17, design: .rounded, relativeTo: .body)
+                        .figmaLineHeight(22, relativeTo: .body)
+                        .foregroundStyle(ProfileStyle.secondary)
+                }
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .combine)
+            Button {
+                guard !isRetrying else { return }
+                Task {
+                    isRetrying = true
+                    await retry()
+                    isRetrying = false
+                    nudge += 1
+                }
+            } label: {
+                ZStack {
+                    Text("Try Again")
+                        .profileFont(17, .semibold)
+                        .opacity(isRetrying ? 0 : 1)
+                    if isRetrying { ProgressView().controlSize(.small).tint(ProfileStyle.link) }
+                }
+                .foregroundStyle(ProfileStyle.link)
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .background(ProfileStyle.card, in: Capsule())
+                .overlay(Capsule().strokeBorder(Self.stroke, lineWidth: 1))
+                .contentShape(Capsule())
+                .animation(.easeOut(duration: 0.15), value: isRetrying)
+            }
+            .buttonStyle(PressScaleButtonStyle())
+            .disabled(isRetrying)
+            .accessibilityIdentifier(identifier)
+        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity)
+        .stateEntrance()
+        .onAppear { nudge += 1 }
+        .sensoryFeedback(.error, trigger: nudge) { _, now in now == 1 }
     }
 }

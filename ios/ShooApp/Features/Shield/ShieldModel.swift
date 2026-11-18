@@ -1,8 +1,9 @@
 import Foundation
 import Observation
 
-/// Protected Home (PR-04, Figma "protected/Home" 957:11102 / 957:11377): extension status, the guardian, the
-/// site blocked in the last 24 h, and recent activity. All from `GET /scans?owner=me`.
+/// Protected Home (PR-04, Figma "protected/Home" 1115:17162 … 1373:12752): extension status, the guardian, the
+/// newest risky site of the last 24 h with what the guardian decided, and recent activity. All from
+/// `GET /scans?owner=me`.
 @MainActor
 @Observable
 final class ShieldModel {
@@ -14,17 +15,25 @@ final class ShieldModel {
 
     private(set) var state: State = .loading
     private(set) var extensionStatus: ExtensionStatus = .off(lastSeen: nil)
+    /// `false` until the first read of the extension's status: the hero says "Checking Shoo…" instead of a guess
+    /// (Figma "protected/Home · Mengecek ekstensi" 1681:5275).
+    private(set) var extensionChecked = false
+    /// A refresh after a successful load failed: the screen keeps what it shows and says it may be old
+    /// (D-alief-A12, A-01, fase 28b K4). The next successful load clears it.
+    private(set) var refreshFailed = false
+    /// Why the first load failed (`state == .failed`): picks the sentence under "Couldn't load" (A-03).
+    private(set) var loadFailure: LoadFailure = .connection
     /// `GET /devices/me` → `guardian`; `nil` when not (or no longer) connected.
     private(set) var guardian: GuardianInfo?
-    /// For the profile initial top right.
-    private(set) var profileName: String?
+    /// The picked avatar for the profile circle top right.
+    private(set) var profileAvatarId: String?
     /// This device's scans of the last 24 h, and at least enough older ones to fill the list; newest first.
     private(set) var scans: [ScanResult] = []
     /// The card under the activity; empty hides it.
     private(set) var scamCases: [ScamCase] = []
 
-    /// The blocked card shows a site for this long after it was blocked.
-    static let blockedCardWindow: TimeInterval = 24 * 60 * 60
+    /// The big card shows a site for this long after it was seen.
+    static let cardWindow: TimeInterval = 24 * 60 * 60
     /// Enough for 14 days of one person; stops a runaway cursor.
     static let maxPages = 10
     static let recentCount = 3
@@ -47,20 +56,21 @@ final class ShieldModel {
 
     // MARK: Derived
 
-    /// Newest `blocked` scan among the loaded ones.
-    var lastBlocked: ScanResult? {
-        scans.filter { $0.status == .blocked }.max { $0.detectedAt < $1.detectedAt }
+    /// Newest scan among the loaded ones (every scan is a warning or a block).
+    var lastScan: ScanResult? {
+        scans.max { $0.detectedAt < $1.detectedAt }
     }
 
-    /// The big card: the newest blocked site of the last 24 h.
-    var recentBlocked: ScanResult? {
-        guard let scan = lastBlocked, scan.detectedAt >= now().addingTimeInterval(-Self.blockedCardWindow) else { return nil }
+    /// The big card: the newest warning or blocked site of the last 24 h, decided or not (protected/Home/blocked
+    /// 1115:17294, /warning 1363:12167, approved 1373:13100, 1373:12376 …).
+    var cardScan: ScanResult? {
+        guard let scan = lastScan, scan.detectedAt >= now().addingTimeInterval(-Self.cardWindow) else { return nil }
         return scan
     }
 
-    /// The site in the big card is not listed again (Figma 957:11377); the next site takes its row.
+    /// The site in the big card is not listed again; the next site takes its row.
     var recent: [ScanResult] {
-        let card = recentBlocked?.id
+        let card = cardScan?.id
         return Array(scans.lazy.filter { $0.id != card }.prefix(Self.recentCount))
     }
 
@@ -71,6 +81,7 @@ final class ShieldModel {
         let request = generation
         // Local (App Group + Safari's switch): never waits for the network.
         extensionStatus = await readExtensionStatus()
+        extensionChecked = true
         guard request == generation else { return }
         do {
             async let profile = repository.me()
@@ -78,14 +89,20 @@ final class ShieldModel {
             let (me, loaded) = try await (profile, all)
             guard request == generation else { return }
             guardian = me.guardian
-            profileName = me.name
+            profileAvatarId = me.avatarId
             scans = loaded.sorted { $0.detectedAt > $1.detectedAt }
             state = .loaded
+            refreshFailed = false
         } catch {
             guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Shield load failed", error)
-            // A failed foreground refresh keeps what is already on screen.
-            if state != .loaded { state = .failed }
+            // A failed foreground refresh keeps what is on screen, with the "Couldn't refresh" notice (D-alief-A12).
+            if state == .loaded {
+                refreshFailed = true
+            } else {
+                loadFailure = LoadFailure(error)
+                state = .failed
+            }
             return
         }
         await refreshScamCases(request: request)
@@ -97,16 +114,27 @@ final class ShieldModel {
         scamCases = cases
     }
 
-    /// "Try again" on the error view: shows the spinner while it retries.
-    func retry() async {
-        state = .loading
+    /// A push arrived while this screen is open: `AppEnvironment.pushesWhileOpen` went up to `count` (A-12).
+    /// Reload once, so the page under the banner tells the same story as Guardian Home does. The same count
+    /// again (the view redrawn) does nothing.
+    func pushesWhileOpenChanged(to count: Int) async {
+        guard count != handledPushes else { return }
+        handledPushes = count
         await refresh()
     }
 
-    /// Pages arrive newest first: stop once a page reaches past the blocked card's window and the list
+    /// The `pushesWhileOpen` value this screen last reloaded for.
+    @ObservationIgnored private var handledPushes = 0
+
+    /// "Try again" on the error card: the card stays (its button spins) until the answer is in.
+    func retry() async {
+        await refresh()
+    }
+
+    /// Pages arrive newest first: stop once a page reaches past the card's window and the list
     /// (plus the card's site) has its rows.
     private func allScans() async throws -> [ScanResult] {
-        let since = now().addingTimeInterval(-Self.blockedCardWindow)
+        let since = now().addingTimeInterval(-Self.cardWindow)
         var items: [ScanResult] = []
         var cursor: String?
         for _ in 0..<Self.maxPages {

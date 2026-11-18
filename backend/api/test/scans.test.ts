@@ -6,7 +6,8 @@ import markedSafe from "../../../contracts/fixtures/blocked-marked-safe.json";
 import verifiedScam from "../../../contracts/fixtures/blocked-verified-scam.json";
 import warning41 from "../../../contracts/fixtures/warning-41.json";
 import warning63 from "../../../contracts/fixtures/warning-63.json";
-import { clearScreenshotPath } from "../src/db/repo/scans";
+import { clearScreenshotPath, ISO_MS, listScans, type ListQuery, type ScanRow } from "../src/db/repo/scans";
+import { lockedUntilSql } from "../src/db/repo/verdictLock";
 import { sha256 } from "../src/http/crypto";
 import { b64, jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
@@ -96,6 +97,19 @@ describe("POST /scans", () => {
     expect(res.status).toBe(422);
   });
 
+  it("a host with a trailing dot (bca-verifikasi.site.) → 201, as GET /verdicts accepts it (BH-04)", async () => {
+    const p = await createDevice("Mom");
+    await postOk(p, extensionBody(blocked92, { url: "https://bca-verifikasi.site./login" }));
+    await postOk(p, extensionBody(blocked92, { url: "https://login.bca-verifikasi.site./x" }));
+    const res = await post(p, extensionBody(blocked92, { url: "https://evilbca-verifikasi.site./" }));
+    expect(res.status).toBe(422);
+  });
+
+  it("signal layers follow the schema enum [1,2,3,4,6] (BH-18)", async () => {
+    const p = await createDevice("Mom");
+    await postOk(p, extensionBody(blocked92, { signals: [{ ...blocked92.signals[0]!, layer: 6 }] }));
+  });
+
   it.each([
     ["score below 30", { score: 29, status: "warning" }],
     // Dashboard phase 05: without thresholdsVersion only the fence applies (scans-thresholds.test.ts).
@@ -104,7 +118,9 @@ describe("POST /scans", () => {
     ["21 signals", { signals: Array.from({ length: 21 }, () => blocked92.signals[0]) }],
     ["signal without labelSimple", { signals: [{ id: "x", layer: 1, weight: 5, label: { en: "a", id: "b" } }] }],
     ["signal label missing id", { signals: [{ ...blocked92.signals[0]!, label: { en: "a" } }] }],
-    ["layer 6", { signals: [{ ...blocked92.signals[0]!, layer: 6 }] }],
+    // Layer 5 is Guardian feedback and emits no Signal (scan-result.schema.json).
+    ["layer 5", { signals: [{ ...blocked92.signals[0]!, layer: 5 }] }],
+    ["layer 7", { signals: [{ ...blocked92.signals[0]!, layer: 7 }] }],
     ["detectedAt far future", { detectedAt: new Date(Date.now() + 3_600_000).toISOString() }],
     ["detectedAt not ISO", { detectedAt: "yesterday" }],
   ])("422 invalid_body: %s", async (_name, extra) => {
@@ -144,7 +160,59 @@ describe("POST /scans", () => {
   });
 });
 
-describe("POST /scans: one Activity row per site", () => {
+describe("POST /scans notified (#377)", () => {
+  const TOKEN = "a".repeat(64);
+  const postBody = async (d: Created, json: unknown) => {
+    const res = await post(d, json);
+    expect(res.status, await res.clone().text()).toBe(201);
+    return (await res.json()) as { id: string; notified?: { name: string } | null };
+  };
+  const withGuardian = async () => {
+    const g = await createDevice("Adhella", "guardian");
+    const p = await createDevice("Maria");
+    await connect(g, p);
+    expect((await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } })).status).toBe(200);
+    return { g, p };
+  };
+
+  it("names the Guardian whose push this scan queued", async () => {
+    const { p } = await withGuardian();
+    expect((await postBody(p, extensionBody(blocked92))).notified).toEqual({ name: "Adhella" });
+  });
+
+  it("null without a Guardian, for the Guardian's own scan, and once the Guardian is gone", async () => {
+    const alone = await createDevice("Solo");
+    expect((await postBody(alone, extensionBody(blocked92))).notified).toBeNull();
+    const { g, p } = await withGuardian();
+    expect((await postBody(g, extensionBody(blocked92))).notified).toBeNull();
+    expect((await call("/devices/me", { method: "DELETE", token: g.token })).status).toBe(200);
+    expect((await postBody(p, extensionBody(warning63))).notified).toBeNull();
+  });
+
+  it("null when the Guardian's push is off or the Guardian has no APNs token", async () => {
+    const g = await createDevice("Adhella", "guardian");
+    const p = await createDevice("Maria");
+    await connect(g, p);
+    expect((await postBody(p, extensionBody(blocked92))).notified).toBeNull();
+    await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } });
+    await sql`update devices set notify_family = false where id = ${g.deviceId}`;
+    expect((await postBody(p, extensionBody(warning63))).notified).toBeNull();
+  });
+
+  it("null for a repeat visit that sends no push", async () => {
+    const { p } = await withGuardian();
+    await postBody(p, extensionBody(blocked92));
+    expect((await postBody(p, extensionBody(blocked92))).notified).toBeNull();
+  });
+
+  it("null for another page of a site that already pushed (#241)", async () => {
+    const { p } = await withGuardian();
+    await postBody(p, extensionBody(blocked92));
+    expect((await postBody(p, extensionBody(blocked92, { url: "https://bca-verifikasi.site/otp" }))).notified).toBeNull();
+  });
+});
+
+describe("POST /scans: one Activity row per link (#241)", () => {
   const at = (minutes: number) => new Date(Date.parse("2026-11-03T04:00:00.000Z") + minutes * 60_000).toISOString();
 
   it("a repeat visit keeps the first row and moves its time to the newest visit", async () => {
@@ -159,12 +227,28 @@ describe("POST /scans: one Activity row per site", () => {
     expect((await list(p)).body.items[0]!.detectedAt).toBe(at(3));
   });
 
-  it("another page of the same site, or a subdomain, is the same row; another site gets its own", async () => {
+  it("the same link with another query or fragment is the same row; another page, a subdomain or another site gets its own", async () => {
     const p = await createDevice("Mom");
     const first = await postOk(p, extensionBody(blocked92));
-    expect(await postOk(p, extensionBody(blocked92, { url: "https://login.bca-verifikasi.site/x" }))).toBe(first);
-    expect(await postOk(p, extensionBody(warning63))).not.toBe(first);
-    expect((await list(p)).body.items).toHaveLength(2);
+    expect(await postOk(p, extensionBody(blocked92, { url: "https://bca-verifikasi.site/login?ref=sms#top" }))).toBe(first);
+    expect(await postOk(p, extensionBody(blocked92, { url: "https://BCA-verifikasi.site:443/login" }))).toBe(first);
+    const page = await postOk(p, extensionBody(blocked92, { url: "https://bca-verifikasi.site/otp" }));
+    const sub = await postOk(p, extensionBody(blocked92, { url: "https://login.bca-verifikasi.site/login" }));
+    const other = await postOk(p, extensionBody(warning63));
+    expect(new Set([first, page, sub, other]).size).toBe(4);
+    expect((await list(p)).body.items).toHaveLength(4);
+  });
+
+  it("a visit to a link whose row retention deletes within a day gets a new row and its push", async () => {
+    const p = await createDevice("Mom");
+    const old = await postOk(p, extensionBody(blocked92));
+    await sql`update scans set created_at = now() - interval '13 days 2 hours' where id = ${old}`;
+    const res = await post(p, extensionBody(blocked92));
+    expect(res.status, await res.clone().text()).toBe(201);
+    const fresh = ((await res.json()) as { id: string }).id;
+    expect(fresh).not.toBe(old);
+    // A row still well inside the 14 days is kept, as before.
+    expect(await postOk(p, extensionBody(blocked92))).toBe(fresh);
   });
 
   it("each device keeps its own row for a site", async () => {
@@ -176,7 +260,7 @@ describe("POST /scans: one Activity row per site", () => {
   it("a higher score replaces status, score and signals; a lower one leaves them", async () => {
     const p = await createDevice("Mom");
     const id = await postOk(p, extensionBody(warning63));
-    const blocked = { score: 90, status: "blocked", signals: blocked92.signals, url: "https://bansos-kemensos.site/login" };
+    const blocked = { score: 90, status: "blocked", signals: blocked92.signals, url: "https://bansos-kemensos.site/cek?step=2" };
     expect(await postOk(p, extensionBody(warning63, blocked))).toBe(id);
     expect(await postOk(p, extensionBody(warning63, { score: 41 }))).toBe(id);
     const [row] = await sql`select url, score, status, signals from scans where id = ${id}`;
@@ -184,7 +268,80 @@ describe("POST /scans: one Activity row per site", () => {
     expect(row!.signals).toEqual(blocked92.signals);
   });
 
-  it("parallel reports of one site still make one row", async () => {
+  // B-02 (fase 28, K14). The admins lower blockAt (GET /config/public) while a warning row is open:
+  // the same link at 75 was a warning, at 72 it is blocked now.
+  const warning75 = { url: "https://hadiah.example/a", domain: "hadiah.example", score: 75, status: "warning" };
+  const blocked72 = { ...warning75, score: 72, status: "blocked", signals: blocked92.signals };
+
+  it("BUG B-02a: a block on a row without a verdict replaces its warning, even at a lower score", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await connect(g, p);
+    const id = await postOk(p, extensionBody(warning63, warning75));
+    expect(await postOk(p, extensionBody(warning63, { ...blocked72, url: "https://hadiah.example/a?step=2" }))).toBe(id);
+    const row = (await list(g, "?owner=family")).body.items[0]!;
+    expect([row.status, row.score]).toEqual(["blocked", 72]);
+    expect(row).toMatchObject({ url: "https://hadiah.example/a?step=2", signals: blocked92.signals });
+    // A later warning never undoes the block, at a lower or a higher score (old thresholds).
+    for (const score of [70, 80]) expect(await postOk(p, extensionBody(warning63, { ...warning75, score }))).toBe(id);
+    const [after] = await sql`select status, score from scans where id = ${id}`;
+    expect(after).toEqual({ status: "blocked", score: 72 });
+  });
+
+  it("BUG B-02a: a not_safe on another page of a shared host is no verdict for this row", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await connect(g, p);
+    const shared = { domain: "google.com", score: 75, status: "warning" };
+    const other = await postOk(p, extensionBody(warning63, { ...shared, url: "https://sites.google.com/view/sekolah" }));
+    expect((await call("/verdicts", { method: "POST", token: g.token, json: { scanId: other, value: "not_safe" } })).status).toBe(200);
+    const id = await postOk(p, extensionBody(warning63, { ...shared, url: "https://sites.google.com/view/hadiah" }));
+    await postOk(p, extensionBody(warning63, { ...shared, url: "https://sites.google.com/view/hadiah", score: 72, status: "blocked" }));
+    const [row] = await sql`select status, score from scans where id = ${id}`;
+    expect(row).toEqual({ status: "blocked", score: 72 });
+  });
+
+  it("BUG B-02a: a not_safe made on a shared host is no verdict for another host of the domain (#495)", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await connect(g, p);
+    const form = await postOk(p, extensionBody(warning63, {
+      domain: "google.com", score: 75, status: "warning", url: "https://docs.google.com/forms/d/scam",
+    }));
+    expect((await call("/verdicts", { method: "POST", token: g.token, json: { scanId: form, value: "not_safe" } })).status).toBe(200);
+    const signin = { domain: "google.com", url: "https://accounts.google.com/signin" };
+    const id = await postOk(p, extensionBody(warning63, { ...signin, score: 75, status: "warning" }));
+    await postOk(p, extensionBody(warning63, { ...signin, score: 72, status: "blocked" }));
+    const [row] = await sql`select status, score from scans where id = ${id}`;
+    expect(row).toEqual({ status: "blocked", score: 72 });
+  });
+
+  // Guard until Q4 of fase 27 (27b) is answered: a row with a verdict keeps main's behaviour.
+  it("a block at a lower score leaves a warning row that has a verdict as it was (until fase 27 Q4)", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await connect(g, p);
+    const id = await postOk(p, extensionBody(warning63, warning75));
+    expect((await call("/verdicts", { method: "POST", token: g.token, json: { scanId: id, value: "safe" } })).status).toBe(200);
+    expect(await postOk(p, extensionBody(warning63, blocked72))).toBe(id);
+    const row = (await list(g, "?owner=family")).body.items[0]!;
+    expect([row.status, row.score]).toEqual(["warning", 75]);
+    expect(row.verdict).toMatchObject({ value: "safe" });
+  });
+
+  it("a not_safe on another link of the domain is a verdict for this row too: it stays as it was (until fase 27 Q4)", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await connect(g, p);
+    const other = await postOk(p, extensionBody(warning63, { ...warning75, url: "https://hadiah.example/b" }));
+    expect((await call("/verdicts", { method: "POST", token: g.token, json: { scanId: other, value: "not_safe" } })).status).toBe(200);
+    const id = await postOk(p, extensionBody(warning63, warning75));
+    expect(await postOk(p, extensionBody(warning63, blocked72))).toBe(id);
+    const [row] = await sql`select status, score from scans where id = ${id}`;
+    expect(row).toEqual({ status: "warning", score: 75 });
+  });
+
+  it("parallel reports of one link still make one row", async () => {
     const p = await createDevice("Mom");
     const ids = await Promise.all(Array.from({ length: 5 }, () => postOk(p, extensionBody(blocked92))));
     expect(new Set(ids).size).toBe(1);
@@ -239,6 +396,77 @@ describe("POST /scans: one Activity row per site", () => {
 
   it("401 without token", async () => {
     expect((await call("/scans", { method: "POST", json: extensionBody(blocked92) })).status).toBe(401);
+  });
+});
+
+describe("POST /scans stores the URL in its normal form (B-04, A-09, A-03 backend half; fase 28 K12)", () => {
+  // The extension sends origin + pathname from the WHATWG parser, so it never sends these forms. A crafted
+  // client with a connected member's token can. The stored URL is new URL(url).href: the form GET /verdicts
+  // reads, public.verdict_link() expects, and Foundation decodes in the app.
+  const toko = (url: string, extra: Record<string, unknown> = {}) => extensionBody(blocked92, { url, domain: "toko.example", ...extra });
+  const storedUrl = async (id: string) => (await sql`select url from scans where id = ${id}`)[0]!.url as string;
+  /** RFC 3986 characters only: no space, backslash, raw non-ASCII or control character (Foundation's URL decodes it). */
+  const RFC3986 = /^[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+$/;
+
+  it.each([
+    ["dot segment", "https://toko.example/x/../a", "https://toko.example/a"],
+    ["empty port", "https://toko.example:/a", "https://toko.example/a"],
+    ["unicode path", "https://toko.example/päth", "https://toko.example/p%C3%A4th"],
+    ["backslash for slash", "https://toko.example\\path", "https://toko.example/path"],
+    ["leading and trailing space", " https://toko.example/a ", "https://toko.example/a"],
+  ])("%s → 201, stored and listed as the normal form", async (_name, url, normal) => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Mom");
+    await connect(g, p);
+    const id = await postOk(p, toko(url));
+    expect(await storedUrl(id)).toBe(normal);
+    const listed = (await list(g, "?owner=family")).body.items[0]!.url as string;
+    const members = (await (await call("/family/members", { token: g.token })).json()) as { members: { lastScan: { url: string } | null }[] };
+    expect([listed, members.members[0]!.lastScan!.url]).toEqual([normal, normal]);
+    expect(listed).toMatch(RFC3986);
+  });
+
+  it.each([
+    ["dot segment", "https://toko.example/x/../a"],
+    ["empty port", "https://toko.example:/a"],
+  ])("%s is the same Activity row as the plain link", async (_name, url) => {
+    const p = await createDevice("Mom");
+    const first = await postOk(p, toko("https://toko.example/a"));
+    expect(await postOk(p, toko(url))).toBe(first);
+    expect(await postOk(p, toko(url))).toBe(first);
+    expect((await list(p)).body.items).toHaveLength(1);
+  });
+
+  it.each([["tab inside", "https://toko.example/a\tb"], ["newline at the end", "https://toko.example/a\n"]])(
+    "%s → 422 invalid_body (control characters are refused, not stripped)",
+    async (_name, url) => {
+      const p = await createDevice("Mom");
+      const res = await post(p, toko(url));
+      expect(res.status).toBe(422);
+      expect(await errorCode(res)).toBe("invalid_body");
+    },
+  );
+
+  it("an IPv6 host sent with a registrable domain → 422 invalid_body (its domain is the bracketed host, #487)", async () => {
+    const p = await createDevice("Mom");
+    for (const [url, domain] of [["https://[2001:db8::1]/a", "toko.example"], ["http://[::1]/a", "toko.example"]] as const) {
+      const res = await post(p, extensionBody(blocked92, { url, domain }));
+      expect(res.status, url).toBe(422);
+      expect(await errorCode(res)).toBe("invalid_body");
+    }
+  });
+
+  it("a raw non-ASCII path ≤ 2048 characters that is > 2048 once encoded → 422 invalid_body; exactly 2048 encoded → 201", async () => {
+    const p = await createDevice("Mom");
+    const over = `https://toko.example/${"ä".repeat(400)}`; // 421 raw, 2421 encoded
+    expect(over.length).toBeLessThanOrEqual(2048);
+    const res = await post(p, toko(over));
+    expect(res.status).toBe(422);
+    expect(await errorCode(res)).toBe("invalid_body");
+    expect((await sql`select count(*)::int as n from scans`)[0]!.n).toBe(0);
+    const at = `https://toko.example/${"ä".repeat(337)}aaaaa`; // 363 raw, 2048 encoded
+    const id = await postOk(p, toko(at));
+    expect((await storedUrl(id)).length).toBe(2048);
   });
 });
 
@@ -301,6 +529,143 @@ describe("POST /scans screenshotBase64 (ignored since fase 20a, K3 a)", () => {
     expect(row!.page_title).toBe("KlikBCA");
     expect(row!.signals[0].evidence).toBe("pin");
     expect(row!.signals[0].label.en).toBe("Ab");
+  });
+});
+
+// DT-04 (#497): optional signals[].host { marks, official } for the address card.
+describe("POST /scans signals[].host (DT-04, #497)", () => {
+  const hostSig = (host: unknown) => ({
+    id: "brand_plus_keyword",
+    layer: 2,
+    weight: 14,
+    label: { en: "Brand name plus a bait word", id: "Nama merek plus kata pancingan" },
+    labelSimple: { en: "Looks like BCA but is not", id: "Mirip BCA tapi bukan" },
+    evidence: "bca · level 2 · verifikasi",
+    host,
+  });
+
+  it("survives POST /scans → GET /scans/{id} and GET /scans", async () => {
+    const p = await createDevice("Mom");
+    const withHost = hostSig({ marks: ["bca", "verifikasi"], official: "bca.co.id" });
+    const cheap = { ...hostSig({ marks: [".site"] }), id: "cheap_tld", evidence: undefined };
+    const old = blocked92.signals[0]!;
+    const id = await postOk(p, extensionBody(blocked92, { signals: [withHost, cheap, old] }));
+    const item = (await (await call(`/scans/${id}`, { token: p.token })).json()) as Item & { signals: unknown[] };
+    expectScanResult(item);
+    expect(item.signals).toEqual([
+      expect.objectContaining({ id: "brand_plus_keyword", host: { marks: ["bca", "verifikasi"], official: "bca.co.id" } }),
+      expect.objectContaining({ id: "cheap_tld", host: { marks: [".site"] } }),
+      old,
+    ]);
+    expect(item.signals[2]).not.toHaveProperty("host");
+    const { body } = await list(p);
+    expect(body.items[0]!.signals).toEqual(item.signals);
+  });
+
+  it("only marks and official are kept; bad shapes → 422", async () => {
+    const p = await createDevice("Mom");
+    const id = await postOk(
+      p,
+      extensionBody(blocked92, {
+        signals: [hostSig({ marks: ["bca", "verifikasi"], official: "bca.co.id", extra: "x" })],
+      }),
+    );
+    const [row] = await sql`select signals from scans where id = ${id}`;
+    expect(row!.signals[0].host).toEqual({ marks: ["bca", "verifikasi"], official: "bca.co.id" });
+
+    for (const host of [
+      { marks: [] },
+      { marks: ["a", "b", "c", "d", "e"] },
+      { marks: [""] },
+      { marks: ["\u202E"] },
+      { marks: ["x".repeat(254)] },
+      { official: "" },
+      { official: "x".repeat(254) },
+      { marks: "bca" },
+      { marks: [1] },
+      "bca.co.id",
+      [],
+      null,
+    ]) {
+      const res = await post(p, extensionBody(blocked92, { signals: [hostSig(host)] }));
+      expect(res.status, JSON.stringify(host)).toBe(422);
+      const { error } = (await res.json()) as { error: { code: string; message: string } };
+      expect(error.code).toBe("invalid_body");
+      expect(error.message, JSON.stringify(host)).toMatch(/^signals\.0\.host\b/);
+    }
+  });
+
+  // #497 follow-up (security, from the #551 review): the app shows `official` as "Real: X" next to a checkmark
+  // seal, so a device holding a token must not be able to put any text there. official = a DOMAIN; marks = host
+  // characters only (they are substrings of the scan's domain). Checked as sent: no cleaning first.
+  it("official that is not a domain → 422 invalid_body at signals.N.host.official", async () => {
+    const p = await createDevice("Mom");
+    for (const official of [
+      "Bank resmi ✓ call 0800",
+      "bca.co.id ✓",
+      "BCA.co.id",
+      "https://bca.co.id",
+      "bca.co.id/login",
+      "bca.co.id:443",
+      "bca.co.id.",
+      "bca .co.id",
+      "-bca.co.id",
+      "bca.co.id\u0007",
+      "bca\u202Eid.oc",
+      "xn--bca-ñ.com",
+    ]) {
+      const ok = hostSig({ marks: ["bca"] });
+      const res = await post(p, extensionBody(blocked92, { signals: [ok, hostSig({ official })] }));
+      expect(res.status, official).toBe(422);
+      const { error } = (await res.json()) as { error: { code: string; message: string } };
+      expect(error.code).toBe("invalid_body");
+      expect(error.message, official).toMatch(/^signals\.1\.host\.official: /);
+    }
+  });
+
+  it("marks that are not host characters → 422 invalid_body at signals.N.host.marks.M", async () => {
+    const p = await createDevice("Mom");
+    for (const mark of ["BCA", "bca verifikasi", "✓", "resmi!", "<b>", "/login", "bca\u202E", "bca\u0000", "ñ"]) {
+      const res = await post(p, extensionBody(blocked92, { signals: [hostSig({ marks: ["bca", mark] })] }));
+      expect(res.status, JSON.stringify(mark)).toBe(422);
+      const { error } = (await res.json()) as { error: { code: string; message: string } };
+      expect(error.code).toBe("invalid_body");
+      expect(error.message, JSON.stringify(mark)).toMatch(/^signals\.0\.host\.marks\.1: /);
+    }
+  });
+
+  it("accepts every domain form the scan's domain allows: www., IPv4, IPv6 in brackets, a single label, punycode", async () => {
+    const p = await createDevice("Mom");
+    const hosts = [
+      { marks: ["bca", "-verifikasi", ".site"], official: "bca.co.id" },
+      { official: "www.bca.co.id" },
+      { marks: ["192.168"], official: "192.168.1.1" },
+      { marks: ["[2001", ":db8::1]"], official: "[2001:db8::1]" },
+      { official: "router" },
+      { marks: ["xn--bca-0la"], official: "xn--bca-0la.com" },
+    ];
+    const id = await postOk(p, extensionBody(blocked92, { signals: hosts.map(hostSig) }));
+    const [row] = await sql`select signals from scans where id = ${id}`;
+    expect(row!.signals.map((s: { host: unknown }) => s.host)).toEqual(hosts);
+  });
+
+  it("accepts the limits: 4 marks, 253 characters, an empty host", async () => {
+    const p = await createDevice("Mom");
+    const long = "x".repeat(253);
+    // 63 + 1 + 63 + 1 + 63 + 1 + 61 = 253: the longest name DOMAIN and the 253 cap allow together.
+    const longDomain = ["a".repeat(63), "b".repeat(63), "c".repeat(63), "d".repeat(61)].join(".");
+    const id = await postOk(
+      p,
+      extensionBody(blocked92, { signals: [hostSig({ marks: ["a", "b", "c", long], official: longDomain }), hostSig({})] }),
+    );
+    const [row] = await sql`select signals from scans where id = ${id}`;
+    expect(row!.signals.map((s: { host: unknown }) => s.host)).toEqual([
+      { marks: ["a", "b", "c", long], official: longDomain },
+      {},
+    ]);
+    const tooLong = `${longDomain}x`;
+    const res = await post(p, extensionBody(blocked92, { signals: [hostSig({ official: tooLong })] }));
+    expect(res.status).toBe(422);
   });
 });
 
@@ -524,7 +889,11 @@ describe("GET /scans", () => {
     const { body } = await list(g, `?owner=${mom.deviceId}`);
     const blocked = body.items.find((i) => i.status === "blocked")!;
     const warning = body.items.find((i) => i.status === "warning")!;
-    expect(blocked.verdict).toEqual({ value: "not_safe", byDeviceId: g.deviceId, byName: "Adhella", decidedAt: "2026-10-21T04:06:00.000Z" });
+    // A verdict inserted without url gets the backfill's link (verdicts_default_url).
+    expect(blocked.verdict).toEqual({
+      value: "not_safe", byDeviceId: g.deviceId, byName: "Adhella", decidedAt: "2026-10-21T04:06:00.000Z",
+      url: "https://bca-verifikasi.site/",
+    });
     expect(warning.verdict).toEqual(blocked.verdict);
     expectScanResult(blocked);
     expectScanResult(warning);
@@ -558,8 +927,15 @@ describe("GET /scans", () => {
 
     // Times are compared as instants; lists never carry a screenshot URL (D-alief-04). EX-07: every
     // item has pageReplicaUrl null (contracts/api.md); the fixture predates the key, so it is checked
-    // here and left out of the comparison.
+    // here and left out of the comparison. Verdict.url (optional in the schema, BH-19) is checked the same way.
     for (const item of body.items) expect(Object.hasOwn(item, "pageReplicaUrl") && item.pageReplicaUrl === null).toBe(true);
+    for (const item of body.items) {
+      const v = item.verdict as { url?: unknown } | null;
+      if (v) {
+        expect(typeof v.url).toBe("string");
+        delete v.url;
+      }
+    }
     const normal = (x: unknown) =>
       JSON.parse(JSON.stringify(x), (k, v) =>
         k === "pageReplicaUrl" ? undefined
@@ -611,5 +987,154 @@ describe("GET /scans/{id}", () => {
     expect((await call(`/scans/${guardianScan}`, { token: mom.token })).status).toBe(404);
     expect((await call(`/scans/00000000-0000-4000-8000-000000000000`, { token: gA.token })).status).toBe(404);
     expect((await call(`/scans/not-a-uuid`, { token: gA.token })).status).toBe(404);
+  });
+});
+
+/**
+ * Fase 28o (OPT-01, K17) guard: listScans pages must stay byte-identical to the statement it had
+ * before the rewrite (one join of every owner's scans, verdict lateral on every row, then limit).
+ * `legacyListScans` is that statement, copied verbatim; it is the oracle, not product code. Since #495 its
+ * fallback also skips a not_safe made on a shared host (`verdict_shared(v.url, v.domain)`), as selectScans does.
+ */
+function legacyListScans(q: ListQuery): Promise<ScanRow[]> {
+  return sql<ScanRow[]>`
+    select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain,
+           s.page_title as "pageTitle", s.score, s.status, s.signals,
+           s.screenshot_path as "screenshotPath", case when s.favicon_ready_at is not null then s.favicon_path end as "faviconPath",
+           case when s.replica_ready_at is not null then s.replica_path end as "replicaPath",
+           to_char(s.detected_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "detectedAt",
+           to_char(s.detected_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
+           case when v.owner_id is not null then jsonb_build_object(
+             'value', v.value, 'byDeviceId', v.by_device_id, 'byName', v.by_name,
+             'decidedAt', to_char(v.decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}), 'url', v.url
+           ) || jsonb_strip_nulls(jsonb_build_object(
+             'lockedUntil', ${lockedUntilSql(sql, "v.value", "v.decided_at")}
+           )) end as verdict
+    from scans s
+    join devices d on d.id = s.owner_id
+    left join lateral (
+      select v.* from (select public.verdict_link(s.url) as link) k, verdicts v
+      where v.owner_id = s.owner_id
+        and (v.url = k.link
+             or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)
+                 and not public.verdict_shared(v.url, v.domain)))
+      order by (v.url = k.link) desc, v.decided_at desc
+      limit 1
+    ) v on true
+    where s.owner_id in ${sql(q.owners)}
+      ${q.status ? sql`and s.status = ${q.status}` : sql``}
+      ${q.cursor ? sql`and (s.detected_at, s.id) < (${q.cursor.at}::text::timestamptz, ${q.cursor.id})` : sql``}
+    order by s.detected_at desc, s.id desc
+    limit ${q.limit + 1}`;
+}
+
+describe("listScans: same pages as the statement before fase 28o (OPT-01)", () => {
+  /**
+   * Guardian + 3 members + a stranger. 46 scans: the heavy member has most (top-N per owner must cut
+   * it), pairs of rows from different owners share one detected_at (id breaks the tie), some times
+   * carry microseconds (the cursor keeps them), statuses mix. Verdicts: a locked safe link verdict
+   * that also has a domain not_safe (link wins), an old safe one, two not_safe on the domain (newest
+   * covers the other links), a not_safe on a shared host (sites.google.com: covers its own link only),
+   * one member's verdict that must not reach another member, and the stranger's rows and verdicts.
+   */
+  async function seedFamily() {
+    const g = await createDevice("Adhella", "guardian");
+    const m1 = await createDevice("Mom");
+    const m2 = await createDevice("Dad");
+    const m3 = await createDevice("Oma");
+    const stranger = await createDevice("Stranger");
+    await sql`insert into family_links (protected_id, guardian_id)
+      values (${m1.deviceId}, ${g.deviceId}), (${m2.deviceId}, ${g.deviceId}), (${m3.deviceId}, ${g.deviceId})`;
+    const cycle = [m1, m1, m2, m1, g, m1, m2, m3, m1, m2, m1, stranger];
+    const urls = [
+      "https://alpha.example/p0?q=1#f", "https://ALPHA.example:443/p1", "https://alpha.example/p2", "https://user@alpha.example/p3",
+      "https://alpha.example/p4", "https://sites.google.com/view/x0", "https://sites.google.com/view/x1?y=2",
+      "https://beta.example", "https://beta.example/deep/page", "https://shop.example/cart",
+    ];
+    const domainOf = (u: string) => (u.includes("google.com") ? "google.com" : new URL(u).hostname);
+    for (let i = 0; i < 46; i++) {
+      const owner = cycle[i % cycle.length]!;
+      const url = urls[(i * 7) % urls.length]!;
+      const sec = 3600 - Math.floor(i / 2) * 37;
+      const micro = i % 5 === 0 ? "123456" : i % 5 === 1 ? "000001" : "000000";
+      const at = `2026-11-10T${String(Math.floor(sec / 3600)).padStart(2, "0")}:${String(Math.floor((sec % 3600) / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}.${micro}Z`;
+      const score = i % 3 === 0 ? 80 + (i % 20) : 30 + (i % 50);
+      await sql`insert into scans (owner_id, url, domain, page_title, score, status, signals, detected_at,
+                                   favicon_path, favicon_ready_at, replica_path, replica_ready_at)
+        values (${owner.deviceId}, ${url}, ${domainOf(url)}, ${i % 4 === 0 ? null : `Page ${i}`}, ${score},
+                ${score >= 80 ? "blocked" : "warning"}, ${sql.json([{ id: `s${i}`, layer: 1 }] as never)}, ${at},
+                ${i % 6 === 0 ? `${owner.deviceId}/fav${i}.png` : null}, ${i % 12 === 0 ? sql`now()` : null},
+                ${i % 7 === 0 ? `${owner.deviceId}/rep${i}.html` : null}, ${i % 14 === 0 ? sql`now()` : null})`;
+    }
+    const verdict = (owner: Created, url: string, domain: string, value: string, decidedAt: unknown) =>
+      sql`insert into verdicts (owner_id, url, domain, value, by_device_id, by_name, decided_at)
+        values (${owner.deviceId}, ${url}, ${domain}, ${value}, ${g.deviceId}, 'Adhella', ${decidedAt as string})`;
+    await verdict(m1, "https://alpha.example/p0", "alpha.example", "safe", sql`now()`);
+    await verdict(m1, "https://alpha.example/p1", "alpha.example", "safe", "2026-10-01T08:00:00.000Z");
+    await verdict(m1, "https://alpha.example/p2", "alpha.example", "not_safe", "2026-11-01T08:00:00.000Z");
+    await verdict(m1, "https://alpha.example/p3", "alpha.example", "not_safe", "2026-11-05T08:00:00.000Z");
+    await verdict(m1, "https://sites.google.com/view/x0", "google.com", "not_safe", "2026-11-06T08:00:00.000Z");
+    await verdict(m2, "https://beta.example/", "beta.example", "not_safe", "2026-11-02T08:00:00.000Z");
+    await verdict(m2, "https://alpha.example/p1", "alpha.example", "safe", "2026-11-03T08:00:00.000Z");
+    await verdict(g, "https://shop.example/cart", "shop.example", "safe", "2026-09-01T08:00:00.000Z");
+    await verdict(stranger, "https://alpha.example/p4", "alpha.example", "not_safe", "2026-11-04T08:00:00.000Z");
+    return { g, m1, m2, m3, stranger };
+  }
+
+  /** Walks every page the way GET /scans does (cursor = last row of a full page) and compares each one. */
+  async function samePages(q: Omit<ListQuery, "cursor">): Promise<ScanRow[][]> {
+    const pages: ScanRow[][] = [];
+    let cursor: ListQuery["cursor"] = null;
+    for (;;) {
+      const now: ScanRow[] = [...(await listScans(sql, { ...q, cursor }))];
+      const old = [...(await legacyListScans({ ...q, cursor }))];
+      expect(JSON.stringify(now), `page ${pages.length + 1}`).toBe(JSON.stringify(old));
+      const page: ScanRow[] = now.slice(0, q.limit);
+      pages.push(page);
+      if (now.length <= q.limit) return pages;
+      cursor = { at: page.at(-1)!.cursorAt, id: page.at(-1)!.id };
+    }
+  }
+
+  it("owner=family, multi-owner with verdicts: every page (first, cursor pages) is byte-identical", async () => {
+    const { g, m1, m2, m3, stranger } = await seedFamily();
+    const owners = [g.deviceId, m1.deviceId, m2.deviceId, m3.deviceId];
+    // limit 1: every row is a page boundary, so each detected_at tie between owners meets the cursor.
+    expect((await samePages({ owners, status: null, limit: 1 })).flat()).toHaveLength(43);
+    const pages = await samePages({ owners, status: null, limit: 5 });
+    const rows = pages.flat();
+    // The fixture really exercises what the rewrite could break.
+    expect(pages.length).toBeGreaterThanOrEqual(3);
+    expect(rows).toHaveLength(43);
+    expect(new Set(rows.map((r) => r.id)).size).toBe(43);
+    expect(rows.some((r) => r.ownerId === stranger.deviceId)).toBe(false);
+    expect(new Set(pages[0]!.map((r) => r.ownerId)).size).toBeGreaterThan(1);
+    expect(rows.some((r, i) => i > 0 && r.cursorAt === rows[i - 1]!.cursorAt && r.ownerId !== rows[i - 1]!.ownerId)).toBe(true);
+    const verdicts = rows.map((r) => r.verdict);
+    expect(verdicts.some((v) => v?.value === "safe" && v.lockedUntil)).toBe(true);
+    expect(verdicts.some((v) => v?.value === "safe" && !v.lockedUntil)).toBe(true);
+    expect(rows.some((r) => r.verdict?.value === "not_safe" && (r.verdict as unknown as { url: string }).url === "https://alpha.example/p3"
+      && !r.url.includes("/p3"))).toBe(true);
+    expect(rows.some((r) => r.url.includes("/view/x1") && r.ownerId === m1.deviceId && r.verdict === null)).toBe(true);
+    expect(rows.some((r) => r.url.includes("/view/x0") && r.ownerId === m1.deviceId && r.verdict?.value === "not_safe")).toBe(true);
+    expect(rows.some((r) => r.faviconPath !== null) && rows.some((r) => r.replicaPath !== null)).toBe(true);
+  });
+
+  it("status=blocked and status=warning: every page (with cursor) is byte-identical", async () => {
+    const { g, m1, m2, m3 } = await seedFamily();
+    const owners = [g.deviceId, m1.deviceId, m2.deviceId, m3.deviceId];
+    const blocked = await samePages({ owners, status: "blocked", limit: 4 });
+    expect(blocked.length).toBeGreaterThanOrEqual(3);
+    expect(blocked.flat().every((r) => r.status === "blocked")).toBe(true);
+    const warning = await samePages({ owners, status: "warning", limit: 5 });
+    expect(warning.length).toBeGreaterThanOrEqual(3);
+    expect(blocked.flat().length + warning.flat().length).toBe(43);
+  });
+
+  it("one owner (owner=me / owner=<member>), limit 1 to 50, and a repeated owner id: byte-identical", async () => {
+    const { m1, m2 } = await seedFamily();
+    for (const limit of [1, 2, 20, 50]) await samePages({ owners: [m1.deviceId], status: null, limit });
+    await samePages({ owners: [m2.deviceId], status: "warning", limit: 2 });
+    await samePages({ owners: [m1.deviceId, m1.deviceId], status: null, limit: 3 });
   });
 });

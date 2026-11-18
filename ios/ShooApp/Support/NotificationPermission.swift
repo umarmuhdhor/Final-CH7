@@ -62,7 +62,8 @@ final class FixedNotificationPermission: NotificationPermission {
 
 /// The small "Notifications are off" banner on Home (ON-05).
 enum NotificationReminder {
-    /// Only the Guardian gets pushes (contracts/api.md), so only the Guardian is reminded.
+    /// Guardian mode gets the pushes (contracts/api.md): the family's sites with Family mode on, its own blocked and
+    /// dangerous sites in Pribadi. Its alert says which (GuardianShieldView).
     static func isShown(status: NotificationAuthorization, mode: UserMode?) -> Bool {
         mode == .guardian && status != .authorized
     }

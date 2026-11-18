@@ -1,0 +1,445 @@
+{
+  "_note": "Figma frame id -> app screenshot under img/figma-parity-1110/ (app/<shot>.jpg from FigmaParityUITests mock data, or e2e/<shot>.jpg from the two-phone run). null = no app screen.",
+  "ONBOARDING (141:5987)": [
+    [
+      "110:3585",
+      "Splash Screen",
+      null
+    ],
+    [
+      "1352:4375",
+      "Onboarding",
+      "app/on-splash-1"
+    ],
+    [
+      "1352:4039",
+      "Onboarding",
+      "app/on-splash-2"
+    ],
+    [
+      "110:3912",
+      "Atur Nama",
+      "app/on-name"
+    ],
+    [
+      "110:4023",
+      "Atur Nama",
+      "app/on-name-typed"
+    ],
+    [
+      "110:4271",
+      "Atur Nama",
+      "app/on-name-tooLong"
+    ],
+    [
+      "140:5762",
+      "Connect with Guardian",
+      "app/on-connect-qr"
+    ],
+    [
+      "926:7974",
+      "Connect with Guardian",
+      "app/on-connect-expired-qr"
+    ],
+    [
+      "141:5887",
+      "Connect with Guardian",
+      "app/on-connect-typed"
+    ],
+    [
+      "926:7992",
+      "Connect with Guardian",
+      "app/on-connect-expired"
+    ],
+    [
+      "110:4440",
+      "Aktifkan Ekstensi",
+      "app/on-turnOnExtension"
+    ],
+    [
+      "856:19332",
+      "Aktifkan Ekstensi",
+      "app/on-extensionOn"
+    ],
+    [
+      "1328:13421",
+      "Aktifkan Ekstensi · Belum setuju (tombol nonaktif)",
+      "app/on-turnOnExtension-agreed"
+    ],
+    [
+      "1328:13313",
+      "Sheet · Data yang dikirim (dari link)",
+      "app/on-dataSent-sheet"
+    ],
+    [
+      "846:7977",
+      "Jadikan Safari Default",
+      "app/on-safariDefault"
+    ],
+    [
+      "929:8067",
+      "Success Screen",
+      "app/on-connected"
+    ],
+    [
+      "1326:12651",
+      "Undangan keluarga · Web · Redesign",
+      null
+    ],
+    [
+      "1336:2677",
+      "Pribadi/Home kalau belum setting guardian or protected",
+      "app/hs-pribadi-cta-0"
+    ]
+  ],
+  "HOME (141:6094)": [
+    [
+      "435:20058",
+      "Pribadi/Home",
+      "app/hs-pribadi-0"
+    ],
+    [
+      "1382:10567",
+      "Pribadi/Home kalau belum setting guardian or protected",
+      "app/hs-pribadi-cta-0"
+    ],
+    [
+      "1382:11008",
+      "To be guardian (guardian not set up yet)",
+      "e2e/g-switch"
+    ],
+    [
+      "1115:17162",
+      "protected/Home/ no recent warning or blocked",
+      "app/hs-prot-quiet-0"
+    ],
+    [
+      "1115:17294",
+      "protected/Home/blocked",
+      "app/hs-prot-blocked-0"
+    ],
+    [
+      "1373:13100",
+      "protected/Home/blocked and approved scam",
+      "app/hs-prot-blocked-scam-0"
+    ],
+    [
+      "1373:12752",
+      "protected/Home/blocked open and approve safe",
+      "app/hs-prot-blocked-safe-0"
+    ],
+    [
+      "1363:12167",
+      "protected/Home/warning",
+      "app/hs-prot-warning-0"
+    ],
+    [
+      "1382:2227",
+      "protected/Home/warning and approved scam",
+      "app/hs-prot-warning-scam-0"
+    ],
+    [
+      "1373:12376",
+      "protected/Home /warning approved safe",
+      "app/hs-prot-warning-safe-0"
+    ],
+    [
+      "1382:2393",
+      "protected/Home/warning (no guardian, MODE TERAWASI)",
+      "app/hs-prot-alone-0"
+    ],
+    [
+      "435:20373",
+      "Guardian/Home/ no recently blocked or warning",
+      "app/home-guardian-members"
+    ],
+    [
+      "1382:2599",
+      "Guardian/Home/warning",
+      "e2e/e-g-home-warning"
+    ],
+    [
+      "1382:10314",
+      "Guardian/Home/blocked",
+      "app/home-guardian"
+    ],
+    [
+      "1382:10466",
+      "Guardian/Home · Belum ada orang",
+      "app/home-guardian-empty"
+    ]
+  ],
+  "Activity (413:1778, 450:4935)": [
+    [
+      "480:5490",
+      "Aktivitas · Semua · Belum ada aktivitas",
+      "app/act-empty-all"
+    ],
+    [
+      "480:5520",
+      "Aktivitas · Waspada · Kosong",
+      "app/act-empty-warning"
+    ],
+    [
+      "480:5550",
+      "Aktivitas · Diblokir · Kosong",
+      "app/act-empty-blocked"
+    ],
+    [
+      "480:5580",
+      "Aktivitas · Semua · Perlindungan mati",
+      "app/act-off"
+    ],
+    [
+      "1115:15028",
+      "Aktivitas - Profil Pribadi",
+      "app/act-pribadi"
+    ],
+    [
+      "1115:15424",
+      "Aktivitas - Profil Pribadi",
+      "app/act-protected"
+    ],
+    [
+      "450:8574",
+      "Aktivitas - Profil Pribadi : Filtered",
+      "app/act-protected-warning"
+    ],
+    [
+      "1115:16415",
+      "Aktivitas - Profil Pribadi : Filtered",
+      "app/act-protected-blocked"
+    ],
+    [
+      "1128:17741",
+      "Aktivitas - Profil Guardian",
+      "app/act-guardian"
+    ],
+    [
+      "1115:15897",
+      "Aktivitas - Profil Guardian / Only one selected",
+      "app/act-guardian-one"
+    ],
+    [
+      "487:4221",
+      "Guardian/Detail Aktivitas, sebelum di cek",
+      "app/dt-unchecked"
+    ],
+    [
+      "487:5990",
+      "Guardian/Detail Aktivitas Waspada",
+      "app/dt-protected-warning"
+    ],
+    [
+      "1187:3398",
+      "protected, sebelum di cek, tanpa angka",
+      "app/dt-protected"
+    ],
+    [
+      "1196:3985",
+      "protected/Detail Aktivitas, sebelum di cek, pake angka",
+      "app/dt-protected"
+    ],
+    [
+      "1196:4116",
+      "protected/Detail Aktivitas, sebelum di cek, pake angka",
+      "app/dt-protected-safe"
+    ]
+  ],
+  "Detail Aktivitas Guardian REVISI PRU (1252:9850)": [
+    [
+      "1252:9851",
+      "Guardian/Detail Aktivitas",
+      "app/dt-blocked"
+    ],
+    [
+      "1252:11249",
+      "Guardian/Detail Aktivitas Setelah Validasi",
+      "app/dt-validated"
+    ],
+    [
+      "1252:10337",
+      "Guardian/Detail Aktivitas Waspada",
+      "app/dt-warning"
+    ],
+    [
+      "1375:9638",
+      "Guardian/Detail Aktivitas Waspada (Anda menandai aman)",
+      "app/dt-safe"
+    ]
+  ],
+  "Detail Aktivitas Ortu REVISI PRU (1211:19924)": [
+    [
+      "1211:19925",
+      "Ortu/Detail · Bahaya · Belum dicek Virellia",
+      "app/dt-protected-verdict"
+    ],
+    [
+      "1252:2346",
+      "Ortu/Detail · Bahaya · Dikonfirmasi penipuan",
+      "app/dt-protected"
+    ],
+    [
+      "1252:2473",
+      "Ortu/Detail · Bahaya · Dikonfirmasi penipuan",
+      "e2e/e-p-detail-blocked-safe"
+    ],
+    [
+      "1252:2600",
+      "Ortu/Detail · Waspada · Dikonfirmasi penipuan",
+      null
+    ],
+    [
+      "1211:20018",
+      "Ortu/Detail · Waspada · Belum dicek Virellia",
+      "app/dt-protected-warning"
+    ],
+    [
+      "1211:20080",
+      "Ortu/Detail · Waspada · Ditandai aman Virellia",
+      "app/dt-protected-safe"
+    ]
+  ],
+  "Profile (416:9961, 455:9046)": [
+    [
+      "1115:14593",
+      "Profile/Guardian",
+      "app/pf-guardian"
+    ],
+    [
+      "1115:14489",
+      "Profile/Guardian · Belum ada orang",
+      "app/pf-guardian-empty"
+    ],
+    [
+      "1115:14392",
+      "Profile/Pribadi",
+      "app/pf-pribadi"
+    ],
+    [
+      "1115:14279",
+      "Profile/Pribadi · Ajak jadi Guardian",
+      "app/pf-pribadi"
+    ],
+    [
+      "1115:14173",
+      "Profile/Pribadi · Konfirmasi hapus akun",
+      "e2e/e-p-delete-confirm"
+    ],
+    [
+      "455:10275",
+      "Profile/Pribadi (protected)",
+      "app/pf-protected"
+    ],
+    [
+      "455:10571",
+      "Profile/Pribadi (protected, bawah)",
+      "app/pf-protected"
+    ],
+    [
+      "1128:18167",
+      "Guardian/Detail Orang Dilindungi",
+      "app/pf-member"
+    ],
+    [
+      "1128:18472",
+      "Guardian/Detail Orang Dilindungi",
+      "app/pf-member"
+    ],
+    [
+      "416:10676",
+      "Guardian/Detail Orang Dilindungi · Putuskan",
+      "app/pf-member-disconnect"
+    ],
+    [
+      "455:9515",
+      "Pengaturan/Mode akun",
+      "app/pf-protected-connection"
+    ],
+    [
+      "457:10896",
+      "Pengaturan/Mode akun",
+      "app/pf-protected-connection"
+    ],
+    [
+      "1279:9348",
+      "Pengaturan/Mode akun",
+      null
+    ],
+    [
+      "416:12854",
+      "Pengaturan/Kelola profil",
+      "app/pf-manage"
+    ],
+    [
+      "462:11043",
+      "Pengaturan/Kelola profil",
+      "app/pf-protected-manage"
+    ],
+    [
+      "1286:12383",
+      "Pengaturan/Kelola profil · Sheet ubah avatar",
+      null
+    ],
+    [
+      "1286:12451",
+      "Pengaturan/Kelola profil · Sheet ubah nama",
+      null
+    ],
+    [
+      "1286:12515",
+      "Pengaturan/Kelola profil · Sheet tambah nomor HP",
+      null
+    ],
+    [
+      "1115:14717",
+      "Pengaturan/Notifikasi",
+      "app/pf-notifications"
+    ],
+    [
+      "455:9627",
+      "Pengaturan/Notifikasi",
+      "app/pf-protected-notifications"
+    ],
+    [
+      "416:12986",
+      "Pengaturan/Bahasa",
+      "app/pf-language"
+    ],
+    [
+      "455:9697",
+      "Pengaturan/Bahasa",
+      "app/pf-language"
+    ],
+    [
+      "416:13007",
+      "Pengaturan/Tema",
+      "app/pf-theme"
+    ],
+    [
+      "455:9718",
+      "Pengaturan/Tema",
+      "app/pf-theme"
+    ],
+    [
+      "1115:14753",
+      "Pengaturan/Aksesibilitas",
+      "app/pf-accessibility"
+    ],
+    [
+      "455:9785",
+      "Pengaturan/Aksesibilitas",
+      "app/pf-accessibility"
+    ],
+    [
+      "416:13147",
+      "Pengaturan/Tentang Shoo",
+      "app/pf-about"
+    ],
+    [
+      "455:9858",
+      "Pengaturan/Tentang Shoo",
+      "app/pf-about"
+    ]
+  ]
+}

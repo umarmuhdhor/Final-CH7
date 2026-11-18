@@ -277,6 +277,44 @@ struct DetailModelTests {
         #expect(await loaded(FixtureScan.blocked92).verdictNote(language: .english) == nil)
     }
 
+    // MARK: Hero avatar (Figma "Guardian Virellia", 1211:19925)
+
+    @Test func protectedHeroShowsTheGuardianWhoDecided() async {
+        let model = await loaded(FixtureScan.markedSafe, mode: .protected)
+        #expect(model.isOwnScan)
+        #expect(model.deciderAvatarId == MockRepository.fixtureGuardian.avatarId)
+    }
+
+    @Test func heroKeepsTheShieldWithoutAGuardianVerdict() async {
+        // Nobody decided yet: the big shield.
+        #expect(await loaded(FixtureScan.blocked92, mode: .protected).deciderAvatarId == nil)
+        // The guardian's own view never shows the circle (Figma 1252:9850).
+        #expect(await loaded(FixtureScan.verifiedScam).deciderAvatarId == nil)
+        #expect(await loaded(FixtureScan.markedSafe).deciderAvatarId == nil)
+    }
+
+    @Test(arguments: [
+        (92, [30, 25, 22], 92),
+        (72, [40, 40], 72),
+        (100, [70, 50], 100),
+        (50, [], 0),
+    ])
+    func scoreBarAddsUpToTheScore(score: Int, weights: [Int], total: Int) {
+        let scaled = RiskScoreBar.scaled(score: score, weights: weights)
+        #expect(abs(scaled.reduce(0, +) - total) <= 1)
+        #expect(scaled.count == weights.count)
+    }
+
+    @Test func detailLookFollowsTheVerdict() async {
+        #expect(DetailLook(scan: FixtureLoader.scan("blocked-verified-scam")) == .danger)
+        var scan = FixtureLoader.scan("blocked-verified-scam")
+        scan.verdict?.value = .safe
+        #expect(DetailLook(scan: scan) == .caution)
+        scan.verdict = nil
+        scan.status = .warning
+        #expect(DetailLook(scan: scan) == .caution)
+    }
+
     // MARK: DT-03 owner
 
     @Test func ownerShownForFamilyItemsOnly() async {
@@ -320,6 +358,19 @@ struct DetailModelTests {
         #expect(model.badge == .markedSafe)
     }
 
+    /// K8 (F-A15): a saved verdict tells the app, so Activity reloads when it shows again; a failed one does not.
+    @Test func onlyASavedVerdictTellsTheApp() async {
+        var told = 0
+        let model = DetailModel(
+            scanId: FixtureScan.blocked92, repository: StubRepository(verdictFailures: 1), onVerdictSaved: { told += 1 }
+        )
+        await model.load()
+        await model.setVerdict(.notSafe)
+        #expect(told == 0)
+        await model.setVerdict(.notSafe)
+        #expect(told == 1)
+    }
+
     @Test func failedVerdictRollsBackToNoVerdict() async {
         let model = DetailModel(scanId: FixtureScan.blocked92, repository: StubRepository(verdictFailures: 1))
         await model.load()
@@ -341,6 +392,21 @@ struct DetailModelTests {
         #expect(model.verdictFailed)
     }
 
+    /// BH-27: each failure says what happened, not always "check your connection".
+    @Test(arguments: [
+        (RepositoryError.api(.verdictNotAllowed, message: "no"), DetailModel.VerdictError.notAllowed),
+        (RepositoryError.api(.rateLimited, message: "slow"), DetailModel.VerdictError.tooMany),
+        (RepositoryError.api(.verdictLocked, message: "locked"), DetailModel.VerdictError.locked),
+        (RepositoryError.network, DetailModel.VerdictError.connection),
+    ])
+    func verdictFailureSaysWhy(error: RepositoryError, expected: DetailModel.VerdictError) async {
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: StubRepository(verdictFailures: 1, verdictError: error))
+        await model.load()
+        await model.setVerdict(.notSafe)
+        #expect(model.verdictError == expected)
+        #expect(model.verdictFailed)
+    }
+
     @Test func nextVerdictClearsTheError() async {
         let model = DetailModel(scanId: FixtureScan.blocked92, repository: StubRepository(verdictFailures: 1))
         await model.load()
@@ -349,6 +415,111 @@ struct DetailModelTests {
         await model.setVerdict(.notSafe)
         #expect(!model.verdictFailed)
         #expect(model.badge == .verifiedScam)
+    }
+
+    /// A push or the foreground while Detail shows: the guardian's verdict comes in, the copy's links stay
+    /// (every read hands out new short-lived links; a new one would load the copy again).
+    @Test func refreshTakesTheVerdictButKeepsTheCopyLinks() async {
+        let stub = StubRepository()
+        await stub.setEditScan { scan, call in
+            scan.pageReplicaUrl = URL(string: "https://replica.example/\(call)")
+            scan.screenshotUrl = URL(string: "https://shot.example/\(call)")
+            guard call >= 2 else { return }
+            scan.verdict = Verdict(
+                value: .notSafe, byDeviceId: "dev_g", byName: "Adhella", decidedAt: Date(timeIntervalSince1970: 1_792_584_000)
+            )
+        }
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        #expect(model.scan?.verdict == nil)
+        await model.refresh()
+        #expect(model.scan?.verdict?.value == .notSafe)
+        #expect(model.scan?.pageReplicaUrl == URL(string: "https://replica.example/1"))
+        #expect(model.scan?.screenshotUrl == URL(string: "https://shot.example/1"))
+    }
+
+    /// The scan was deleted (or the family link is gone) while Detail showed it: the refresh says it is gone.
+    @Test func refreshShowsAScanThatIsGone() async {
+        let stub = StubRepository()
+        await stub.setGone(fromCall: 2)
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        await model.refresh()
+        #expect(model.state == .notFound)
+    }
+
+    /// Before the first load ends, a refresh does nothing (the first load owns the spinner).
+    @Test func refreshWaitsForTheFirstLoad() async {
+        let stub = StubRepository(failLoads: 1)
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        #expect(model.state == .failed)
+        await model.refresh()
+        #expect(model.state == .failed)
+        #expect(await stub.scanCalls == 0)
+    }
+
+    /// A-02 (fase 28c, K5): `409 verdict_locked` means the server already holds a safe verdict on this link
+    /// (an "Aman" whose answer was lost, or another device). Detail reloads the scan and shows that verdict,
+    /// whichever button was tapped, instead of rolling back to "Blocked" with the buttons still there.
+    @Test(arguments: [Verdict.Value.safe, .notSafe])
+    func BUG_A02_detailShowsTheServersLockedSafeVerdictAfterVerdictLocked(tapped: Verdict.Value) async {
+        let stub = StubRepository(verdictFailures: 1, verdictError: .api(.verdictLocked, message: "locked"))
+        // Call 1 is the first load (no verdict yet); from call 2 on the server has the locked "Aman".
+        await stub.setEditScan { scan, call in
+            guard call >= 2 else { return }
+            scan.verdict = Verdict(
+                value: .safe, byDeviceId: "dev_me", byName: "Adhella", decidedAt: Date(timeIntervalSince1970: 1_792_584_000)
+            )
+        }
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        #expect(model.scan?.verdict == nil)
+        let outcome = await model.setVerdict(tapped)
+        #expect(outcome == .rolledBack)
+        #expect(model.verdictError == .locked)
+        #expect(model.scan?.verdict?.value == .safe)
+        #expect(model.badge == .markedSafe)
+        #expect(!model.isSubmittingVerdict)
+    }
+
+    /// K5: when the reload after `verdict_locked` fails too, the rollback and the locked message stay.
+    @Test func lockedVerdictKeepsTheRollbackWhenTheReloadFails() async {
+        let stub = StubRepository(verdictFailures: 1, verdictError: .api(.verdictLocked, message: "locked"))
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        await stub.failNextLoads(1)
+        await model.setVerdict(.safe)
+        #expect(model.scan?.verdict == nil)
+        #expect(model.badge == .blocked)
+        #expect(model.verdictError == .locked)
+        #expect(model.state == .loaded)
+    }
+
+    /// K5: the locked message waits for the reload, so it never shows over the rolled-back buttons.
+    @Test func lockedMessageWaitsForTheReload() async {
+        let ref = ModelRef()
+        let stub = StubRepository(verdictFailures: 1, verdictError: .api(.verdictLocked, message: "locked"))
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        ref.model = model
+        await model.load()
+        await stub.setOnScan {
+            await MainActor.run { #expect(ref.model?.verdictError == nil) }
+        }
+        await model.setVerdict(.safe)
+        #expect(model.verdictError == .locked)
+    }
+
+    /// K5: a scan deleted meanwhile answers the reload with 404, so Detail says it is gone.
+    @Test func lockedVerdictOnAGoneScanShowsNotFound() async {
+        let stub = StubRepository(verdictFailures: 1, verdictError: .api(.verdictLocked, message: "locked"))
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        await stub.setGone(fromCall: 2)
+        let outcome = await model.setVerdict(.safe)
+        #expect(outcome == .gone)
+        #expect(model.state == .notFound)
+        #expect(model.scan == nil)
     }
 
     @Test func reloadDuringVerdictKeepsTheNewVerdict() async {

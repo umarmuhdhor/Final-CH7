@@ -19,6 +19,7 @@ final class LiveBackendUITests: XCTestCase {
         app.launchArguments += [
             "-settings.dataConsent", "granted",
             "-UITestReset", "YES",
+            "-UITestSkipSplash", "YES",
             "-settings.language", language,
             "-UITestNotifications", "granted",
             "-UITestExtensionActive", "YES",
@@ -34,35 +35,21 @@ final class LiveBackendUITests: XCTestCase {
         try? app.screenshot().pngRepresentation.write(to: url)
     }
 
+    /// ON (Figma 1205:4696): a real POST /devices once the consent box is ticked on Aktifkan Ekstensi.
+    /// Guardian = Pribadi, then Family mode on (GD-02).
     @MainActor
     private func register(_ app: XCUIApplication, name: String, mode: String) {
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
-        app.buttons["splash.skip"].tap()
-        let field = app.textFields["name.field"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap()
-        field.typeText(name)
-        app.buttons["name.continue"].tap()
-        app.buttons["mode.\(mode)"].tap()
-        app.buttons["mode.continue"].tap()
-        // A real POST /devices: the next step only shows after the server answered.
-        let next = mode == "guardian" ? "invite.skip" : "connect.skip"
-        XCTAssertTrue(app.buttons[next].waitForExistence(timeout: 15), app.debugDescription)
+        app.onboardPersonal(name)
+        XCTAssertTrue(app.tabBars.buttons.firstMatch.waitForExistence(timeout: 15), app.debugDescription)
         shot(app, "\(mode)-1-registered")
-        if mode == "guardian" {
-            XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
-            app.buttons["invite.skip"].tap()
-        }
+        if mode == "guardian" { app.becomeGuardian() }
     }
 
     @MainActor
     func testGuardianOnboardingActivityAndProfile() {
         let app = launch()
         register(app, name: "Rina", mode: "guardian")
-        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5))
-        app.buttons["safariDefault.alreadyUsing"].tap()
-        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
-        app.buttons["extensionOn.continue"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 10))
         shot(app, "guardian-2-shield")
 
@@ -71,21 +58,28 @@ final class LiveBackendUITests: XCTestCase {
                       app.debugDescription)
         shot(app, "guardian-3-activity-empty")
 
+        // The Profile button lives on Shield only (Activity has none since the Figma revision).
+        app.tabBars.buttons["Shield"].tap()
+        XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["profileButton"].tap()
         let manage = app.buttons["profile.manage"]
         XCTAssertTrue(manage.waitForExistence(timeout: 10), app.debugDescription)
         for _ in 0..<6 where !manage.isHittable { app.swipeUp() }
         manage.tap()
+        // Manage account lists the display name as a row; the field is one page deeper.
+        XCTAssertTrue(app.buttons["profile.displayName"].waitForExistence(timeout: 10), app.debugDescription)
+        app.buttons["profile.displayName"].tap()
         let field = app.textFields["profile.name"]
-        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertEqual(field.value as? String, "Rina")
         // Cursor at the end of "Rina".
         field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
         field.typeText(" B")
         app.buttons["profile.saveName"].tap()
         XCTAssertFalse(app.descendants(matching: .any)["profile.error"].waitForExistence(timeout: 3), app.debugDescription)
-        app.buttons["profile.back"].firstMatch.tap()
         let language = app.buttons["profile.language"]
+        // Back out of the name page and Manage account to Profile.
+        for _ in 0..<3 where !language.waitForExistence(timeout: 2) { app.buttons["profile.back"].firstMatch.tap() }
         for _ in 0..<6 where !language.isHittable { app.swipeUp() }
         language.tap()
         app.buttons["language.id"].tap()
@@ -98,22 +92,10 @@ final class LiveBackendUITests: XCTestCase {
 
     @MainActor
     func testProtectedOnboardingInIndonesian() {
+        // A Protected without a guardian is no longer an onboarding choice (Figma): "Nanti saja" ends as Pribadi.
         let app = launch(language: "id")
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
-        app.buttons["splash.skip"].tap()
-        let field = app.textFields["name.field"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap()
-        field.typeText("Mom")
-        app.buttons["name.continue"].tap()
-        app.buttons["mode.protected"].tap()
-        app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.buttons["connect.skip"].waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["connect.skip"].tap()
-        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5))
-        app.buttons["safariDefault.alreadyUsing"].tap()
-        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
-        app.buttons["extensionOn.continue"].tap()
+        app.onboardPersonal("Mom")
         XCTAssertTrue(app.tabBars.buttons["Perisai"].waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.descendants(matching: .any)["shield.nothingBlocked"].firstMatch.waitForExistence(timeout: 10),
                       app.debugDescription)

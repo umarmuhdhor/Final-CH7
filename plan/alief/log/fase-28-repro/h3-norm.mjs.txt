@@ -1,0 +1,97 @@
+// Fase 28 hunt, hunter 3: one table of URLs through every domain / link normaliser in the repo (real modules).
+// Run: node h3-norm.mjs <worktree> [backend-shared.txt]
+//   backend-shared.txt = docker exec supabase_db_shoo_hunt psql -U postgres -d shoo_f28 -Atc "select hosting||' '||domain from admin.v_domain_lists_public order by 1"
+import { readFileSync } from "node:fs";
+const W = process.argv[2];
+const R = `${W}/ios/ShooExtension/Resources`;
+const { PSL_RULES } = await import(`${R}/psl.js`);
+const { parseRules, registrableDomain, naiveDomain, shareableUrl } = await import(`${R}/domain.js`);
+const { memoryKey } = await import(`${R}/block-memory.js`);
+const { candidates } = await import(`${R}/lists.js`);
+const { createLive } = await import(`${R}/live.js`);
+const ai = await import(`${W}/ai/src/rdap/domain.js`);
+const aiBl = await import(`${W}/ai/src/blocklist/domains.js`);
+const aiOff = await import(`${W}/ai/src/layer3/official.js`);
+const rules = parseRules(PSL_RULES);
+const reg = (h) => registrableDomain(h, rules);
+// backend/api/src/http/validate.ts DOMAIN, read from the file so it is the real pattern
+const src = readFileSync(`${W}/backend/api/src/http/validate.ts`, "utf8");
+const DOMAIN = new RegExp(src.match(/export const DOMAIN = \/(.+)\/;/)[1]);
+// detector: which host does it ask ShooLists for?
+await import(`${R}/detector.js`); // the built copy the extension ships
+async function detectorHost(url, domain) {
+    let asked = "(not asked)";
+    globalThis.ShooLists = { match: async (h) => ((asked = h), null) };
+    await globalThis.ShooDetector.analyzeLocal({ url, domain, title: "", text: "", forms: [], imageAlts: [] });
+    return asked;
+}
+async function liveSends(domain) {
+    let sent = null;
+    const live = createLive({ getSession: async () => ({ aiBaseURL: "x", apiBaseURL: "x", token: "t" }), post: async (_s, b) => (sent = b) });
+    await live.show({ domain, score: 40, status: "warning", analyzing: false });
+    return sent ? "sent" : "no island";
+}
+const URLS = [
+    "https://toko.example/a", "https://WWW.Toko.Example/a", "https://toko.example./a", "https://toko.example:8443/a", "https://toko.example:443/a",
+    "https://bücher.example/a", "https://xn--bcher-kva.example/a", "https://login.bca.co.id.verifikasi.xyz/a", "https://alice.github.io/a",
+    "https://sites.google.com/view/x", "https://docs.google.com./forms/d/1", "http://203.0.113.9/login", "http://[2001:db8::1]/login", "http://localhost:3000/a",
+    "https://a_b.example.com/a", "https://shop_x.web.app/a", "https://user:pw@toko.example/a?token=1#f", "https://toko.example", "https://toko.example//a//b/",
+    "https://toko.example/a%20b/ü", "https://co.id/", "https://www.co.id/x", "https://bansos-2026.my.id/daftar", "https://klaim.biz.id/x", "https://hadiah.web.id/x",
+    "https://desa-bantuan.desa.id/x", "https://youtu.be/abc", "https://1drv.ms/f/abc", "https://alice.medium.com/p", "https://medium.com/@alice/p",
+    "https://www.www.toko.example/", "https://xn--80ak6aa92e.com/", "https://toko.example/" + "p".repeat(2100),
+];
+console.log(["url", "ext.domain(PSL)", "ext.fallback(content.js)", "backend DOMAIN ok", "backend host⊂domain", "ext.link(shareable)", "link len≤2048", "ext.memoryKey", "lists candidates", "detector asks lists for", "live island", "ai.rdap domain", "ai.blocklist reg", "ai official"].join(" | "));
+let disagreements = 0;
+for (const url of URLS) {
+    const u = new URL(url);
+    const d = reg(u.hostname);
+    const fb = naiveDomain(u.hostname);
+    const link = shareableUrl(url);
+    const host = u.hostname.replace(/\.$/, "");
+    const hostOk = host === d || host.endsWith(`.${d}`);
+    const aiReg = ai.registrableDomain(aiOff.hostOf(url));
+    const row = [url.length > 80 ? url.slice(0, 40) + `…(${url.length} chars)` : url, d, fb, DOMAIN.test(d), hostOk, link.length > 80 ? `(${link.length} chars)` : link, link.length <= 2048,
+        memoryKey(url, reg), JSON.stringify(candidates(u.hostname, d)), await detectorHost(url, d), await liveSends(d), aiReg, aiBl.toRegistrable(u.hostname), aiOff.isOfficialHost(aiOff.hostOf(url))];
+    const flags = [];
+    if (!DOMAIN.test(d) || !hostOk || link.length > 2048) flags.push("POST /scans would 422");
+    if (aiReg !== null && aiReg !== d) flags.push("ai.rdap≠ext");
+    if (fb !== d) flags.push("fallback≠PSL");
+    if (flags.length) disagreements++;
+    console.log(row.join(" | ") + (flags.length ? `   <-- ${flags.join("; ")}` : ""));
+}
+console.log(`\nrows ${URLS.length}, rows with a disagreement ${disagreements}`);
+
+// ---- every multi-label ICANN public suffix: ext (PSL) vs ai/src/rdap/domain.js (approximation) ----
+const icann = PSL_RULES.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("!") && !l.startsWith("*") && l.includes(".") && /^[a-z0-9.-]+$/.test(l));
+let diff = 0; const idDiff = [];
+for (const suffix of icann) {
+    const host = `login.scam-site.${suffix}`;
+    const a = reg(host), b = ai.registrableDomain(host);
+    if (b !== null && a !== b) { diff++; if (suffix.endsWith(".id")) idDiff.push(`${host} → ext ${a} / ai ${b}`); }
+}
+console.log(`\nPSL multi-label suffixes checked ${icann.length}; ai.rdap registrable domain differs from the extension's on ${diff}`);
+console.log(".id suffixes that differ:\n  " + idDiff.join("\n  "));
+
+// ---- shared hosts: extension block memory vs backend verdict_shared list vs ai/data/shared-hosts.json ----
+const aiShared = new Set(JSON.parse(readFileSync(`${W}/ai/data/shared-hosts.json`, "utf8")).hosts);
+const backend = new Map();
+if (process.argv[3]) for (const line of readFileSync(process.argv[3], "utf8").trim().split("\n")) { const [kind, dom] = line.split(" "); backend.set(dom, kind); }
+const extKind = (h) => {
+    const own = memoryKey(`https://${h}/p/q`, reg), sub = memoryKey(`https://u1.${h}/p/q`, reg);
+    if (own === `${h}/p/q`) return "host_path";
+    if (sub === `u1.${h}` && reg(`u1.${h}`) !== `u1.${h}`) return "subdomains(list)";
+    if (sub === `u1.${h}`) return "subdomains(PSL)";
+    return "none";
+};
+const all = new Set([...aiShared, ...[...backend].filter(([, k]) => k !== "none").map(([d]) => d)]);
+const extSrc = readFileSync(`${R}/block-memory.js`, "utf8").match(/const SHARED = \[([\s\S]*?)\];/)[1].match(/"[^"]+"/g).map((s) => s.slice(1, -1));
+for (const h of extSrc) all.add(h);
+let n = 0, bad = 0;
+console.log("\nhost | extension block memory | backend verdict_shared kind | in ai/data/shared-hosts.json");
+for (const h of [...all].sort()) {
+    n++;
+    const e = extKind(h), b = backend.get(h) ?? "(absent)", a = aiShared.has(h);
+    const extShared = e !== "none", beShared = b === "host_path" || b === "subdomains";
+    if (extShared !== beShared || !a) { bad++; console.log(`${h} | ${e} | ${b} | ${a}`); }
+}
+console.log(`shared hosts compared ${n}; rows where the three lists disagree ${bad} (only those are printed)`);

@@ -55,6 +55,28 @@ struct ApiRepositoryTests {
         #expect(server.requests.last?.query == ["owner": "dev_mom"])
     }
 
+    @Test func latestScamsDecodesItemsAndDropsABrokenOne() async throws {
+        let server = StubServer()
+        server.reply { _ in
+            .json(200, #"{"items":[{"category":"undian_palsu","title":{"en":"Fake prize","id":"Undian/hadiah palsu"},"lastSeenAt":"2026-11-17T02:00:00Z"},{"category":"x"}]}"#)
+        }
+        let cases = try await server.repository().latestScams()
+        let request = try #require(server.requests.last)
+        #expect(request.method == "GET" && request.path == "/scams/latest")
+        #expect(cases.map(\.id) == ["undian_palsu"])
+        #expect(cases.first?.title.text(for: "id") == "Undian/hadiah palsu")
+        #expect(cases.first?.lastSeenAt == ISO8601DateFormatter().date(from: "2026-11-17T02:00:00Z"))
+    }
+
+    @Test func latestScamsDecodesTheContractFixture() async throws {
+        let server = StubServer()
+        let page = Self.fixture("latest-scams")
+        server.reply { _ in HostStubProtocol.Reply(status: 200, body: page) }
+        let cases = try await server.repository().latestScams()
+        #expect(cases.map(\.id) == ["phishing_bank", "undian_palsu"])
+        #expect(cases.last?.title.text(for: "id") == "Undian/hadiah palsu")
+    }
+
     @Test func everyCallUsesItsContractRoute() async throws {
         let server = StubServer()
         let scan = Self.fixture("blocked-92")
@@ -89,8 +111,37 @@ struct ApiRepositoryTests {
         try await repository.deleteMe()
         let verdictBody = try #require(server.requests.first { $0.path == "/verdicts" }?.json)
         #expect(verdictBody["scanId"] as? String == "scan_1" && verdictBody["value"] as? String == "safe")
+        #expect(verdictBody.keys.contains("notes") == false)
         #expect(server.requests.first { $0.path == "/family/join" }?.json?["code"] as? String == "482193")
         #expect(server.requests.allSatisfy { $0.headers["Authorization"] == "Bearer shoo_test_token_123" })
+    }
+
+    /// GD-07 "Aman" sheet: the reasons travel as `notes`; a blank note is left out, as older builds send it.
+    @Test func verdictSendsNotesOnlyWhenThereAreSome() async throws {
+        let server = StubServer()
+        server.reply { _ in
+            .json(200, #"{"verdict":{"value":"safe","byDeviceId":"dev_me","byName":"Adhella","decidedAt":"2026-10-22T03:00:00Z"}}"#)
+        }
+        let repository = server.repository()
+        _ = try await repository.setVerdict(scanId: "scan_1", value: .safe, notes: "reasons: official_site\nSitus bank saya")
+        _ = try await repository.setVerdict(scanId: "scan_1", value: .safe, notes: "  ")
+        let bodies = server.requests.filter { $0.path == "/verdicts" }.compactMap(\.json)
+        #expect(bodies.count == 2)
+        #expect(bodies[0]["notes"] as? String == "reasons: official_site\nSitus bank saya")
+        #expect(bodies[1].keys.contains("notes") == false)
+    }
+
+    /// #493: `.unknown` only comes from the server; `POST /verdicts` takes `safe` / `not_safe` only, so it is never sent.
+    @Test func unknownVerdictIsNeverSent() async throws {
+        let server = StubServer()
+        server.reply { _ in
+            .json(200, #"{"verdict":{"value":"unknown","byDeviceId":"dev_me","byName":"Adhella","decidedAt":"2026-10-22T03:00:00Z"}}"#)
+        }
+        let repository = server.repository()
+        await #expect(throws: RepositoryError.self) {
+            _ = try await repository.setVerdict(scanId: "scan_1", value: .unknown, notes: nil)
+        }
+        #expect(server.requests.isEmpty)
     }
 
     /// No body asks for the active code; `{"refresh":true}` only from "Refresh code" (contracts/api.md).
@@ -219,6 +270,27 @@ struct ApiRepositoryTests {
         }
         _ = try await server.repository().me()
         #expect(server.session.defaults.string(forKey: AppGroup.Key.guardianName) == "Adhella")
+    }
+
+    /// Fase 27h (F-A12, K10): a `GET /devices/me` sent with the old token answers after "Punya kode undangan?"
+    /// saved the new protected session. That old Guardian profile must not overwrite the new session's
+    /// name or guardian in the App Group (the extension shows them).
+    @Test func profileForAnOlderTokenLeavesTheNewSessionAlone() async throws {
+        let server = StubServer()
+        let session = server.session
+        server.reply { _ in
+            // Meanwhile the switch finished: new token, new name, the new guardian.
+            try! session.save(
+                DeviceRegistration(deviceId: "dev_p", token: "shoo_protected_token", avatarId: "avatar_05"),
+                name: "Rina", mode: .protected
+            )
+            session.setGuardian(GuardianInfo(deviceId: "dev_g", name: "Budi", avatarId: "avatar_04"))
+            return .json(200, #"{"deviceId":"dev_me","name":"Adhella","avatarId":"avatar_01","mode":"guardian","language":"en","guardian":null}"#)
+        }
+        _ = try await server.repository().me()
+        #expect(session.defaults.string(forKey: AppGroup.Key.guardianName) == "Budi")
+        #expect(session.guardian?.deviceId == "dev_g")
+        #expect(session.defaults.string(forKey: AppGroup.Key.deviceName) == "Rina")
     }
 
     // MARK: Delete my data (SECURITY §3 P3, P13)

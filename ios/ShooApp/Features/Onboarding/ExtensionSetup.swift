@@ -9,8 +9,7 @@ enum ExtensionSetup {
         case openSettingsModern
         case openSettingsLegacy
         case switchOn
-        case allowEveryWebsite
-        case openAWebsite
+        case comeBack
     }
 
     static func steps(for version: OperatingSystemVersion) -> [Step] {
@@ -22,10 +21,9 @@ enum ExtensionSetup {
         } else {
             first = .openSettingsLegacy
         }
-        // iOS 26.2+ reads Safari's switch directly (ExtensionStatus). Before that only a heartbeat tells,
-        // and it needs a page load, so the last step sends the user to Safari (S1, BELUM DIVERIFIKASI).
-        if first == .tapTurnOn { return [first, .switchOn, .allowEveryWebsite] }
-        return [first, .switchOn, .allowEveryWebsite, .openAWebsite]
+        // Figma "Aktifkan Ekstensi": three steps. What Safari still needs (All Websites → Allow, or a page load
+        // before iOS 26.2) shows as a note once the user is back and Shoo is not on yet (#135).
+        return [first, .switchOn, .comeBack]
     }
 
     /// Bundle ID of the Safari extension: the app's own ID + ".extension" (ios/project.yml). Never hardcoded (L0).
@@ -67,9 +65,8 @@ extension ExtensionSetup.Step {
         case .tapTurnOn: "Tap the button below to open Safari settings."
         case .openSettingsModern: "Open Settings › Apps › Safari › Extensions."
         case .openSettingsLegacy: "Open Settings › Safari › Extensions."
-        case .switchOn: "Tap Shoo and switch it on."
-        case .allowEveryWebsite: "Tap All Websites and choose Allow, not Ask."
-        case .openAWebsite: "Open any website in Safari, then come back here."
+        case .switchOn: "Switch on the Shoo extension."
+        case .comeBack: "Come back to Shoo and get protected."
         }
     }
 
@@ -78,8 +75,7 @@ extension ExtensionSetup.Step {
         case .tapTurnOn: "hand.tap.fill"
         case .openSettingsModern, .openSettingsLegacy: "gearshape.fill"
         case .switchOn: "switch.2"
-        case .allowEveryWebsite: "checkmark.circle.fill"
-        case .openAWebsite: "safari.fill"
+        case .comeBack: "arrow.uturn.backward.circle.fill"
         }
     }
 }

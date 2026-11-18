@@ -1,0 +1,2 @@
+# Build output of build.sh: APK, dex and the throwaway signing key. Never commit.
+build/

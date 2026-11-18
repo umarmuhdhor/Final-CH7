@@ -17,8 +17,9 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Page replicas](#page-replicas): `GET /replicas/{scanId}`
 - [Screenshots](#screenshots): `GET /screenshots/{scanId}` (deprecated, removed in fase 20b)
 - [Favicons](#favicons): `GET /favicons/{scanId}`
-- [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
+- [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts?url=&domain=`
 - [Blocklist](#blocklist): `GET /blocklist`
+- [Latest scams](#latest-scams): `GET /scams/latest` (Home card)
 - [Config](#config): `GET /config/public`
 - [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /support`, `GET /terms`, `GET /get`
 - [Push notification](#push-notification) sent by `POST /scans`
@@ -49,11 +50,15 @@ Authorization: Bearer shoo_<43 characters>
 ### Request format
 
 - JSON bodies with `Content-Type: application/json`, UTF-8.
-- Maximum body size: 16 KB (most endpoints), 256 KB for `POST /scans`, 1 KB for `POST /verdicts`.
+- Maximum body size: 16 KB (most endpoints), 256 KB for `POST /scans`, 4 KB for `POST /verdicts`.
   A larger body returns `413 too_large`.
 - Times are ISO 8601 with an offset, e.g. `2026-10-22T03:05:00Z`, between 1970 and 2100.
 - Names are 1–20 characters after trimming, without control or bidi-override characters.
-- Domains are lowercase registrable domains without `www.`, e.g. `bca-verifikasi.site`.
+- A `domain` follows `contracts/api.md` Scans "`domain`" (#487): lowercase, no trailing dot, no port; the
+  registrable domain (`bca-verifikasi.site`), the full host on a shared `host_path` platform, or the full host
+  when there is no registrable domain (`192.168.1.1`, `[2001:db8::1]`, `router`, `www.co.id`). The backend
+  keeps no Public Suffix List, so it checks the shape only (`src/http/validate.ts` `DOMAIN`) and, where a url
+  comes with it, that the url host is the domain or a subdomain of it.
 
 ### Errors
 
@@ -87,7 +92,7 @@ after the wait.
 
 ### Caching and privacy headers
 
-- Every response is `Cache-Control: private, no-store`, except `GET /blocklist` (`private, max-age=300`) and `GET /config/public` (`private, max-age=3600`).
+- Every response is `Cache-Control: private, no-store`, except `GET /blocklist` (`private, max-age=300`), `GET /scams/latest` (`private, max-age=600`) and `GET /config/public` (`private, max-age=3600`).
 - Request bodies over 256 KB get `413 too_large` before anything else runs; only `POST /scans` (exactly
   that path) takes up to 512 KB, for the page replica.
   Deleted or disconnected data must disappear at once (Apple privacy rule, `plan/alief/SECURITY.md` §3 P13).
@@ -162,7 +167,10 @@ Free project from pausing.
 the app after the user picks a name and a mode.
 
 - **Auth:** none
-- **Rate limit:** 10 per hour per IP (and 1000 per day across all users)
+- **Rate limit:** 30 per hour per IP (and 1000 per day across all users). Not lower: mobile carriers
+  put many users behind one CGNAT IP, and a reinstall registers again (edge-case QA 2026-11-11 #2).
+  Over it: `429 rate_limited` with `Retry-After` (up to an hour). The app says so ("too many new
+  sign-ups from this network"), not the join copy for `too_many_attempts`.
 
 **Request body**
 
@@ -258,6 +266,11 @@ push language, and the extension's hourly heartbeat that drives "Not connected" 
 
 **Response 200:** `{ "ok": true }`
 
+Other top-level keys are dropped without an error. Builds from before #555 still send
+`liveActivityStartToken` / `liveActivityUpdateToken` (the Dynamic Island, EX-03, removed): they get
+the `200` above, the rest of their body is saved and those two are stored nowhere. `POST /live` is gone
+(`404`).
+
 ### `POST /devices/me/protected`
 
 **For:** *PF-01 proposed.* "Punya kode undangan?" on "Mode akun": a Guardian who protects nobody joins
@@ -270,7 +283,9 @@ another family and is a Protected device from then on.
   attempt limits as [`POST /family/join`](#post-familyjoin)), and only then deletes the old Guardian
   device and everything about it, as in [`DELETE /devices/me`](#delete-devicesme). A failed join
   deletes the new device again: nothing changes for the Guardian.
-- Rate limit: the `POST /devices` limit per IP, plus the join attempt limits.
+- Rate limit: 30 per hour per device (not per IP: it replaces a device, so it never spends the
+  `POST /devices` IP bucket), plus the join attempt limits. Over it: `429 too_many_attempts` with
+  `Retry-After`, like a join.
 
 **Response 200**
 
@@ -287,7 +302,7 @@ The new token is shown only in this response; the old token returns `401` from n
 saves it in the Keychain and the App Group, then sends its APNs token again.
 
 **Errors:** `409 has_members` (disconnect the members first), and the `POST /family/join` errors
-`code_invalid`, `code_expired`, `family_full`, `rate_limited`.
+`code_invalid`, `code_expired`, `family_full`, `too_many_attempts`.
 
 ### `DELETE /devices/me`
 
@@ -302,6 +317,11 @@ everything about it right away.
   files are removed from storage just after the response; if storage cannot be reached, the daily cron
   retries. `POST /devices/me/protected` deletes the old guardian device the same way.
 - The app then clears the Keychain token and the App Group keys and starts onboarding again.
+- **Push to the other side** (QA 2026-11-10 #6), after the delete, to each family contact that has an APNs
+  token, in their language, no `scanId`: a guardian's members get "Adhella stopped protecting you" /
+  "Adhella berhenti melindungimu" (the disconnect text); a member's guardian gets "Maria deleted their Shoo
+  account. You no longer protect them" / "Maria menghapus akun Shoo-nya. Kamu tidak lagi melindunginya". The
+  name is only in the push text; nothing about the deleted device is stored for it.
 
 ## Family
 
@@ -323,7 +343,7 @@ device scans or types, and the same code in the invite link shared on WhatsApp /
 **Response 200**
 
 ```json
-{ "code": "482193", "expiresAt": "2026-10-22T03:35:00.000Z", "inviteUrl": "https://shoo-api.afindo-mi01.workers.dev/j/482193" }
+{ "code": "482193", "expiresAt": "2026-10-22T03:35:00.000Z", "inviteUrl": "https://join.shoo.ai.id/j/482193" }
 ```
 
 - The code is valid for 30 minutes and can be used by several Protected devices until the family is full.
@@ -466,11 +486,26 @@ ever sent. Scans, screenshots, favicons and page replicas are deleted automatica
 **For:** the Safari extension (EX-07) after it blocks a page or finishes all layers on a warning
 page. One page is one scan, one Activity item and (for a Protected device) one push to the Guardian.
 
-**One row per site (PR-05):** when the owner already has a scan of the same `domain`, no new row is
-made. The response is `201 { id }` with that row's id; no screenshot, favicon or page replica is
-stored, and no push is sent unless this visit moves the row from `warning` to `blocked`. The row's `detectedAt` moves to the newest visit, and a higher `score` replaces
-its `url`, `pageTitle`, `score`, `status` and `signals`. The lifetime totals (profile stats) still count
-every scan. Once retention deletes the row (14 days after the first visit), the next visit makes a new one.
+**One row per link (#241, was one row per site, PR-05):** a link is origin + path, without query or
+fragment (`verdict_link`, the same rule as verdicts). When the owner already has a scan of the same
+link, no new row is made. The response is `201 { id, notified: null }` with that row's id, and no
+favicon or page replica is stored. The row's `detectedAt` moves to the newest visit. Which visit
+replaces the row's `url`, `pageTitle`, `score`, `status`, `signals` and `thresholdsVersion`
+(fase 28, K14):
+- Row without a verdict: a `blocked` visit replaces a `warning` row at any score (the admins may have
+  lowered `blockAt`), a `warning` visit never replaces a `blocked` row, and within the same status a
+  higher `score` replaces it.
+- Row with a verdict: only a higher `score` replaces it (until fase 27 Q4 is decided).
+
+Another page of the site gets
+its own row, so the Guardian can decide on `/b` after marking `/a` safe. The lifetime totals (profile
+stats) still count every scan. Once retention deletes the row (14 days after the first visit), the next
+visit makes a new one.
+
+**Push per site:** the Guardian's push and the device's own push go out at most twice per owner +
+`domain`: on the first visit to the site (no other row of that domain), and once more when the site
+first reaches `blocked` (no earlier row of that domain was blocked). A site blocked on its first visit
+pushes once. A scam site with many pages never sends a push per page.
 
 - **Auth:** Bearer, either mode. The owner is always the token's device.
 - **Rate limit:** 120 per hour per device
@@ -481,7 +516,7 @@ optional page replica. Older builds may still send a screenshot, which is ignore
 
 | Field | Type | Required | Rules |
 |---|---|---|---|
-| `url` | string | yes | http(s) URL, ≤ 2048 characters |
+| `url` | string | yes | http(s) URL, ≤ 2048 characters. Stored in its normal form (`new URL(url).href`: dot segments resolved, empty port and edge spaces dropped, non-ASCII percent-encoded), which must also be ≤ 2048 characters, else `422 invalid_body` (fase 28j) |
 | `domain` | string | yes | Registrable domain; the URL's host must be this domain or a subdomain of it |
 | `pageTitle` | string \| null | no | Trimmed and cut to 300 characters |
 | `faviconUrl` | string \| null | no | The site's icon. Kept only if it is an http(s) URL ≤ 2048 characters; the server downloads it (see Favicon rules) |
@@ -499,14 +534,15 @@ Each signal:
 | Field | Type | Rules |
 |---|---|---|
 | `id` | string | 1–64 characters, e.g. `new_domain` |
-| `layer` | integer | 1–5 |
+| `layer` | integer | 1, 2, 3, 4 or 6 (5 is Guardian feedback, no Signal) |
 | `weight` | integer | 0–100 |
 | `label` | `{ en, id }` | Technical text for the Guardian, 1–500 characters each |
 | `labelSimple` | `{ en, id }` | Plain text for the Protected user, 1–500 characters each |
 | `evidence` | string | Optional, ≤ 500 characters |
+| `host` | `{ marks?, official? }` | Optional (DT-04, #497). `marks`: 1–4 strings, 1–253 characters each, host characters only (`a-z`, `0-9`, `.`, `-`, `:`, `[`, `]`; they are parts of `domain`); `official`: 1–253 characters and a domain by the same rule as the scan's `domain` (lowercase, no scheme, path, port, space or trailing dot; IPv4, `[IPv6]`, a single label and `www.` forms pass), because the app shows it as "Real: X" next to a checkmark. Both are checked as sent, not cleaned: any other value, an empty one, or `host: null` gives 422 `invalid_body` at `signals.N.host.official` / `signals.N.host.marks.M`. Other keys inside are dropped. Returned as stored in every scan response; absent on older scans |
 
 `ownerDeviceId` and `ownerName` are accepted but ignored. Control and bidi characters are removed from
-all text.
+all other text.
 
 **Thresholds** (*dashboard phase 05, proposed X1*). The extension decides `status` from the score:
 
@@ -538,7 +574,12 @@ an extension that sends version 0 is held to the old 30/80 rule.
 }
 ```
 
-**Response 201:** `{ "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03" }`
+**Response 201:** `{ "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03", "notified": { "name": "Adhella" } }`
+
+`notified` (#377): the Guardian whose push this scan queued, as `{ name }`, or `null` when no Guardian
+push was queued (no Guardian, the Guardian's own scan, "Kabari saya" or "Aktivitas orang dilindungi"
+off, quiet hours for a warning, no APNs token, the push cap, a repeat visit, or a failed lookup). The
+block page shows "Link terkirim ke <name>" only from this field.
 
 > **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. Since fase 20a (7 Nov 2026) `screenshotBase64` is ignored. `GET /screenshots/{scanId}` stays only for scans already stored and is removed in fase 20b (plan/alief, D-alief-C24/C27).
 
@@ -553,7 +594,7 @@ already stored 50 in the last 24 h, when its family (the Guardian and up to 3 me
 sending IP already sent 300 in the last 24 h. The last 600 uploads and 100 MB of the global quota are
 kept for families with fewer than 10 uploads in the last 24 h. A full device, family or global quota
 is checked before the replica is decompressed and before it counts against the IP's 300. A second
-scan of the same domain within 24 h reuses the earlier replica. The gzip bytes are stored as sent, in a private Cloudflare R2 bucket.
+scan of the same link (origin + path) within 24 h reuses the earlier replica; another page of the site gets its own. The gzip bytes are stored as sent, in a private Cloudflare R2 bucket.
 
 **Screenshot rules.** `screenshotBase64` is ignored since fase 20a (7 Nov 2026): any value (string or
 not) is accepted, the scan is stored and the answer is 201, but no screenshot is stored. A non-empty
@@ -607,7 +648,7 @@ GET /scans?owner=family&status=blocked&limit=20
   open the scan to get them.
 - `faviconUrl` is a link made for you to the stored icon (see [Favicons](#favicons)), valid for 1 hour,
   or `null` when no icon was stored. It is never the site's own favicon URL.
-- `verdict` is the Guardian's decision for that owner and domain, or `null`.
+- `verdict` is the Guardian's decision for this scan's link, by the rule of [`GET /verdicts?url=`](#get-verdictsurldomain), or `null`.
 
 | Error | When |
 |---|---|
@@ -638,14 +679,15 @@ GET /scans?owner=family&status=blocked&limit=20
   "ownerDeviceId": "0b6e0c1e-…",
   "ownerName": "Mom",
   "detectedAt": "2026-10-21T04:05:00.000Z",
-  "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" }
+  "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z", "url": "https://bca-verifikasi.site/login" }
 }
 ```
 
 - `pageTitle` is left out when there is none.
 - `pageReplicaUrl` is a link made for you to the page replica, valid for 1 hour, or `null` when there
   is none (or replicas are switched off). Right after a push the replica may still be saving: it can
-  appear a few seconds later.
+  appear a few seconds later. The link appears only after the copy is stored, so a link never 404s
+  because the upload is still running (fase 22 fix, 8 Nov 2026).
 - `screenshotUrl` is a link made for you, valid for 1 hour, or `null` when there is no screenshot
   (only older scans have one).
 - `faviconUrl` is the same kind of link to the stored icon, or `null` when there is none. The site's
@@ -715,8 +757,10 @@ exactly like a screenshot link.
 
 ## Verdicts
 
-A **verdict** is the Guardian's decision on a flagged domain (warning or blocked): `safe` ("Aman") or
-`not_safe` ("Bahaya"). It applies per owner and domain, so it covers every visit by that person to that site.
+A **verdict** is the Guardian's decision on a flagged page (warning or blocked): `safe` ("Aman") or
+`not_safe` ("Bahaya"). It applies per owner and **link** (#241): origin + path, without query or fragment
+(`shareableUrl` in the extension). A `safe` opens only that link; a `not_safe` also covers the other links
+of the domain, except on a shared host.
 
 ### `POST /verdicts`
 
@@ -725,7 +769,7 @@ confirmation step.
 
 - **Auth:** Bearer, **guardian** only
 - **Rate limit:** 60 per minute per device
-- **Body limit:** 1 KB
+- **Body limit:** 4 KB
 
 **Request body**
 
@@ -733,21 +777,31 @@ confirmation step.
 |---|---|---|
 | `scanId` | string | The warning or blocked scan the Guardian is looking at |
 | `value` | `"safe"` \| `"not_safe"` | |
+| `notes` | string, optional | Why the Guardian decided. At most 280 characters after trim; line breaks become spaces, control and bidi characters are removed; empty = no note. The app requires it on `not_safe`; the backend does not (older builds send none) |
 
 ```json
-{ "scanId": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03", "value": "not_safe" }
+{ "scanId": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03", "value": "not_safe", "notes": "Minta kode OTP lewat WA" }
 ```
 
 **Response 200**
 
 ```json
-{ "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" } }
+{ "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z", "url": "https://bca-verifikasi.site/login" } }
 ```
 
-- A new verdict replaces the previous one for that owner and domain.
+- The verdict is stored for the scan's link (its `url` as origin + path). A new verdict on that link
+  replaces the previous one, its note included.
+- `notes` is never returned and never logged. It is cleared after 14 days; the decision stays, otherwise the
+  link would be blocked again on day 15. A copy, masked (e-mail addresses and digit runs of 8 or more), goes
+  to the admin label and archive row (`admin.mask_note`).
 - A Guardian can decide on its own scans and on its members' scans, warning or blocked (Figma "Detail
   Aktivitas Waspada"; before GD-07 warning scans answered `409`).
-- Every scan of that owner and domain then carries the verdict, warning or blocked.
+- Every scan of that owner then carries it by the lookup rule below, warning or blocked.
+- **Safe lock (#476):** a `safe` verdict cannot change until Shoo's weekly AI review has read it: the
+  first Sunday 18:00 UTC after `decidedAt` (the shoo-admin review cron acts on Mondays in WITA). Until
+  then any new verdict on that link, `safe` or `not_safe`, answers `409 verdict_locked`. A `not_safe`
+  is never locked: blocking more is the safe side. The lock is per link; other pages of the site are free.
+  While locked, the `Verdict` carries `lockedUntil` (ISO), here, in `GET /verdicts` and on a scan.
 - A `not_safe` on a connected member's scan also queues the domain for **manual** review before it can
   enter the global blocklist (at most 10 new domains per Guardian per 24 h). Government, education and bank domains, and
   shared roots such as `co.id` or `vercel.app`, are never queued.
@@ -756,26 +810,48 @@ confirmation step.
 |---|---|
 | `404 not_found` | Unknown scan id |
 | `403 verdict_not_allowed` | Not your scan and not one of your members' scans |
+| `409 verdict_locked` | The link has a `safe` verdict that is still locked. The error carries `lockedUntil`: `{ "error": { "code": "verdict_locked", "message": "…", "lockedUntil": "2026-11-15T18:00:00.000Z" } }` |
 
-### `GET /verdicts?domain=`
+### `GET /verdicts?url=&domain=`
 
-**For:** the extension's block screen (EX-06). While it is open, the extension polls this every
-5 seconds; when the Guardian taps "It's safe" the page opens.
+**For:** the extension's block screen (EX-06). While it is open, the extension polls this on an
+adaptive schedule (every 2 s for the first 2 minutes, every 5 s up to 10 minutes, then every 15 s;
+#414, issue #350); when the Guardian taps "It's safe" the page opens.
 
 - **Auth:** Bearer, either mode (a Guardian's own extension polls for pages it blocked itself)
 - **Rate limit:** 30 per 10 seconds per device. On 429, wait `Retry-After` and poll again; it does not
   mean "no verdict".
-- **Query:** `domain`, the registrable domain. Case, surrounding spaces, a trailing dot and a leading
-  `www.` are tolerated.
+- **Query:** `url`, the page (an http(s) URL; query and fragment are ignored), and `domain`, the scan's
+  `domain` (`contracts/api.md` Scans "`domain`", #487). Case, surrounding spaces and a trailing dot are
+  tolerated in `domain`; a leading `www.` stays (`www.co.id` is not `co.id`). The url's host must be the
+  domain or a subdomain of it, else `422`.
+- **Deprecated:** `?domain=` alone, for builds from before #241 (a leading `www.` is still dropped there): any `not_safe` on that domain, else the
+  newest `safe`. A `not_safe` made on a shared host (step 2 below) covers only its own link, so it never
+  counts here (#495). It goes once the last older build is gone.
 
 **Response 200**
 
 ```json
-{ "verdict": { "value": "safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" } }
+{ "verdict": { "value": "safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z", "url": "https://bca-verifikasi.site/login" } }
 ```
 
-`verdict` is `null` when there is no decision for (this device, this domain). When a member
-disconnects or is removed, the old Guardian's verdicts for that member are deleted.
+Lookup, first match wins:
+1. A verdict on exactly this link, `safe` or `not_safe`.
+2. A `not_safe` by this owner on another link of the same domain, unless **either** link is on a shared
+   host: its host is on, or under, an `admin.domain_lists` row with `hosting = 'host_path'` (`docs.google.com`,
+   `sites.google.com`, `bit.ly`), or the domain itself has `hosting = 'subdomains'` (`vercel.app`). Either
+   link means the one asked about and the one the `not_safe` was made on (#495): a scam Google Form filed
+   under `google.com` by an older build never answers for `accounts.google.com`. A tenant domain such as
+   `evil.github.io` is one owner, so its pages share step 2.
+3. Otherwise `null`. A `safe` never reaches past its own link.
+
+Every `Verdict` (here, in `POST /verdicts` and on a scan) carries `url`: the link it was made on. A
+`url` that differs from the asked link means step 2 matched (another page of the site).
+
+A `safe` verdict that is still locked (#476) also carries `lockedUntil`, the ISO time it can change
+again. The field is absent on `not_safe` and once the weekly review has passed.
+
+When a member disconnects or is removed, the old Guardian's verdicts for that member are deleted.
 
 **Log (fase 25 K7):** when the verdict was decided at most 120 s ago, the Worker logs one line
 `{"event":"verdict_seen","ageMs":…,"value":"safe"}`: the time from the Guardian's tap to this poll,
@@ -822,6 +898,41 @@ Incremental refresh every hour, full refresh daily (`docs/design/blocklist.md`).
 | `422 invalid_body` | `since` is not an ISO time |
 
 Entries can also be approved, rejected, removed or added from the internal admin dashboard through the `admin` schema (no new endpoint here; see `backend/README.md`, "Admin dashboard"). Its approval and removal times use `clock_timestamp()` like the SQL editor path, so `since` paging is unchanged.
+
+## Latest scams
+
+### `GET /scams/latest`
+
+Contract: `contracts/api.md` "GET /scams/latest", `contracts/fixtures/latest-scams.json`. Home card "Scam terbaru di pengguna Shoo" (Protected and
+Pribadi Home). The kinds of scam several Shoo users were blocked from this week, newest first. Any device.
+
+```json
+{
+  "items": [
+    { "category": "undian_palsu", "title": { "en": "Fake prize", "id": "Undian/hadiah palsu" }, "lastSeenAt": "2026-11-17T02:00:00Z" }
+  ]
+}
+```
+
+- `category`: an `admin.categories` id. Clients must accept an unknown one (show `title`).
+- `title`: the admin's category label, never text from a page, URL or domain.
+- `lastSeenAt`: the newest counted scan, server time, rounded down to the hour (the card says "today",
+  "yesterday", "3 days ago").
+- `items` is empty when nothing passes the gates: the app hides the card.
+
+Gates, so nobody can use the card to spread spam or to point at one person
+(`db/repo/latestScams.ts`, migration `20261117100000_latest_scams_public.sql`):
+
+1. Only domains a named admin approved onto the blocklist, with the category chosen then
+   (`admin.v_scam_categories_public`). Pending, rejected or removed domains never count; nor do
+   domains on the trusted/protected lists (official brand sites) or the category `lainnya`.
+2. Only `blocked` scans, by server `created_at` (a client's `detectedAt` cannot keep an item "today"), last 7 days.
+3. Devices count once per category and only once they are 24 h old, so a batch of new devices adds nothing.
+4. A category shows only when 3+ different devices hit it (k-anonymity). No count, domain or URL is returned.
+5. One row per category, at most 4.
+
+Nothing is stored for this: it is counted from live `scans`, so a deleted device or a 14-day-old scan
+stops counting at once.
 
 ## Config
 
@@ -967,8 +1078,13 @@ sending, so two runs never push twice.
   - `id`: `Perlindungan Mom mati: Shoo tidak berjalan di Safari sejak sehari`
 - **Weekly summary** (`notifications.weeklySummary`, off by default): Monday from 08:00 in the
   device's `timeZone`, outside quiet hours, once per local Monday. Counts of `blocked` and `warning`
-  scans in the last 7 days, the Guardian's members included. Counts only, no sites.
+  scans in the last 7 days, the Guardian's members included. Counts only, no sites. Guardian devices
+  only: a protected device never gets it, and its copy from `POST /devices/me/protected` starts with
+  `weeklySummary: false` (the Protected settings page has no switch for it).
   - `en`: `Your week for you and your family: 2 sites blocked, 1 warning.`
   - `id`: `Ringkasan minggu ini untuk kamu dan keluargamu: 2 situs diblokir, 1 peringatan.`
 
 These pushes carry no `scanId`; tapping one opens the app.
+
+If the weekly summary step fails, the "protection off" pushes already claimed in that run are still
+sent, and the run is recorded as failed in `ops_jobs` (fase 28k).

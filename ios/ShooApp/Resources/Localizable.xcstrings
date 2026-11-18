@@ -1,6 +1,242 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@, %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$lld of %3$lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$lld dari %3$lld"
+          }
+        }
+      }
+    },
+    "%lld days ago" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld hari lalu"
+          }
+        }
+      }
+    },
+    "I agree to pages being checked online." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saya setuju halaman dicek secara online."
+          }
+        }
+      }
+    },
+    "See what is sent" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat data yang dikirim"
+          }
+        }
+      }
+    },
+    "Shoo can't point to this on the page: it may be hidden" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo tidak bisa menunjukkan bagian ini di halaman: mungkin tersembunyi"
+          }
+        }
+      }
+    },
+    "Too many changes in a minute. Wait a moment, then try again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak perubahan dalam semenit. Tunggu sebentar, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "What is sent" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data yang dikirim"
+          }
+        }
+      }
+    },
+    "When a suspicious site shows up, you'll see it here." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nanti kalau ada web mencurigakan, akan muncul di sini."
+          }
+        }
+      }
+    },
+    "When the online check is on." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat cek online menyala."
+          }
+        }
+      }
+    },
+    "Page text, form field names and the address. What you type is not sent." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teks halaman, nama kolom formulir, dan alamat. Ketikanmu tidak dikirim."
+          }
+        }
+      }
+    },
+    "The address and a copy are kept. Some of it stays after the account is deleted." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alamat dan salinannya disimpan. Sebagian tetap ada setelah akun dihapus."
+          }
+        }
+      }
+    },
+    "A summary of a suspicious page is sent to DeepSeek, an AI from China." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ringkasan halaman mencurigakan dikirim ke DeepSeek, AI asal Tiongkok."
+          }
+        }
+      }
+    },
+    "Without the online check" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa cek online"
+          }
+        }
+      }
+    },
+    "Shoo checks on your iPhone only, with less protection." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo hanya cek di iPhone, perlindungan lebih terbatas."
+          }
+        }
+      }
+    },
+    "Got it" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengerti"
+          }
+        }
+      }
+    },
+    "Switch on the Shoo extension." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyalakan ekstensi Shoo."
+          }
+        }
+      }
+    },
+    "Come back to Shoo and get protected." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali ke aplikasi Shoo dan terima perlindungan"
+          }
+        }
+      }
+    },
+    "Protect the people\nclosest to you" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lindungi\norang terdekat"
+          }
+        }
+      }
+    },
+    "Protect them by double-checking what Shoo finds for the people closest to you!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melindungi dengan mengecek kembali hasil kalkulasi Shoo milik orang terdekat anda!"
+          }
+        }
+      }
+    },
+    "SUPERVISED MODE" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MODE TERAWASI"
+          }
+        }
+      }
+    },
+    "Not sure?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak yakin?"
+          }
+        }
+      }
+    },
+    "Connect so someone you love can double-check for you" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan agar orang terkasih Anda dapat melakukan pemeriksaan ulang"
+          }
+        }
+      }
+    },
+    "Become supervised" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menjadi yang Terawasi"
+          }
+        }
+      }
+    },
     "Danger detected!" : {
       "localizations" : {
         "id" : {
@@ -17,6 +253,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sementara, jangan dibuka dulu ya"
+          }
+        }
+      }
+    },
+    "Family under threat" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga Dalam Ancaman"
+          }
+        }
+      }
+    },
+    "Suspicious site!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs Mencurigakan!"
+          }
+        }
+      }
+    },
+    "Dangerous site!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs Berbahaya!"
           }
         }
       }
@@ -41,12 +307,52 @@
         }
       }
     },
+    "Connect so someone you love can check it again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan agar orang terkasih Anda dapat melakukan pemeriksaan ulang"
+          }
+        }
+      }
+    },
+    "%@ will check it again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ akan mengecek kembali"
+          }
+        }
+      }
+    },
+    "%@ marked it dangerous" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ menandai berbahaya"
+          }
+        }
+      }
+    },
+    "%@ marked it safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ menandai aman"
+          }
+        }
+      }
+    },
     "Latest scams among Shoo users" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scam terbaru di pengguna Shoo"
+            "value" : "Scam Terbaru Pengguna Shoo"
           }
         }
       }
@@ -146,12 +452,12 @@
         }
       }
     },
-    "%@ still sees Shoo's warning when opening this site." : {
+    "Shoo no longer blocks or warns %@ on this link." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ tetap melihat peringatan Shoo saat membuka situs ini."
+            "value" : "Shoo tidak lagi memblokir atau memperingatkan %@ di link ini."
           }
         }
       }
@@ -231,6 +537,24 @@
     "%lld people you protect will be disconnected." : {
       "extractionState" : "stale",
       "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld person you protect will be disconnected."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld people you protect will be disconnected."
+                }
+              }
+            }
+          }
+        },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
@@ -244,7 +568,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pemeriksaan AI oleh DeepSeek"
+            "value" : "Cek AI oleh DeepSeek"
           }
         }
       }
@@ -255,6 +579,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Izinkan cek online"
+          }
+        }
+      }
+    },
+    "Anyone you protect will be disconnected." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua orang yang kamu lindungi akan terputus."
           }
         }
       }
@@ -315,16 +649,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Halaman yang kamu buka"
-          }
-        }
-      }
-    },
-    "Privacy" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privasi"
           }
         }
       }
@@ -425,6 +749,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tanpa ini, Shoo hanya memeriksa halaman di iPhone-mu dan perlindunganmu berkurang. Halaman berisiko tetap dilaporkan. Kamu bisa mengubahnya di Profil."
+          }
+        }
+      }
+    },
+    "Yesterday" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kemarin"
+          }
+        }
+      }
+    },
+    "You're no longer this person's guardian, so you can't mark this site." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu bukan lagi Guardian orang ini, jadi tidak bisa menandai situs ini."
           }
         }
       }
@@ -591,18 +935,18 @@
       }
     },
     "activity.note.safe %@" : {
-      "comment" : "Activity row (Figma 450:8744): the guardian marked this blocked site safe. %@ = guardian's name or 'you'",
+      "comment" : "Activity row (Figma 450:8744): the guardian marked this link safe (#369: no more warnings on it). %@ = guardian's name or 'you'",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "According to %@, this link is safe.\nShoo still doesn't recommend opening it"
+            "value" : "%@ marked this link safe."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menurut %@ link ini aman.\nShoo tetap tak menyarankan untuk membuka link ini"
+            "value" : "%@ menandai link ini aman."
           }
         }
       }
@@ -1018,6 +1362,38 @@
         }
       }
     },
+    "Checked" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diperiksa"
+          }
+        }
+      }
+    },
+    "Checked by %@" : {
+      "comment" : "#493: a guardian's verdict whose value this build does not know (a newer server). Neutral, never \"safe\". %@ = name",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diperiksa oleh %@"
+          }
+        }
+      }
+    },
+    "Checked by you" : {
+      "comment" : "#493: the viewer's own verdict whose value this build does not know (a newer server). Neutral, never \"safe\".",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diperiksa oleh kamu"
+          }
+        }
+      }
+    },
     "Check your connection and try again." : {
       "localizations" : {
         "id" : {
@@ -1387,22 +1763,11 @@
       }
     },
     "Couldn't load this item" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Item ini gagal dimuat"
-          }
-        }
-      }
-    },
-    "Couldn't load your family" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gagal memuat keluarga"
+            "value" : "Gagal memuat item ini"
           }
         }
       }
@@ -1413,16 +1778,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gagal memuat keluarga. Coba lagi"
-          }
-        }
-      }
-    },
-    "Couldn't load your profile" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gagal memuat profil"
           }
         }
       }
@@ -2290,12 +2645,11 @@
       }
     },
     "Invite link copied" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Link undangan disalin"
+            "value" : "Link undangan tersalin"
           }
         }
       }
@@ -2312,12 +2666,11 @@
       }
     },
     "Invite your family" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Undang keluargamu"
+            "value" : "Undang keluarga"
           }
         }
       }
@@ -2372,6 +2725,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Baru saja"
+          }
+        }
+      }
+    },
+    "just now" : {
+      "comment" : "A family member's Safari was seen less than a second ago, or a few seconds ahead of this phone's clock (A-08). Lowercase: it follows \"active\".",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "baru saja"
           }
         }
       }
@@ -3058,16 +3422,6 @@
         }
       }
     },
-    "Opens a larger view" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Membuka tampilan lebih besar"
-          }
-        }
-      }
-    },
     "Opens the details" : {
       "localizations" : {
         "id" : {
@@ -3111,7 +3465,6 @@
       }
     },
     "People you protect" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -4051,7 +4404,6 @@
       }
     },
     "Shows how to switch Shoo off in Safari" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -4422,6 +4774,16 @@
         }
       }
     },
+    "Start and end can't be the same time." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktu mulai dan selesai tidak boleh sama."
+          }
+        }
+      }
+    },
     "Starts" : {
       "localizations" : {
         "id" : {
@@ -4628,17 +4990,6 @@
         }
       }
     },
-    "That code doesn't match a family. Check the 6 digits and try again." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kode itu tidak cocok dengan keluarga mana pun. Periksa 6 angkanya lalu coba lagi."
-          }
-        }
-      }
-    },
     "That code has expired. Ask your guardian for the new code." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4646,16 +4997,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kode kedaluwarsa, minta kode baru dan coba lagi."
-          }
-        }
-      }
-    },
-    "That QR code isn't a Shoo family code." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kode QR itu bukan kode keluarga Shoo."
           }
         }
       }
@@ -4742,19 +5083,7 @@
         }
       }
     },
-    "This family already has 3 people. Ask your guardian to remove someone first." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keluarga ini sudah berisi 3 orang. Minta Guardian-mu menghapus satu orang dulu."
-          }
-        }
-      }
-    },
     "This iPhone isn't connected to Shoo anymore. Set it up again to stay protected." : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -4832,17 +5161,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hari ini · %@"
-          }
-        }
-      }
-    },
-    "Too many tries. Wait a few minutes, then try again." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terlalu banyak percobaan. Tunggu beberapa menit, lalu coba lagi."
           }
         }
       }
@@ -5321,16 +5639,6 @@
         }
       }
     },
-    "You still protect someone" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu masih melindungi seseorang"
-          }
-        }
-      }
-    },
     "You still protect someone. Disconnect them in Profile first." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5375,23 +5683,22 @@
         }
       }
     },
+    "You won't hear when Shoo blocks a dangerous site." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu tidak akan tahu saat Shoo memblokir situs berbahaya."
+          }
+        }
+      }
+    },
     "You won't hear when your family is at risk." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kamu tidak akan tahu saat keluargamu dalam bahaya."
-          }
-        }
-      }
-    },
-    "You're already connected to a guardian. Disconnect in Profile first." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu sudah terhubung ke Guardian. Putuskan dulu di Profil."
           }
         }
       }
@@ -5524,26 +5831,6 @@
         }
       }
     },
-    "Zoom in" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perbesar"
-          }
-        }
-      }
-    },
-    "Zoom out" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perkecil"
-          }
-        }
-      }
-    },
     "2 of 3" : {
       "localizations" : {
         "id" : {
@@ -5590,16 +5877,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "· Dilindungi"
-          }
-        }
-      }
-    },
-    "Invite your family" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Undang keluarga"
           }
         }
       }
@@ -5700,6 +5977,1355 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tekan tombol di bawah untuk membuka Pengaturan."
+          }
+        }
+      }
+    },
+    "detail.title.dangerous" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): title of a blocked site",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dangerous Site!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs Berbahaya!"
+          }
+        }
+      }
+    },
+    "detail.title.suspicious" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): title of a warning",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suspicious Site!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs Mencurigakan!"
+          }
+        }
+      }
+    },
+    "detail.title.markedBlocked" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): title once the guardian confirmed a scam",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Site Marked as Blocked!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs Sudah Ditandai Blokir!"
+          }
+        }
+      }
+    },
+    "detail.title.youMarkedSafe" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): title once the viewer marked it safe",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You Marked This Safe"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda Menandai ini Aman"
+          }
+        }
+      }
+    },
+    "%@ marked this safe" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): title once a guardian marked it safe. %@ = guardian's name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Marked This Safe"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Menandai ini Aman"
+          }
+        }
+      }
+    },
+    "detail.riskScore" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): label over 92/100",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo risk score"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Penilaian Risiko Shoo"
+          }
+        }
+      }
+    },
+    "detail.openedBy" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): label over the chip of the person who opened the site",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opened by"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil yang mengakses"
+          }
+        }
+      }
+    },
+    "detail.siteStatus" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): label over the status chip",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Site status"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status situs"
+          }
+        }
+      }
+    },
+    "detail.status.warning" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): status chip of a warning",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warning"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waspada"
+          }
+        }
+      }
+    },
+    "detail.status.unblocked" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): status chip of a blocked site a guardian marked safe",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unblocked"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blokir Dibuka"
+          }
+        }
+      }
+    },
+    "detail.flaggedByShoo" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): no guardian decided yet",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "flagged by Shoo"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ditandai oleh Shoo"
+          }
+        }
+      }
+    },
+    "confirmed by %@ · %@" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): who decided and when. %1$@ = name, %2$@ = time",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dikonfirmasi %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "confirmed by you · %@" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): the viewer decided. %@ = time",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dikonfirmasi Anda · %@"
+          }
+        }
+      }
+    },
+    "Is this site dangerous?" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): question over Aman / Bahaya on a blocked site",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apakah situs ini berbahaya?"
+          }
+        }
+      }
+    },
+    "%lld of %lld characters" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dari %lld karakter"
+          }
+        }
+      }
+    },
+    "Change avatar" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah avatar"
+          }
+        }
+      }
+    },
+    "Change name" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah nama"
+          }
+        }
+      }
+    },
+    "Connected with" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terhubung dengan"
+          }
+        }
+      }
+    },
+    "Days protecting" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari melindungi"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus"
+          }
+        }
+      }
+    },
+    "Everything in this app, including your profile, history and family links, is deleted for good and can't be recovered." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua data yang ada di aplikasi ini termasuk profil, riwayat, dan koneksi keluarga hilang permanen dan tidak bisa dipulihkan."
+          }
+        }
+      }
+    },
+    "Guardian mode" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode Guardian"
+          }
+        }
+      }
+    },
+    "Guardian user" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengguna pengawas"
+          }
+        }
+      }
+    },
+    "Personal mode" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode Pribadi"
+          }
+        }
+      }
+    },
+    "Personal user" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengguna pribadi"
+          }
+        }
+      }
+    },
+    "Pick a character." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih karakter."
+          }
+        }
+      }
+    },
+    "Protected since %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dilindungi sejak %@"
+          }
+        }
+      }
+    },
+    "Protected user" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengguna dilindungi"
+          }
+        }
+      }
+    },
+    "Status" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status"
+          }
+        }
+      }
+    },
+    "This name shows in %@'s app." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama ini terlihat di app %@."
+          }
+        }
+      }
+    },
+    "Your family sees this name." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama ini terlihat oleh keluarga Anda."
+          }
+        }
+      }
+    },
+    "Only your guardian can disconnect you. Ask them first, then join another family." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya Guardian-mu yang bisa memutuskan koneksi. Minta dulu, lalu bergabung ke keluarga lain."
+          }
+        }
+      }
+    },
+    "If your guardian disconnected you or deleted their account, ask them for a new invite code. Shoo keeps protecting you in the meantime." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalau Guardian-mu memutuskan koneksi atau menghapus akunnya, minta kode undangan baru. Sementara itu Shoo tetap melindungimu."
+          }
+        }
+      }
+    },
+    "You're already connected to a guardian. Only they can disconnect you: ask them first." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah terhubung ke Guardian. Hanya Guardian-mu yang bisa memutuskan koneksi, jadi minta dulu."
+          }
+        }
+      }
+    },
+    "You've got a family invite" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu dapat undangan keluarga"
+          }
+        }
+      }
+    },
+    "You can't join another family yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum bisa gabung keluarga lain"
+          }
+        }
+      }
+    },
+    "You're already protected by %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah dilindungi %@"
+          }
+        }
+      }
+    },
+    "Join as Protected so your guardian can help check suspicious sites." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gabung sebagai Protected supaya Guardian-mu bisa bantu cek situs mencurigakan."
+          }
+        }
+      }
+    },
+    "You still protect someone. Disconnect them in Profile first, then open the link again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu masih melindungi orang lain. Putuskan dulu di Profil, lalu buka link ini lagi."
+          }
+        }
+      }
+    },
+    "Only %@ can disconnect you. This invite won't be used." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya %@ yang bisa memutus hubunganmu. Undangan ini tidak dipakai."
+          }
+        }
+      }
+    },
+    "View" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat"
+          }
+        }
+      }
+    },
+    "Open Profile" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Profil"
+          }
+        }
+      }
+    },
+    "This iPhone isn't protected yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone ini belum terlindungi"
+          }
+        }
+      }
+    },
+    "Set up again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siapkan lagi"
+          }
+        }
+      }
+    },
+    "Checking Shoo…" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengecek Shoo…"
+          }
+        }
+      }
+    },
+    "Checking the Safari extension" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memeriksa ekstensi Safari"
+          }
+        }
+      }
+    },
+    "Status not available yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status Belum Tersedia"
+          }
+        }
+      }
+    },
+    "Connection not read yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koneksi belum terbaca"
+          }
+        }
+      }
+    },
+    "Couldn't load" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gagal memuat"
+          }
+        }
+      }
+    },
+    "Check your connection." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa koneksi Anda."
+          }
+        }
+      }
+    },
+    "Couldn't save" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gagal menyimpan"
+          }
+        }
+      }
+    },
+    "Can't be marked yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum bisa ditandai"
+          }
+        }
+      }
+    },
+    "Open this site's details first." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat detail situs ini dulu."
+          }
+        }
+      }
+    },
+    "Open details" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka detail"
+          }
+        }
+      }
+    },
+    "Switch the Shoo extension off." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matikan ekstensi Shoo."
+          }
+        }
+      }
+    },
+    "Shoo off means protection stops. Your family won't get warnings anymore." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo mati, perlindungan berhenti. Keluarga tak lagi mendapat peringatan."
+          }
+        }
+      }
+    },
+    "That code doesn't match. Check it again, or ask your Guardian for a new code." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode tidak cocok. Periksa lagi, atau minta kode baru ke Guardian-mu."
+          }
+        }
+      }
+    },
+    "This family already has 3 people. Ask your Guardian to remove one person first." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga ini sudah berisi 3 orang. Minta Guardian-mu menghapus satu orang dulu."
+          }
+        }
+      }
+    },
+    "Too many tries. For your safety, wait a moment before trying again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak percobaan. Demi keamananmu, tunggu sebentar sebelum mencoba lagi."
+          }
+        }
+      }
+    },
+    "Too many sign-ups from this network. Try again in 1 hour." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak pendaftaran dari jaringan ini. Coba lagi dalam 1 jam."
+          }
+        }
+      }
+    },
+    "This QR isn't a Shoo invite code. Scan the QR from your Guardian's Shoo app." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QR ini bukan kode undangan Shoo. Pindai QR dari aplikasi Shoo milik Guardian-mu."
+          }
+        }
+      }
+    },
+    "Just enter the code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masukkan kode saja"
+          }
+        }
+      }
+    },
+    "Retype code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketik ulang kode"
+          }
+        }
+      }
+    },
+    "Try again in %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba lagi dalam %@"
+          }
+        }
+      }
+    },
+    "Try again in %lld hours" : {
+      "comment" : "Grey wait button on Connect after a sign-up limit; counts down to minutes under an hour (U-18).",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Try again in %lld hour"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Try again in %lld hours"
+                }
+              }
+            }
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba lagi dalam %lld jam"
+          }
+        }
+      }
+    },
+    "Try again in %lld minutes" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba lagi dalam %lld menit"
+          }
+        }
+      }
+    },
+    "Preparing the invite code…" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyiapkan kode undangan…"
+          }
+        }
+      }
+    },
+    "Code can't be made yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode belum bisa dibuat"
+          }
+        }
+      }
+    },
+    "Check your internet connection, then try again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa koneksi internetmu, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Family is full" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga sudah penuh"
+          }
+        }
+      }
+    },
+    "A family has at most 3 people.\nRemove one to invite again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga maksimal 3 orang.\nHapus satu untuk mengundang lagi."
+          }
+        }
+      }
+    },
+    "Manage family" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kelola Keluarga"
+          }
+        }
+      }
+    },
+    "Expired" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kedaluwarsa"
+          }
+        }
+      }
+    },
+    "An item can disappear for one of these reasons:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Item bisa hilang karena salah satu hal ini:"
+          }
+        }
+      }
+    },
+    "14 days have passed" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah lewat 14 hari"
+          }
+        }
+      }
+    },
+    "The family link was removed" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungan keluarga diputus"
+          }
+        }
+      }
+    },
+    "Back to Activity" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali ke Aktivitas"
+          }
+        }
+      }
+    },
+    "Connection problem" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gangguan koneksi"
+          }
+        }
+      }
+    },
+    "This item can't be shown right now. Check your connection, then try again!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Item ini belum bisa ditampilkan sekarang. Periksa koneksi, lalu coba lagi!"
+          }
+        }
+      }
+    },
+    "Couldn't refresh" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gagal memperbarui"
+          }
+        }
+      }
+    },
+    "Showing the last data. " : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan data terakhir. "
+          }
+        }
+      }
+    },
+    "Data can't be viewed yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data belum bisa dilihat"
+          }
+        }
+      }
+    },
+    "No longer connected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah tidak terhubung"
+          }
+        }
+      }
+    },
+    "This person has disconnected. You no longer get warnings from them." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orang ini sudah memutus koneksi. Kamu tidak lagi menerima peringatan darinya."
+          }
+        }
+      }
+    },
+    "Reminder sent" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengingat terkirim"
+          }
+        }
+      }
+    },
+    "Safari extension off" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstensi Safari mati"
+          }
+        }
+      }
+    },
+    "%@ will get a notification." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ akan dapat notifikasi."
+          }
+        }
+      }
+    },
+    "%@ isn't protected yet." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ belum terlindungi."
+          }
+        }
+      }
+    },
+    "Try Again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba Lagi"
+          }
+        }
+      }
+    },
+    "Couldn't load the profile" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil belum bisa dimuat"
+          }
+        }
+      }
+    },
+    "Official site" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs resmi"
+          }
+        }
+      }
+    },
+    "I know this site" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saya kenal situs ini"
+          }
+        }
+      }
+    },
+    "Used it before, no problems" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pernah dipakai, aman"
+          }
+        }
+      }
+    },
+    "Sent by someone I trust" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dari orang yang saya percaya"
+          }
+        }
+      }
+    },
+    "Other" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lainnya"
+          }
+        }
+      }
+    },
+    "Why is it safe?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kenapa aman?"
+          }
+        }
+      }
+    },
+    "Note (optional)" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catatan (opsional)"
+          }
+        }
+      }
+    },
+    "Don't write a PIN, OTP or account number." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangan tulis PIN, OTP, atau nomor rekening."
+          }
+        }
+      }
+    },
+    "Mark as safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tandai sebagai aman"
+          }
+        }
+      }
+    },
+    "e.g. This is my bank's real site, I checked the address." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contoh: Ini situs resmi bank saya, alamatnya sudah saya cek."
+          }
+        }
+      }
+    },
+    "Check your connection. Your note isn't lost." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa koneksi. Catatanmu tidak hilang."
+          }
+        }
+      }
+    },
+    "Mark Safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tandai Aman"
+          }
+        }
+      }
+    },
+    "Pick at least one reason first" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih minimal satu alasan dulu"
+          }
+        }
+      }
+    },
+    "You can change this after Shoo's weekly review, %@." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bisa diubah lagi setelah Shoo belajar mingguan, %@."
+          }
+        }
+      }
+    },
+    "Shoo flagged this site. Tell us why it's safe. It helps Shoo block fewer good sites." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo menandai situs ini. Beri tahu kami kenapa aman. Ini membantu Shoo tidak salah blokir situs yang baik."
+          }
+        }
+      }
+    },
+    "This site stays safe until Shoo's weekly review. You can change it after that." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs ini tetap aman sampai Shoo belajar mingguan. Setelah itu kamu bisa mengubahnya."
+          }
+        }
+      }
+    },
+    "Address is 1 day old" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umur alamat 1 hari"
+          }
+        }
+      }
+    },
+    "Address is %lld days old" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umur alamat %lld hari"
+          }
+        }
+      }
+    },
+    "Address made recently" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alamat baru dibuat"
+          }
+        }
+      }
+    },
+    "On a scam list" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada di daftar penipuan"
+          }
+        }
+      }
+    },
+    "Cheap ending often used by scam sites" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akhiran murah yang sering dipakai situs penipuan"
+          }
+        }
+      }
+    },
+    "Not the brand's official address" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bukan alamat resmi brand ini"
+          }
+        }
+      }
+    },
+    "Real: %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yang asli: %@"
+          }
+        }
+      }
+    },
+    "Brand name with extra words" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama brand ditambah kata lain"
+          }
+        }
+      }
+    },
+    "The link itself looks like a scam link" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link-nya sendiri mirip link penipuan"
+          }
+        }
+      }
+    },
+    "Something is off with this address" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada yang janggal dengan alamat ini"
+          }
+        }
+      }
+    },
+    "This account isn't linked to a guardian yet." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akun ini belum terhubung ke Guardian."
+          }
+        }
+      }
+    },
+    "How to connect" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cara menghubungkan"
+          }
+        }
+      }
+    },
+    "Ask your guardian to open Shoo" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minta Guardian buka Shoo"
+          }
+        }
+      }
+    },
+    "On your guardian's iPhone" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di iPhone milik Guardian-mu"
+          }
+        }
+      }
+    },
+    "Your guardian taps Invite family" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardian ketuk Undang Keluarga"
+          }
+        }
+      }
+    },
+    "A QR code and an invite code appear" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muncul kode QR dan kode undangan"
+          }
+        }
+      }
+    },
+    "Scan the QR or enter the code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan QR atau masukkan kode"
+          }
+        }
+      }
+    },
+    "Tap the button below" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk tombol di bawah"
+          }
+        }
+      }
+    },
+    "Shoo keeps protecting you in the meantime. Scam sites stay blocked on this iPhone." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sementara itu Shoo tetap melindungimu. Situs penipuan tetap diblokir di iPhone ini."
           }
         }
       }

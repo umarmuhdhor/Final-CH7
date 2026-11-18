@@ -1,44 +1,66 @@
 import SwiftUI
 
-/// Protected Home (PR-04, Figma "protected/Home" 957:11102 / 957:11377): blue hero with the shield, who looks
-/// after me, the site blocked in the last 24 h with its gauge, recent activity and the latest scams.
+/// Protected Home (PR-04, Figma "protected/Home"): the blue hero with "Terhubung dengan …" under the headline, then on
+/// the page the newest risky site of the last day with what the guardian decided, recent activity and the latest scams.
+/// Frames: nothing today 1115:17162; blocked 1115:17294; warning 1363:12167; marked dangerous 1373:13100 / 1382:2227;
+/// marked safe 1373:12376 / 1373:12752; no guardian yet 1382:2393 (the "Mode Terawasi" card instead of the pill).
 struct ProtectedShieldView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: ShieldModel
-    /// The hero is scrolled out from under the bar: the top scrim takes over as the dark backdrop.
+    /// Bumped when Shoo turns on while the page is up (back from Settings): one success tap.
+    @State private var turnedOn = 0
+    /// The hero is scrolled out from under the status bar: the top scrim takes over as its backdrop.
     @State private var isHeroHidden = false
+    /// Bumped when a failed page loads after "Try again": one success tap.
+    @State private var recovered = 0
 
     init(repository: any ShooRepository, extensionStatus: @escaping () async -> ExtensionStatus) {
         _model = State(initialValue: ShieldModel(repository: repository, extensionStatus: extensionStatus))
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
+    private var scrim: Color { colorScheme == .dark ? HomeTheme.navy : HomeTheme.background }
+    private var isLoaded: Bool { model.state == .loaded }
+    /// Loaded and nobody looks after this phone: no pill, the "Mode Terawasi" card (1382:2393).
+    private var hasNoGuardian: Bool { isLoaded && model.guardian == nil }
+    private var showsSupervisedCard: Bool { hasNoGuardian && !env.settings.supervisedCardDismissed }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 hero
+                    // Off ↔ on (back from Settings): the headline cross-fades and the shield eases over, not a jump.
+                    // Not on the first load: the status is read before the page counts as loaded.
+                    .animation(
+                        isLoaded ? (reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.35)) : nil,
+                        value: model.extensionStatus.isActive
+                    )
+                    // "Checking Shoo…" → protected / not protected, and "Status not available yet" ↔ loaded:
+                    // the headline and the pill cross-fade.
+                    .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.35), value: heroPhase)
                     .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < 140 } action: { isHeroHidden = $0 }
-                // Figma 957:11102: one 24 pt column, 24 pt from the screen edges.
-                VStack(spacing: 24) {
+                // Figma "Status": the page itself rounds up over the hero; one 354 pt column, 24 from the edges.
+                VStack(spacing: 0) {
                     content
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)
+                .frame(maxWidth: .infinity)
+                .background(HomeTheme.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             }
             // Light only, like the Figma; scoped to the page so the bars keep their own scheme.
             .environment(\.colorScheme, .light)
         }
+        // No navigation bar (see HomeTopBar): the page starts where the bar's bottom edge would be.
+        .safeAreaPadding(.top, HomeTopBar.barHeight)
         .scrollIndicators(.hidden)
         .background(HomeTheme.background)
-        .toolbar {
-            HomeProfileToolbarItem(name: model.profileName) { env.router.openProfile() }
-        }
         .overlay(alignment: .top) {
-            LinearGradient(colors: [HomeTheme.navy, HomeTheme.navy.opacity(0.85), HomeTheme.navy.opacity(0)],
-                           startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [scrim, scrim.opacity(0.85), scrim.opacity(0)], startPoint: .top, endPoint: .bottom)
                 .frame(height: 110)
                 .ignoresSafeArea(edges: .top)
                 .opacity(isHeroHidden ? 1 : 0)
@@ -46,17 +68,31 @@ struct ProtectedShieldView: View {
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        // Figma "Top Bar" 1115:17282: the profile circle only, right under the status bar.
+        .overlay(alignment: .top) {
+            HomeTopBar(avatarId: model.profileAvatarId ?? env.session?.avatarId, onSwitch: nil) { env.router.openProfile() }
+        }
+        .toolbar(.hidden, for: .navigationBar)
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
         .refreshable { await model.refresh() }
+        .onChange(of: model.refreshFailed) { _, failed in
+            guard failed else { return }
+            AccessibilityNotification.Announcement(
+                L10n.string("Couldn't refresh. Pull down to try again.", language: language)
+            ).post()
+        }
         // Coming back from Settings can flip Off → Active: say it (not on the first load).
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
             guard model.state == .loaded else { return }
+            if isActive { turnedOn += 1 }
             AccessibilityNotification.Announcement(
                 L10n.string(isActive ? "You're protected!" : "You're not protected yet", language: language)
             ).post()
+        }
+        // A push while this screen is open (new scan, verdict, member change): reload, as Guardian Home does (A-12).
+        .onChange(of: env.pushesWhileOpen) { _, count in
+            Task { await model.pushesWhileOpenChanged(to: count) }
         }
         // Back from Connect (PR-01): show the new guardian.
         .onChange(of: env.router.isConnectPresented) { _, isPresented in
@@ -77,233 +113,404 @@ struct ProtectedShieldView: View {
         ) {
             TurnOnExtensionSheet()
         }
+        // Only off → on, never the other way round.
+        .sensoryFeedback(.success, trigger: turnedOn)
+        .sensoryFeedback(.success, trigger: recovered)
+        // A failed load is felt too, not only read.
+        .sensoryFeedback(.error, trigger: model.state) { _, now in now == .failed }
+        .onChange(of: model.state) { old, now in
+            if old == .failed, now == .loaded { recovered += 1 }
+        }
     }
 
     // MARK: Hero
 
+    /// What the hero says: still reading the extension, the page failed, or the status itself.
+    private enum HeroPhase: Equatable { case checking, failed, status }
+
+    private var heroPhase: HeroPhase {
+        if !model.extensionChecked { return .checking }
+        return model.state == .failed ? .failed : .status
+    }
+
     private var hero: some View {
         let isActive = model.extensionStatus.isActive
+        let phase = heroPhase
+        let showsPill = (isLoaded && model.guardian != nil) || phase != .status
         var layout = HomeHeroLayout.personal
-        // The background's fade ends where the next card starts (Figma y 443).
-        layout.backgroundOverhang = 0
+        // Figma "box": 349…469 with nothing today, 362…482 over the card; 1382:2393 (no pill) moves the gradient
+        // up to y −31 and stretches the fade to 141 pt from 317.
+        if hasNoGuardian {
+            layout.backdrop = HeroBackdrop(imageTop: -31, boxTop: 317.08, boxHeight: 141)
+        } else {
+            layout.backdrop = HeroBackdrop(boxTop: model.cardScan == nil ? 349 : 362)
+        }
+        // The sheet starts at 403 under the pill (24.4 below it) and at 379 without one.
+        let bottom: CGFloat = showsPill ? 24.38 : 379 - layout.titleBottom
+        let showsNextStep = phase == .status && model.extensionStatus.nextStep != nil
+        let title: LocalizedStringKey = switch phase {
+        case .checking: "Checking Shoo…"
+        case .failed: "Status not available yet"
+        case .status: isActive ? "You're protected!" : "You're not protected yet"
+        }
+        let identifier = switch phase {
+        case .checking: "shield.status.checking"
+        case .failed: "shield.status.unavailable"
+        case .status: isActive ? "shield.status.active" : "shield.status.off"
+        }
         return HomeHero(
             style: .blue,
-            title: isActive ? "You're protected!" : "You're not protected yet",
-            titleIdentifier: isActive ? "shield.status.active" : "shield.status.off",
-            shieldOn: isActive,
+            title: title,
+            titleIdentifier: identifier,
+            shieldOn: isActive || phase == .checking,
             layout: layout,
-            bottomPadding: 24
+            bottomPadding: showsNextStep ? 20 : bottom
         ) {
-            VStack(spacing: 16) {
-                if model.extensionStatus.nextStep != nil {
-                    Button { env.router.isTurnOnPresented = true } label: {
-                        Text(isActive ? "Finish setup" : "Turn on now")
-                            .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
-                            .underline()
-                            .foregroundStyle(.white)
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
-                    .accessibilityIdentifier("shield.turnOn")
-                }
-                if model.state == .loaded {
-                    GuardianPill(guardian: model.guardian) { env.router.isConnectPresented = true }
-                        .padding(.horizontal, 13)
+            VStack(spacing: 8) {
+                switch phase {
+                case .checking:
+                    // Figma 1681:5275: a blue dot that breathes while Safari answers.
+                    HeroStatusPill(text: Text("Checking the Safari extension"), dot: Color(hex: 0x1A73D9), pulses: true)
+                        .accessibilityIdentifier("shield.checking")
+                case .failed:
+                    // Figma 1665:3122: grey dot, nothing to report yet.
+                    HeroStatusPill(text: Text("Connection not read yet"), dot: HomeTheme.offline)
+                        .accessibilityIdentifier("shield.unavailable")
+                case .status:
+                    statusAccessory(showsNextStep: showsNextStep, showsPill: showsPill, isActive: isActive)
                 }
             }
-            // Figma: the card 30 under the headline's text box.
-            .padding(.top, model.extensionStatus.nextStep != nil ? 4 : 30)
+            // Figma: the pill 12 under the headline's text box (13 here: SwiftUI's 28 pt box ends 1 pt higher).
+            .padding(.top, showsNextStep ? 4 : (showsPill ? 13 : 0))
         }
     }
 
-    // MARK: Below the hero
+    @ViewBuilder
+    private func statusAccessory(showsNextStep: Bool, showsPill: Bool, isActive: Bool) -> some View {
+        if showsNextStep {
+            Button { env.router.isTurnOnPresented = true } label: {
+                Text(isActive ? "Finish setup" : "Turn on now")
+                    .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
+                    .underline()
+                    .foregroundStyle(.white)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
+            .accessibilityIdentifier("shield.turnOn")
+        }
+        if showsPill, let guardian = model.guardian {
+            ConnectedPill(name: guardian.name)
+                .transition(.opacity)
+        }
+    }
+
+    // MARK: The page
 
     @ViewBuilder
     private var content: some View {
         switch model.state {
         case .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, minHeight: 120)
+            // The rows that are coming, sweeping while they load.
+            SkeletonActivity(rows: 4, animating: true)
+                .padding(.top, 32)
+                .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("Loading"))
         case .failed:
-            VStack(spacing: 12) {
-                Text("Couldn't load your Shield").font(.headline)
-                Text("Check your connection and try again.").foregroundStyle(.primary)
-                Button { Task { await model.retry() } } label: { Text("Try again").frame(minHeight: 44) }
-                    .buttonStyle(.borderedProminent)
-            }
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .padding(16)
-        case .loaded:
-            if let scan = model.recentBlocked {
-                BlockedCard(scan: scan, guardian: model.guardian, language: language) {
-                    env.router.showDetail(scanId: scan.id)
+            // Figma "protected/Home · Gagal memuat" (1665:3122): the card 28 under the sheet's top, "Aktivitas
+            // Terakhir" 22 under it, then four grey rows.
+            VStack(alignment: .leading, spacing: 22) {
+                StateNoticeCard(
+                    title: "Couldn't load",
+                    message: Text(verbatim: L10n.string(model.loadFailure.message(connection: "Check your connection."), language: language)),
+                    actionTitle: "Try again"
+                ) {
+                    await model.retry()
                 }
-                // Figma 957:11377: 360 wide, 26 from what is above and below.
-                .padding(.horizontal, -3)
-                .padding(.vertical, 2)
+                .accessibilityIdentifier("shield.loadError")
+                .stateEntrance()
+                SkeletonActivity(rows: 4)
             }
-            RecentActivity(
-                scans: model.recent,
-                language: language,
-                hasSitesAbove: model.recentBlocked != nil,
-                onOpen: { env.router.showDetail(scanId: $0.id) },
-                onSeeAll: { env.router.selectedTab = .activity }
-            )
-            if !model.scamCases.isEmpty {
-                LatestScamsCard(cases: model.scamCases)
+            .padding(.top, 28)
+        case .loaded:
+            loaded
+                .modifier(LoaderReplacementFade())
+        }
+    }
+
+    /// Figma's gaps per frame: the card 24 under the sheet's top; then 38 to "Aktivitas Terakhir" and 32 to the scams
+    /// (1115:17294). Nothing today: the list 32 under the top, the scams 58 under it (1115:17162). No guardian: the
+    /// "Mode Terawasi" card 29 under the site card, the list 16 under it, the scams 29 (1382:2393); without a site
+    /// card it sits 31 under the top with 37 to the list and the scams, as on Pribadi (1382:10567).
+    @ViewBuilder
+    private var loaded: some View {
+        let card = model.cardScan
+        let cta = showsSupervisedCard
+        let gaps: (top: CGFloat, list: CGFloat, scams: CGFloat) = switch (card != nil, cta) {
+        case (true, true): (24, 16, 29)
+        case (true, false): (24, 38, 32)
+        case (false, true): (31, 37, 37)
+        case (false, false): (32, 0, 58)
+        }
+        Color.clear.frame(height: gaps.top)
+        // A-01 (fase 28b K4, D-alief-A12): what is shown stays, the pill included, and this says it may be old.
+        // The same notice as Activity's and Guardian Home's. Only the notice animates: the rows a good refresh
+        // brings in the same update do not.
+        VStack(spacing: 0) {
+            if model.refreshFailed {
+                RefreshFailedNotice(retryIdentifier: "shield.refreshRetry") { await model.refresh() }
+                    .transition(StateMotion.transition(reduceMotion: reduceMotion, edge: .top))
+                    .accessibilityIdentifier("shield.refreshFailed")
+                    .padding(.bottom, 24)
             }
+        }
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: model.refreshFailed)
+        if let card {
+            ProtectedSiteCard(scan: card, guardian: model.guardian, language: language) {
+                env.router.showDetail(scanId: card.id)
+            }
+            .padding(.bottom, cta ? 29 : gaps.list)
+        }
+        if cta {
+            SupervisedModeCard(onConnect: { env.router.isConnectPresented = true }) {
+                withAnimation(.easeOut(duration: 0.2)) { env.settings.supervisedCardDismissed = true }
+            }
+            .padding(.bottom, card == nil ? gaps.list : 16)
+            .transition(.opacity)
+        }
+        RecentActivity(
+            scans: model.recent,
+            language: language,
+            hasSitesAbove: card != nil,
+            onOpen: { env.router.showDetail(scanId: $0.id) },
+            onSeeAll: { env.router.selectedTab = .activity }
+        )
+        if !model.scamCases.isEmpty {
+            LatestScamsCard(cases: model.scamCases)
+                .padding(.top, gaps.scams)
         }
     }
 }
 
 // MARK: - Guardian
 
-/// Figma "Card Perlindungan": "Terhubung dengan Virellia"; no guardian → a way to connect (PR-01).
-private struct GuardianPill: View {
-    let guardian: GuardianInfo?
-    let onConnect: () -> Void
+/// The glass capsule under the hero's headline (Figma "Card Perlindungan"): a dot and a line. `pulses`: the dot
+/// breathes while something is being checked (still with Reduce Motion).
+struct HeroStatusPill: View {
+    let text: Text
+    let dot: Color
+    var pulses = false
+    @Environment(\.shooReduceGlass) private var reduceGlass
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var breathing = false
 
     var body: some View {
-        Group {
-            if let guardian {
-                HStack(spacing: 12) {
-                    InitialAvatar(name: guardian.name, size: 35, fontSize: 14.3)
-                    Text("Connected with \(guardian.name)")
-                        .onboardingFont(18, relativeTo: .body)
-                        .tracking(-0.18)
-                        .foregroundStyle(HomeTheme.navy)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .accessibilityElement(children: .combine)
-            } else {
-                Button(action: onConnect) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "person.crop.circle.badge.plus")
-                            .font(.system(size: 22))
-                            .foregroundStyle(HomeTheme.action)
-                            .frame(width: 33, height: 33)
-                            .accessibilityHidden(true)
-                        Text("Connect to your guardian")
-                            .onboardingFont(17, weight: .medium, relativeTo: .body)
-                            .foregroundStyle(HomeTheme.action)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Image(systemName: "chevron.right")
-                            .foregroundStyle(HomeTheme.secondaryInk)
-                            .accessibilityHidden(true)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("shield.connect")
-            }
+        HStack(spacing: 4) {
+            Circle()
+                .fill(dot)
+                .frame(width: 8.88, height: 8.88)
+                .opacity(pulses && breathing ? 0.35 : 1)
+                .scaleEffect(pulses && breathing && !reduceMotion ? 0.8 : 1)
+                .accessibilityHidden(true)
+            text
+                .onboardingFont(13, tracking: -0.13, relativeTo: .footnote)
+                .foregroundStyle(HomeTheme.glassInk)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
         }
-        .padding(.horizontal, 17)
-        .padding(.vertical, 15)
-        .frame(minHeight: 69)
-        .homeCard(cornerRadius: 21)
-        .accessibilityIdentifier("shield.guardian")
+        .padding(.horizontal, 16.98)
+        .padding(.vertical, 8)
+        .frame(minHeight: 42.62)
+        .background(.white.opacity(reduceGlass ? 1 : 0.28), in: Capsule())
+        .overlay(Capsule().strokeBorder(.white.opacity(0.9), lineWidth: 1.06))
+        .accessibilityElement(children: .combine)
+        .onAppear {
+            guard pulses, !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { breathing = true }
+        }
     }
 }
 
-// MARK: - Blocked card
+/// Figma "Card Perlindungan" (1373:13094): a 42.6 pt glass capsule, white 28 % with a 1 pt white 90 % ring;
+/// a green 8.9 pt dot, 4 pt, "Terhubung dengan Virellia" in SF Pro Display 13 (-1 %, #1A1A1A); 17 pt sides.
+private struct ConnectedPill: View {
+    let name: String
 
-/// Figma 957:11415: the site, ↗ to Detail, a "Diblokir" chip over the gauge, and the guardian's note.
-private struct BlockedCard: View {
+    var body: some View {
+        HeroStatusPill(text: Text("Connected with \(name)"), dot: HomeTheme.success)
+            .accessibilityIdentifier("shield.guardian")
+    }
+}
+
+// MARK: - The site card
+
+/// Figma "Frame 1618872233" (1115:17294): #EDEDED 50 %, 20 pt corners, 354 wide. The site and when with a ↗ to the
+/// details; the risk panel (red "Situs Berbahaya!" when blocked or marked dangerous, else orange "Situs
+/// Mencurigakan!"); then who checks it: "Virellia akan mengecek kembali", or what they decided with a red ! or a
+/// blue ✓ on their avatar. A warm or red glow at the foot; marked dangerous blushes the whole card.
+private struct ProtectedSiteCard: View {
     let scan: ScanResult
     let guardian: GuardianInfo?
     let language: AppLanguage
     let onOpen: () -> Void
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    private static let space = "protectedSiteCard"
+
+    /// #493: a verdict this build can't read counts as none, so the card follows the detection status, never "safe".
+    private var decision: Verdict.Value? { scan.verdict?.known?.value }
+    private var isDanger: Bool { decision == .notSafe || (decision == nil && scan.status == .blocked) }
+    /// Who the line under the panel names: who decided, else the guardian who will.
+    private var checker: String? { scan.verdict?.byName ?? guardian?.name }
+    /// The checker's avatar: the guardian's, unless someone else decided (then the neutral person).
+    private var checkerAvatarId: String? {
+        guard let guardian else { return nil }
+        if let verdict = scan.verdict, verdict.byDeviceId != guardian.deviceId { return nil }
+        return guardian.avatarId
+    }
 
     var body: some View {
         Button(action: onOpen) {
-            VStack(spacing: 12) {
-                HStack(alignment: .top, spacing: 12) {
-                    SiteIcon(url: scan.faviconUrl)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(verbatim: scan.domain)
-                            .onboardingFont(20, relativeTo: .title3)
-                            .tracking(-0.45)
-                            .foregroundStyle(HomeTheme.navy)
-                            .lineLimit(2)
-                            .truncationMode(.middle)
-                        Text(verbatim: Formatters.dayAndTime(scan.detectedAt, language: language))
-                            .onboardingFont(13, design: .rounded, relativeTo: .footnote)
-                            .tracking(-0.08)
-                            .foregroundStyle(HomeTheme.rowSubtitle)
-                    }
-                    .padding(.top, 3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    // Figma "Status Badge": 40 pt white circle, 20 pt in from the card's top and right.
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 14.6, weight: .semibold))
-                        .foregroundStyle(Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1A / 255))
-                        .frame(width: 40, height: 40)
-                        .background(.white, in: Circle())
-                        .padding(.top, 6)
-                        .padding(.trailing, 3)
-                        .accessibilityHidden(true)
-                }
-                .padding(.horizontal, 5)
-
-                // Figma "Frame 1618872237": 338 × 226, the chip then the 242 pt gauge; the frame trims the
-                // gauge's empty bottom 4.6 pt.
-                VStack(spacing: 0) {
-                    HomeStatusChip(badge: .blocked, large: true)
-                    FittedScoreGauge(scan: scan, maxWidth: 242)
-                }
-                .padding(.top, 18.3)
-                .padding(.bottom, 13.7)
-                .padding(.horizontal, 29.8)
-                .frame(maxWidth: .infinity)
-                .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 22.9, style: .continuous))
-
-                if let guardian, scan.verdict == nil {
-                    // Figma "Frame 1618872238": two lines, the guardian's name bold on the first.
-                    HStack(spacing: 6.3) {
-                        InitialAvatar(name: guardian.name, size: 29.2, fontSize: 12)
-                        VStack(alignment: .leading, spacing: 2) {
-                            (Text(verbatim: guardian.name).fontWeight(.semibold) + Text(verbatim: " ") + Text("will check this link"))
-                                .onboardingFont(15, relativeTo: .subheadline)
-                                .foregroundStyle(HomeTheme.navy)
-                            Text("Don't open it for now")
-                                .onboardingFont(17, design: .rounded, relativeTo: .subheadline)
-                                .foregroundStyle(HomeTheme.secondaryInk)
-                                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-                                .minimumScaleFactor(0.85)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.horizontal, 16.7)
-                    .padding(.vertical, 16)
-                    .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 20.9, style: .continuous))
+            VStack(spacing: 0) {
+                header
+                HomeRiskPanel(scan: scan, isDanger: isDanger)
+                    .padding(.horizontal, 8)
+                    .padding(.top, 12)
+                if let checker {
+                    footer(checker)
+                        .padding(.horizontal, 8)
+                        .padding(.top, 12)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 14)
-            .padding(.bottom, 14.5)
-            .background {
-                // Glass grey card that blushes red towards the bottom (Figma "Rectangle 9652").
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill(Color(red: 0xED / 255, green: 0xED / 255, blue: 0xED / 255).opacity(0.5))
-                    .overlay(
-                        LinearGradient(colors: [Color(red: 0xF2 / 255, green: 0x8D / 255, blue: 0x83 / 255).opacity(0),
-                                                Color(red: 0xF2 / 255, green: 0x61 / 255, blue: 0x53 / 255).opacity(0.2)],
-                                       startPoint: .init(x: 0.5, y: 0.79), endPoint: .init(x: 0.5, y: 0.99))
-                            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-                    )
-            }
+            .padding(.bottom, 13.79)
+            .background { background }
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .coordinateSpace(.named(Self.space))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The guardian's answer arrives while the card is up: badge, line and colour ease over instead of jumping.
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.3), value: decision)
         .accessibilityElement(children: .combine)
         .accessibilityHint(Text("Opens the details"))
         .accessibilityIdentifier("shield.lastBlocked")
+    }
+
+    /// Figma "Frame 1618872182": the 48 pt icon 17 / 14 in, the site (SF Pro Rounded 17, 22 pt line) and when (13,
+    /// 18 pt) 3 under its top; "Status Badge" 40 pt white (its #FFCDCD ring is hidden), 20 from the top and 14 from
+    /// the right.
+    private var header: some View {
+        HStack(alignment: .top, spacing: 12) {
+            SiteIcon(url: scan.faviconUrl)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: scan.domain)
+                    .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
+                    .figmaLineHeight(22, relativeTo: .body)
+                    .foregroundStyle(HomeTheme.navy)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .padding(.vertical, 1)
+                Text(verbatim: Formatters.dayAndTime(scan.detectedAt, language: language))
+                    .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
+                    .figmaLineHeight(18, glyphOffset: 1, relativeTo: .footnote)
+                    .foregroundStyle(HomeTheme.rowSubtitle)
+            }
+            .padding(.top, 3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // SF Symbol arrow.up.right (U+100C3E) semibold 14.58, #1A1A1A.
+            Image(systemName: "arrow.up.right")
+                .font(.system(size: 14.58, weight: .semibold))
+                .foregroundStyle(HomeTheme.glassInk)
+                .frame(width: 40, height: 40)
+                .background(.white, in: Circle())
+                .overlay { if decision == .notSafe { Self.blush.clipShape(Circle()) } }
+                .padding(.top, 6)
+                .accessibilityHidden(true)
+        }
+        .padding(.leading, 17)
+        .padding(.trailing, 14)
+        .padding(.top, 14)
+    }
+
+    /// Figma "Frame 1618872238": white 70 %, 20.9 pt corners, 16 / 17 padding; the 29.2 pt avatar, 6.3 pt, then
+    /// the line in SF Pro Display 17 (#3A3D42), the name semibold.
+    private func footer(_ name: String) -> some View {
+        HStack(spacing: 6.26) {
+            avatar
+            Group {
+                switch decision {
+                // `.unknown` never gets here (`decision` maps it to nil); listed for the exhaustive switch.
+                case nil, .unknown: Text("\(Text(verbatim: name).fontWeight(.semibold)) will check it again")
+                case .notSafe: Text("\(Text(verbatim: name).fontWeight(.semibold)) marked it dangerous")
+                case .safe: Text("\(Text(verbatim: name).fontWeight(.semibold)) marked it safe")
+                }
+            }
+            .onboardingFont(17, relativeTo: .body)
+            .foregroundStyle(HomeTheme.bodyInk)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 17)
+        .padding(.vertical, 16)
+        .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 20.86, style: .continuous))
+    }
+
+    /// Figma "Avatar/S" with "Group 36523": a red ! (11.6 pt, #E5483B) or a blue ✓ (11 pt, #2E90FA) with a white ring,
+    /// 18.3 / 19 from the avatar's corner.
+    private var avatar: some View {
+        AvatarView(id: checkerAvatarId ?? "", size: 29.21)
+            .overlay(alignment: .topLeading) {
+                if let decision {
+                    let size: CGFloat = decision == .notSafe ? 11.55 : 11
+                    Image(systemName: decision == .notSafe ? "exclamationmark" : "checkmark")
+                        .font(.system(size: decision == .notSafe ? 5.43 : 5.17, weight: .heavy, design: .rounded))
+                        // Safe ↔ dangerous: the mark morphs (a cross-fade with Reduce Motion).
+                        .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
+                        .foregroundStyle(.white)
+                        .frame(width: size, height: size)
+                        .background(Color(hex: decision == .notSafe ? 0xE5483B : 0x2E90FA), in: Circle())
+                        .background(Circle().fill(.white).padding(-0.96))
+                        .offset(x: 18.31, y: 19)
+                }
+            }
+            .padding(.trailing, decision == nil ? 0 : 0.65)
+            .padding(.bottom, decision == nil ? 0 : (decision == .notSafe ? 1.34 : 0.79))
+    }
+
+    /// #EDEDED 50 % with Figma "Rectangle 9652": a red or warm glow from 63.5 pt above the foot (clear) to 14.5 under
+    /// it (full), at 20 %; marked dangerous, the whole card blushes instead.
+    private var background: some View {
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(Color(hex: 0xEDEDED).opacity(0.5))
+            .overlay {
+                if decision == .notSafe {
+                    Self.blush
+                } else {
+                    GeometryReader { proxy in
+                        let height = proxy.size.height
+                        let colors = isDanger ? [Color(hex: 0xF28D83).opacity(0), Color(hex: 0xF26153)]
+                            : [Color(hex: 0xFB9E20).opacity(0), Color(hex: 0xFB9E20)]
+                        LinearGradient(colors: colors, startPoint: UnitPoint(x: 0.5, y: (height - 63.5) / height),
+                                       endPoint: UnitPoint(x: 0.5, y: (height + 14.5) / height))
+                            .opacity(0.2)
+                    }
+                }
+            }
+    }
+
+    /// Figma "Rectangle 9652" on the marked-dangerous frames (1373:13100): over the card and the badge, under the panel
+    /// (measured: the panel is plain white 70 % over the blushed card); #F28D83 20 % at 4.6 pt to #F26153 at 173.6 pt from the card's top, all at 20 %.
+    private static var blush: some View {
+        GeometryReader { proxy in
+            let frame = proxy.frame(in: .named(space))
+            LinearGradient(colors: [Color(hex: 0xF28D83).opacity(0.2), Color(hex: 0xF26153)],
+                           startPoint: UnitPoint(x: 0.5, y: (4.6 - frame.minY) / frame.height),
+                           endPoint: UnitPoint(x: 0.5, y: (173.6 - frame.minY) / frame.height))
+                .opacity(0.2)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

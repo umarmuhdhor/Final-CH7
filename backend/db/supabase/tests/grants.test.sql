@@ -15,9 +15,10 @@ from unnest(array[
   'devices', 'family_links', 'family_codes', 'join_attempts', 'scans', 'verdicts',
   'ops_heartbeat', 'push_log', 'rate_limit_hits'
 ]) as t;
--- blocklist_entries: table-wide SELECT + DELETE, INSERT/UPDATE per column (fase 12, hardening.test.sql)
+-- blocklist_entries: table-wide DELETE; SELECT, INSERT and UPDATE per column (fase 12; fase 27c: no
+-- SELECT on approved_by/rejected_by, the reviewers' names; hardening.test.sql)
 select table_privs_are('public', 'blocklist_entries', 'shoo_api',
-  array['SELECT', 'DELETE'], 'shoo_api SELECT + DELETE on blocklist_entries (column grants for the rest)');
+  array['DELETE'], 'shoo_api DELETE on blocklist_entries (column grants for the rest)');
 -- ops_jobs (fase 21a): cron status, never deleted by the Worker
 select table_privs_are('public', 'ops_jobs', 'shoo_api',
   array['SELECT', 'INSERT', 'UPDATE'], 'shoo_api SELECT/INSERT/UPDATE on ops_jobs');

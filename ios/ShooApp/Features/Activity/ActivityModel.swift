@@ -70,6 +70,8 @@ final class ActivityModel {
     /// Family members for the picker; empty outside Family Activity.
     private(set) var people: [FamilyMember] = []
     private(set) var state: State = .loading
+    /// Why the first load failed (`state == .failed`): picks the sentence under "Couldn't load activity" (A-03).
+    private(set) var loadFailure: LoadFailure = .connection
     private(set) var filter: ActivityFilter = .all
     private(set) var items: [ScanResult] = []
     private(set) var isLoadingMore = false
@@ -85,16 +87,25 @@ final class ActivityModel {
     private(set) var guardianName: String?
 
     @ObservationIgnored private let repository: any ShooRepository
+    /// `AppEnvironment.verdictSaves` (K8), read at every load.
+    @ObservationIgnored private let verdictSaves: @MainActor () -> Int
     /// Bumped when a first-page request starts and again when one is applied, so neither an older
     /// first page nor a next page meant for the previous list can overwrite the newer one.
     @ObservationIgnored private var generation = 0
+    /// Bumped by every `loadMore`: only the newest one clears the spinner, so a next page dropped by a
+    /// refresh never hides the spinner of the next page asked for after it (F-A5, K8).
+    @ObservationIgnored private var loadMoreRequest = 0
+    /// `verdictSaves()` when the last load started.
+    @ObservationIgnored private var loadedVerdictSaves = 0
 
     /// `ownDeviceId` comes from the session; without one (mock, tests) Family Activity asks `me()` once.
     init(
         repository: any ShooRepository, owner: ScanOwnerFilter, ownDeviceId: String? = nil,
-        filter: ActivityFilter = .all, person: ActivityPerson = .everyone
+        filter: ActivityFilter = .all, person: ActivityPerson = .everyone,
+        verdictSaves: @escaping @MainActor () -> Int = { 0 }
     ) {
         self.repository = repository
+        self.verdictSaves = verdictSaves
         baseOwner = owner
         self.ownDeviceId = ownDeviceId
         self.filter = filter
@@ -130,10 +141,13 @@ final class ActivityModel {
     }
 
     func load() async {
+        // Read at the start: a verdict saved while this load runs may be missing from it. Counted as seen only
+        // once a list arrived, so a cancelled or failed reload runs again on the next appearance.
+        let saves = verdictSaves()
         await refreshPeople()
         await refreshViewer()
         guard !Task.isCancelled else { return }
-        await loadFirstPage()
+        if await loadFirstPage() { loadedVerdictSaves = saves }
     }
 
     /// Pull to refresh: keeps the current items on screen until the new first page arrives,
@@ -141,6 +155,25 @@ final class ActivityModel {
     func refresh() async {
         await load()
     }
+
+    /// On every appearance after the first load (back from Detail, back to the tab): a verdict saved since
+    /// the last load (Detail, Home) is not in these rows yet, so the list reloads once (F-A15, K8).
+    func refreshIfVerdictsChanged() async {
+        guard state == .loaded, verdictSaves() != loadedVerdictSaves else { return }
+        await refresh()
+    }
+
+    /// A push arrived while this screen is open: `AppEnvironment.pushesWhileOpen` went up to `count` (A-12).
+    /// Reload once, so the page under the banner tells the same story as Guardian Home does. The same count
+    /// again (the view redrawn) does nothing.
+    func pushesWhileOpenChanged(to count: Int) async {
+        guard count != handledPushes else { return }
+        handledPushes = count
+        await refresh()
+    }
+
+    /// The `pushesWhileOpen` value this screen last reloaded for.
+    @ObservationIgnored private var handledPushes = 0
 
     /// "Try again" on the error screen: shows the spinner while it retries.
     func retry() async {
@@ -174,19 +207,21 @@ final class ActivityModel {
     func loadMore() async {
         guard let cursor = nextCursor, state == .loaded, !isLoadingMore else { return }
         let request = generation
+        loadMoreRequest += 1
+        let ticket = loadMoreRequest
         isLoadingMore = true
         loadMoreFailed = false
+        // Every way out clears the spinner (F-A5): before, a page dropped by a refresh left it on for good,
+        // and the `!isLoadingMore` guard then blocked every next page.
+        defer { if ticket == loadMoreRequest { isLoadingMore = false } }
         do {
             guard let page = try await visiblePage(after: cursor, request: request, seen: Set(items.map(Self.site)))
             else { return }
             items += page.items
             nextCursor = page.nextCursor
-            isLoadingMore = false
         } catch {
-            // A newer list replaced this one: its own state is already right.
-            guard request == generation else { return }
-            isLoadingMore = false
-            if error.isCancellation { return }
+            // A newer list replaced this one: it is not a "couldn't load more".
+            guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Activity next page failed", error)
             loadMoreFailed = true
         }
@@ -198,10 +233,14 @@ final class ActivityModel {
         return scan.ownerDeviceId != ownDeviceId
     }
 
-    /// One row per site (PR-05): an owner's domain shows once, as its newest scan. The backend keeps
-    /// one row per site; older duplicate rows from before that stay hidden until retention drops them.
+    /// One row per link (PR-05, #241): an owner's page (origin + path, as `verdict_link` on the backend)
+    /// shows once, as its newest scan. The backend keeps one row per owner + link, so two pages of one site
+    /// are two rows (BH-25); older duplicate rows of one link stay hidden until retention drops them.
     private static func site(_ scan: ScanResult) -> String {
-        "\(scan.ownerDeviceId)|\(scan.domain)"
+        let url = scan.url
+        let origin = "\(url.scheme?.lowercased() ?? "")://\(url.host()?.lowercased() ?? "")" + (url.port.map { ":\($0)" } ?? "")
+        let path = url.path(percentEncoded: true)
+        return "\(scan.ownerDeviceId)|\(origin)\(path.isEmpty ? "/" : path)"
     }
 
     /// One page with its hidden rows and sites already in `seen` removed. A page left empty by that is
@@ -258,11 +297,13 @@ final class ActivityModel {
         }
     }
 
-    private func loadFirstPage() async {
+    /// `true` when this first page is now on screen.
+    @discardableResult
+    private func loadFirstPage() async -> Bool {
         generation += 1
         let request = generation
         do {
-            guard let page = try await visiblePage(after: nil, request: request) else { return }
+            guard let page = try await visiblePage(after: nil, request: request) else { return false }
             generation += 1
             items = page.items
             nextCursor = page.nextCursor
@@ -270,16 +311,21 @@ final class ActivityModel {
             loadMoreFailed = false
             refreshFailed = false
             state = .loaded
+            return true
         } catch {
-            guard request == generation, !error.isCancellation else { return }
+            guard request == generation, !error.isCancellation else { return false }
             Log.ui.error("Activity load failed", error)
+            // A next page on its way was for the list before this load: it is dropped (`generation`).
+            isLoadingMore = false
             if state == .loaded {
                 refreshFailed = true
             } else {
                 items = []
                 nextCursor = nil
+                loadFailure = LoadFailure(error)
                 state = .failed
             }
+            return false
         }
     }
 }

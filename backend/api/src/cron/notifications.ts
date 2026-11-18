@@ -1,4 +1,4 @@
-import type { Sql } from "postgres";
+import type { PendingQuery, Row, Sql } from "postgres";
 import { opsWriter, type OpsWriter } from "../db/repo/ops";
 import type { Env, Language } from "../env";
 import { errorInfo } from "../http/logError";
@@ -41,11 +41,22 @@ export async function runNotifications(
   const ops = opts.ops ?? opsWriter;
   await writeOps(() => ops.start(sql, "notifications"));
   const off = await protectionOff(sql, now, MAX_PUSHES);
-  const summaries = await weeklySummaries(sql, now, MAX_PUSHES - off.length);
+  // Fase 28k (H5-02, K13): the "protection off" rows are claimed already. A summary query that
+  // throws (e.g. a statement timeout) must not lose those pushes: they are sent first, the run is
+  // marked failed, and the error is thrown again after. A claim that times out is rolled back as one
+  // statement, so its summaries go out on the next run. (A connection lost after the commit would
+  // lose them: the same at-most-once rule as every claimed push.)
+  let summaries: PushMessage[] = [];
+  let summaryError: unknown = null;
+  try {
+    summaries = await weeklySummaries(sql, now, MAX_PUSHES - off.length);
+  } catch (err) {
+    summaryError = err;
+  }
   const messages = [...off, ...summaries];
   // A run fails (fase 21a, ops_jobs) on pushes that threw or found the APNs config broken. An APNs
   // rejection of one device (bad or expired token) is normal and only lands in push_log.
-  let failed = 0;
+  let failed = summaryError === null ? 0 : 1;
   for (const m of messages) {
     try {
       if ((await deliverPush(sql, sender, m)) === "failed:config") failed++;
@@ -57,6 +68,7 @@ export async function runNotifications(
   const result = { protectionOff: off.length, summaries: summaries.length };
   await writeOps(() => ops.finish(sql, "notifications", { failed, backlog: false }));
   console.log(JSON.stringify({ event: "notifications", ...result }));
+  if (summaryError !== null) throw summaryError;
   return result;
 }
 
@@ -67,6 +79,27 @@ async function writeOps(write: () => Promise<void>): Promise<void> {
   } catch (err) {
     console.error(JSON.stringify({ event: "ops_job_write_failed", job: "notifications", error: errorInfo(err) }));
   }
+}
+
+/**
+ * isQuiet (services/push/quiet.ts) in SQL, for the device columns of alias `g` at the injected `now`:
+ * local minutes in the device's zone, a window that may cross midnight, start = end = all day. An
+ * unknown zone falls back to WIB like localTime does, instead of failing the whole query. The name
+ * matches without case, as Intl accepts it (PATCH /devices/me stores what Intl took). Lets the cron
+ * filter quiet hours before its limit (fase 27k F-N10).
+ * The zone map is an uncorrelated subquery, so Postgres builds it once per query (an InitPlan; the
+ * pg_timezone_names scan takes ~15 ms), and `offset 0` keeps the local time from being inlined into
+ * each comparison. EXPLAIN ANALYZE on 10k rows: one scan, 24 ms in all.
+ */
+export function quietSql(sql: Sql, now: Date): PendingQuery<Row[]> {
+  return sql`(g.quiet_hours and (
+    select g.quiet_start = g.quiet_end
+        or (g.quiet_start < g.quiet_end and x.m >= g.quiet_start and x.m < g.quiet_end)
+        or (g.quiet_start > g.quiet_end and (x.m >= g.quiet_start or x.m < g.quiet_end))
+    from (select (extract(hour from t.local) * 60 + extract(minute from t.local))::int as m
+          from (select ${now.toISOString()}::timestamptz at time zone coalesce(
+                  (select jsonb_object_agg(lower(z.name), z.name) from pg_timezone_names z) ->> lower(g.time_zone),
+                  'Asia/Jakarta') as local offset 0) t) x))`;
 }
 
 /**
@@ -81,19 +114,19 @@ async function protectionOff(sql: Sql, now: Date, limit: number): Promise<PushMe
     where m.id = l.protected_id and l.off_notified_at is not null
       and m.ext_last_seen_at > now() - interval '24 hours'`;
   if (limit <= 0) return [];
-  const rows = await sql<(Candidate & { protectedId: string })[]>`
-    select g.id, l.protected_id as "protectedId",
-           g.quiet_hours as "quietHours", g.quiet_start as "quietStart", g.quiet_end as "quietEnd", g.time_zone as "timeZone"
+  // Quiet hours: not claimed, so the next run after the window sends it. Filtered before the limit,
+  // so guardians inside their window cannot fill it and starve one outside (F-N10).
+  const due = await sql<{ protectedId: string }[]>`
+    select l.protected_id as "protectedId"
     from family_links l
     join devices m on m.id = l.protected_id
     join devices g on g.id = l.guardian_id
     where l.off_notified_at is null
       and m.ext_last_seen_at <= now() - interval '24 hours'
       and g.notify_protection_off and g.apns_token is not null
-    order by m.ext_last_seen_at
-    limit 200`;
-  // Quiet hours: not claimed, so the next run after the window sends it.
-  const due = rows.filter((r) => !isQuiet(r, now)).slice(0, limit);
+      and not ${quietSql(sql, now)}
+    order by m.ext_last_seen_at, l.protected_id
+    limit ${limit}`;
   if (due.length === 0) return [];
   const claimed = await sql<{ guardianId: string; apnsToken: string; language: Language; member: string }[]>`
     update family_links l set off_notified_at = now()
@@ -108,7 +141,12 @@ async function protectionOff(sql: Sql, now: Date, limit: number): Promise<PushMe
 
 /**
  * Monday from 08:00 local (outside quiet hours), once per local Monday: the last 7 days of
- * blocked and warned sites, the guardian's members included. Counts only, no sites.
+ * blocked and warned sites, the guardian's members included. Counts only, no sites. Guardian
+ * devices only: the Protected settings page has no switch for it (fase 27j, F-N4).
+ * The counts take the owners as one list (the guardian plus its members), so each owner is an
+ * index range on scans_owner_time. `owner_id = d.id or owner_id in (…)` read every scan instead:
+ * 6.8 s for 40 guardians on the local volume DB, against 52 ms for the same counts in the read-only
+ * prototype (fase 28 hunt, N04 and P4; fase 28k, H5-02, OPT-03).
  */
 async function weeklySummaries(sql: Sql, now: Date, limit: number): Promise<PushMessage[]> {
   if (limit <= 0) return [];
@@ -116,7 +154,7 @@ async function weeklySummaries(sql: Sql, now: Date, limit: number): Promise<Push
     select id, quiet_hours as "quietHours", quiet_start as "quietStart", quiet_end as "quietEnd",
            time_zone as "timeZone", to_char(summary_sent_on, 'YYYY-MM-DD') as "sentOn"
     from devices
-    where weekly_summary and apns_token is not null
+    where weekly_summary and mode = 'guardian' and apns_token is not null
       and (summary_sent_on is null or summary_sent_on < (now() at time zone 'UTC')::date - 1)`;
   const due: { id: string; day: string }[] = [];
   for (const r of rows) {
@@ -129,15 +167,15 @@ async function weeklySummaries(sql: Sql, now: Date, limit: number): Promise<Push
   const claimed = await sql<{ id: string; apnsToken: string; language: Language; blocked: number; warnings: number; family: boolean }[]>`
     update devices d set summary_sent_on = v.day
     from unnest(string_to_array(${due.map((d) => d.id).join(",")}, ','), string_to_array(${due.map((d) => d.day).join(",")}, ',')::date[]) as v(id, day)
-    where d.id = v.id and d.weekly_summary and d.apns_token is not null
+    where d.id = v.id and d.weekly_summary and d.mode = 'guardian' and d.apns_token is not null
       and d.summary_sent_on is distinct from v.day
     returning d.id, d.apns_token as "apnsToken", d.language,
       (select count(*)::int from scans s
-        where s.status = 'blocked' and s.detected_at > now() - interval '7 days'
-          and (s.owner_id = d.id or s.owner_id in (select protected_id from family_links where guardian_id = d.id))) as blocked,
+        where s.owner_id in (select d.id union all select protected_id from family_links where guardian_id = d.id)
+          and s.status = 'blocked' and s.detected_at > now() - interval '7 days') as blocked,
       (select count(*)::int from scans s
-        where s.status = 'warning' and s.detected_at > now() - interval '7 days'
-          and (s.owner_id = d.id or s.owner_id in (select protected_id from family_links where guardian_id = d.id))) as warnings,
+        where s.owner_id in (select d.id union all select protected_id from family_links where guardian_id = d.id)
+          and s.status = 'warning' and s.detected_at > now() - interval '7 days') as warnings,
       exists (select 1 from family_links where guardian_id = d.id) as family`;
   return claimed.map((r) => ({ toDeviceId: r.id, apnsToken: r.apnsToken, body: summaryText(r.language, r) }));
 }

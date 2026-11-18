@@ -247,9 +247,10 @@ select is(pg_temp.as_admin($$select admin.vote('co.id', 'approve', 'phishing_ban
 insert into blocklist_entries (domain, families) values ('tenant-dl.github.io', 2), ('plain-dl.test', 2);
 select is(pg_temp.as_admin($$select string_agg(domain, ',' order by domain) from admin.review_due(100) where domain like '%-dl.%'$$),
   'plain-dl.test', 'K11: review_due skips a page on a shared host (x.github.io)');
-insert into admin.domain_labels (domain, is_scam, source, connected, owner_ref, by_ref) values
-  ('tenant-dl.github.io', true, 'guardian', true, 'a1a1a1a1a1a1a1a1', 'b1b1b1b1b1b1b1b1'),
-  ('plain-dl.test', true, 'guardian', true, 'a1a1a1a1a1a1a1a1', 'b1b1b1b1b1b1b1b1');
+-- ai_dataset reads one row per decision (admin.guardian_decisions, QA-D-H01).
+insert into admin.guardian_decisions (domain, is_scam, connected, owner_ref, by_ref) values
+  ('tenant-dl.github.io', true, true, 'a1a1a1a1a1a1a1a1', 'b1b1b1b1b1b1b1b1'),
+  ('plain-dl.test', true, true, 'a1a1a1a1a1a1a1a1', 'b1b1b1b1b1b1b1b1');
 select is((select string_agg(domain || '=' || shared_host, ',' order by domain) from admin.ai_dataset where domain like '%-dl.%'),
   'plain-dl.test=false,tenant-dl.github.io=true', 'K11: ai_dataset.shared_host from v_shared_hosts');
 

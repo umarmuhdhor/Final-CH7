@@ -82,10 +82,10 @@ struct URLSessionReplicaLoader: ReplicaLoading {
 #if DEBUG
 /// The page copy `MockRepository` links to with `-debug.replicaFixture YES`: a stand-in bank login page as
 /// replica.js writes it (CSP meta, `shoo-replica` meta with marks), so previews and the UI gate show the
-/// copy, the "Copy of the page" line and both spotlight variants.
+/// copy, the "Copy of the page" line, both spotlight variants and a reason far down the page (DT-04 crop).
 struct FixtureReplicaLoader: ReplicaLoading {
     func html(at url: URL) async throws -> String {
-        let meta = #"{&quot;v&quot;:1,&quot;url&quot;:&quot;https://bca-verifikasi.site/login/pin&quot;,&quot;capturedAt&quot;:&quot;2026-10-31T03:42:00Z&quot;,&quot;focusY&quot;:300,&quot;truncated&quot;:false,&quot;marks&quot;:[{&quot;signalId&quot;:&quot;asks_pin&quot;,&quot;x&quot;:24,&quot;y&quot;:332,&quot;w&quot;:342,&quot;h&quot;:52},{&quot;signalId&quot;:&quot;unreasonable_request&quot;,&quot;x&quot;:24,&quot;y&quot;:420,&quot;w&quot;:342,&quot;h&quot;:44},{&quot;signalId&quot;:&quot;unreasonable_request&quot;,&quot;x&quot;:24,&quot;y&quot;:560,&quot;w&quot;:342,&quot;h&quot;:52}]}"#
+        let meta = #"{&quot;v&quot;:1,&quot;url&quot;:&quot;https://bca-verifikasi.site/login/pin&quot;,&quot;capturedAt&quot;:&quot;2026-10-31T03:42:00Z&quot;,&quot;focusY&quot;:300,&quot;truncated&quot;:false,&quot;marks&quot;:[{&quot;signalId&quot;:&quot;asks_pin&quot;,&quot;x&quot;:24,&quot;y&quot;:332,&quot;w&quot;:342,&quot;h&quot;:52},{&quot;signalId&quot;:&quot;unreasonable_request&quot;,&quot;x&quot;:24,&quot;y&quot;:2300,&quot;w&quot;:342,&quot;h&quot;:44},{&quot;signalId&quot;:&quot;unreasonable_request&quot;,&quot;x&quot;:24,&quot;y&quot;:2440,&quot;w&quot;:342,&quot;h&quot;:52}]}"#
         // Absolute positions, so the marks above sit exactly on their elements.
         func box(_ top: Int, _ height: Int, _ style: String, _ text: String = "") -> String {
             #"<div style="position:absolute;left:24px;width:342px;top:\#(top)px;height:\#(height)px;\#(style)">\#(text)</div>"#
@@ -97,17 +97,21 @@ struct FixtureReplicaLoader: ReplicaLoading {
             box(130, 44, "font-size:15px;color:#4b5868", "Akun Anda dibekukan sementara. Selesaikan verifikasi dalam 15 menit."),
             box(304, 20, "font-size:14px;font-weight:600", "PIN KlikBCA (6 digit)"),
             box(332, 52, field),
-            box(420, 44, "font-size:15px;color:#b42318;font-weight:600", "Transfer biaya aktivasi Rp 150.000 untuk membuka akun"),
-            box(532, 20, "font-size:14px;font-weight:600", "Nomor rekening tujuan"),
-            box(560, 52, field),
-            box(644, 52, "border-radius:26px;background:#0a5cab;color:#fff;text-align:center;line-height:52px;font-weight:700", "Verifikasi Sekarang"),
+            box(420, 52, "border-radius:26px;background:#0a5cab;color:#fff;text-align:center;line-height:52px;font-weight:700", "Lanjut"),
+            // DT-04: the second reason sits far below the form, outside the main picture, so its card needs
+            // its own crop.
+            box(2240, 40, "font-size:13px;color:#4b5868", "Langkah terakhir untuk mengaktifkan kembali akun Anda:"),
+            box(2300, 44, "font-size:15px;color:#b42318;font-weight:600", "Transfer biaya aktivasi Rp 150.000 untuk membuka akun"),
+            box(2412, 20, "font-size:14px;font-weight:600", "Nomor rekening tujuan"),
+            box(2440, 52, field),
+            box(2524, 52, "border-radius:26px;background:#0a5cab;color:#fff;text-align:center;line-height:52px;font-weight:700", "Verifikasi Sekarang"),
         ].joined()
         return """
             <!doctype html><html><head><meta charset="utf-8">\
             <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">\
             <meta name="viewport" content="width=device-width,initial-scale=1">\
             <meta name="shoo-replica" content="\(meta)"><title>KlikBCA - Verifikasi Akun</title></head>\
-            <body style="margin:0;position:relative;height:1000px;font-family:-apple-system,Helvetica,sans-serif;background:#f3f6fa;color:#1d2733">\
+            <body style="margin:0;position:relative;height:2700px;font-family:-apple-system,Helvetica,sans-serif;background:#f3f6fa;color:#1d2733">\
             \(body)</body></html>
             """
     }

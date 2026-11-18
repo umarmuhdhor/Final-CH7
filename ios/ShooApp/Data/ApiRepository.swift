@@ -36,16 +36,24 @@ final class ApiRepository: ShooRepository {
     }
 
     func me() async throws -> DeviceProfile {
+        let usedToken = session.token
         let profile: DeviceProfile = try await client.send(.init(method: .get, path: ["devices", "me"]))
-        session.updateName(profile.name)
+        // Written only while the token is still the one this request used: when "Punya kode undangan?" saved
+        // a new device meanwhile (fase 27h, F-A12), this is the old device's profile and the App Group keeps
+        // the new name and guardian. No token (locked Keychain, cleared) = nothing to write for.
         // `guardian: null` = never joined, left, or removed by the guardian (D-alief-21).
-        session.setGuardian(profile.mode == .protected ? profile.guardian : nil)
+        if let usedToken {
+            session.applyProfile(
+                name: profile.name, avatarId: profile.avatarId, guardian: profile.mode == .protected ? profile.guardian : nil, ifToken: usedToken
+            )
+        }
         return profile
     }
 
     func updateMe(_ update: DeviceUpdate) async throws {
         let _: OkResponse = try await client.send(.init(method: .patch, path: ["devices", "me"], body: update))
         if let name = update.name { session.updateName(name) }
+        if let avatarId = update.avatarId { session.updateAvatar(avatarId) }
     }
 
     func becomeProtected(code: String) async throws -> ProtectedSwitch {
@@ -86,8 +94,8 @@ final class ApiRepository: ShooRepository {
         return code
     }
 
-    /// Same as the server's `REUSE_MIN_SECONDS`.
-    static let codeReuseSeconds: TimeInterval = 5 * 60
+    /// Same as the server's `REUSE_MIN_SECONDS` (checked by backend/api/test/family-code-sync.test.ts).
+    nonisolated static let codeReuseSeconds: TimeInterval = 5 * 60
 
     struct CachedCode: Sendable {
         var deviceId: String
@@ -160,13 +168,30 @@ final class ApiRepository: ShooRepository {
         try await client.send(.init(method: .get, path: ["scans", id]))
     }
 
+    func latestScams() async throws -> [ScamCase] {
+        let page: LatestScamsPage = try await client.send(.init(method: .get, path: ["scams", "latest"]))
+        return page.items
+    }
+
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
+        try await setVerdict(scanId: scanId, value: value, notes: nil)
+    }
+
+    func setVerdict(scanId: String, value: Verdict.Value, notes: String?) async throws -> Verdict {
         struct Body: Encodable, Sendable {
             var scanId: String
             var value: Verdict.Value
+            /// Left out when empty, as older builds send it.
+            var notes: String?
         }
+        // #493: `.unknown` only comes from the server; `POST /verdicts` takes `safe` / `not_safe` only.
+        guard value != .unknown else {
+            throw RepositoryError.api(.invalidBody, message: "A verdict must be safe or not_safe")
+        }
+        let trimmed = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
         let response: VerdictResponse = try await client.send(.init(
-            method: .post, path: ["verdicts"], body: Body(scanId: scanId, value: value)
+            method: .post, path: ["verdicts"],
+            body: Body(scanId: scanId, value: value, notes: trimmed?.isEmpty == false ? trimmed : nil)
         ))
         return response.verdict
     }

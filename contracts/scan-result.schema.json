@@ -27,7 +27,8 @@
     },
     "domain": {
       "type": "string",
-      "description": "Registrable domain, lowercase, no www. A verdict applies per link, see contracts/api.md Verdicts."
+      "maxLength": 253,
+      "description": "The url's host or a parent of it, lowercase, no trailing dot, no port (contracts/api.md Scans `domain`, #487, #495). The registrable domain, no www (login.bca.co.id -> bca.co.id); the full host on a shared host_path platform (sites.google.com, docs.google.com, forms.office.com, sway.cloud.microsoft) and for a host with no registrable domain ([2001:db8::1], router, www.co.id, www.com, 192.168.1.1). A verdict applies per link; a not_safe made on a shared host covers only that link, see contracts/api.md Verdicts."
     },
     "pageTitle": {
       "type": "string"
@@ -50,7 +51,7 @@
         "warning",
         "blocked"
       ],
-      "description": "30–79 = warning, >= 80 = blocked. 'normal' results are never stored."
+      "description": "Follows the thresholds from GET /config/public (warnAt / blockAt; default 30 / 80): warnAt..blockAt-1 = warning, >= blockAt = blocked. 'normal' results are never stored. Clients must accept a value not listed here: show it as unknown, never drop the row (contracts/api.md, #493)."
     },
     "signals": {
       "type": "array",
@@ -166,6 +167,10 @@
         "evidence": {
           "type": "string",
           "description": "Optional. Text signals: text that appears exactly on the page (highlighted by the extension, EX-05). Field signals (asks_*): the field's name/id. Never typed values. See detector-interface.md."
+        },
+        "host": {
+          "$ref": "#/$defs/SignalHost",
+          "description": "Optional (#497). Only on layer 1–2 address signals (lookalike_domain, brand_plus_keyword, cheap_tld, suspicious_link). Absent = the app marks the whole domain. See detector-interface.md \"host\"."
         }
       }
     },
@@ -182,7 +187,8 @@
           "enum": [
             "safe",
             "not_safe"
-          ]
+          ],
+          "description": "Clients must accept a value not listed here: show it as unknown, never drop the scan (contracts/api.md, #493)."
         },
         "byDeviceId": {
           "type": "string"
@@ -198,6 +204,24 @@
         "decidedAt": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "SignalHost": {
+      "type": "object",
+      "description": "Which part of the address to mark on Detail, and the brand's real domain (#497, DT-04 address card). Made on the device by the detector.",
+      "properties": {
+        "marks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Substrings of the scan's domain to highlight, exactly as written there (lowercase, punycode for IDN), in reading order, never overlapping. cheap_tld: the ending, e.g. [\".site\"]. Absent when there is no precise part; the app ignores a mark not found in domain."
+        },
+        "official": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The brand's real domain: the first of its domains in detector/data/brands.json. Only on lookalike_domain and brand_plus_keyword."
         }
       }
     },

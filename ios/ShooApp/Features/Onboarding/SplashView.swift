@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// ON-01: brand splash, then two swipeable slides with Skip and a round Next button (Figma 110:3585, 110:3692, 110:3786).
+/// ON-01: two swipeable slides with Skip and a round Next button (Figma 1352:4375, 1352:4039). First run only.
+/// The brand splash before them (Figma 110:3585) is `LaunchSplash`, over the first screen of every launch.
 struct SplashView: View {
     let model: OnboardingModel
-    @State private var showsBrand: Bool
     @State private var page = 0
-    @Environment(\.shooReduceMotion) private var reduceMotion
 
     private struct Slide: Identifiable {
         let id: Int
@@ -31,28 +30,9 @@ struct SplashView: View {
 
     private var isLast: Bool { page == slides.count - 1 }
 
-    init(model: OnboardingModel) {
-        self.model = model
-        _showsBrand = State(initialValue: !model.brandSplashShown)
-    }
-
     var body: some View {
-        ZStack {
-            if showsBrand {
-                BrandSplash()
-                    .transition(.opacity)
-            } else {
-                slidesView
-                    .transition(.opacity)
-            }
-        }
-        .environment(\.colorScheme, .light)
-        .task {
-            guard showsBrand else { return }
-            try? await Task.sleep(for: .seconds(1.9))
-            model.brandSplashShown = true
-            withAnimation(.easeInOut(duration: reduceMotion ? 0.2 : 0.5)) { showsBrand = false }
-        }
+        slidesView
+            .environment(\.colorScheme, .light)
     }
 
     private var slidesView: some View {
@@ -90,19 +70,6 @@ struct SplashView: View {
 
             Spacer()
 
-            Button { model.startDemo() } label: {
-                Text("Try the demo")
-                    .onboardingFont(17, design: .rounded, relativeTo: .body)
-                    .foregroundStyle(OnboardingTheme.ink)
-                    .underline()
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("splash.demo")
-
-            Spacer()
-
             Button {
                 if isLast {
                     model.skipSplash()
@@ -118,85 +85,13 @@ struct SplashView: View {
                     // Figma "Button/Full/Circle": gradient only, no shadow.
                     .background(OnboardingTheme.buttonGradient, in: Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(OnboardingPressButtonStyle())
             .accessibilityLabel(isLast ? Text("Get started") : Text("Next"))
             .accessibilityIdentifier("splash.next")
         }
         .padding(.horizontal, 24)
         // Figma "Horizontal Slider": the 62 pt button ends 66 pt above the screen bottom.
         .padding(.bottom, 32)
-    }
-}
-
-/// Figma "Splash Screen" in motion: the light band sweeps in and settles where the frame has it, the logo
-/// springs in, then breathes, blinks and twinkles (`ShooBirdLogo`). With Reduce Motion it is the still frame.
-private struct BrandSplash: View {
-    @Environment(\.shooReduceMotion) private var reduceMotion
-    @State private var start = Date()
-    @State private var logoIn = false
-
-    /// Where Figma "final" has the light stop, and how long the band takes to get there.
-    private static let lightStop = 0.46
-    private static let sweep = 1.2
-
-    var body: some View {
-        GeometryReader { proxy in
-            let scale = proxy.size.width / 402
-            ZStack {
-                TimelineView(.animation(paused: reduceMotion)) { context in
-                    let progress = reduceMotion ? 1 : min(context.date.timeIntervalSince(start) / Self.sweep, 1)
-                    background(progress: progress, scale: scale)
-                }
-                logo
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-        }
-        .ignoresSafeArea()
-        .onAppear(perform: play)
-    }
-
-    private func background(progress: Double, scale: CGFloat) -> some View {
-        // Ease out: the band slows down as it reaches its place.
-        let eased = 1 - pow(1 - progress, 3)
-        let light = -0.1 + (Self.lightStop + 0.1) * eased
-        let band = Gradient(stops: [
-            .init(color: Color(hex: 0x46A7FF), location: 0),
-            .init(color: Color(hex: 0xBFE0FF), location: max(light, 0.001)),
-            .init(color: Color(hex: 0x46A7FF), location: 1),
-        ])
-        return ZStack {
-            LinearGradient(gradient: band, startPoint: .topLeading, endPoint: .bottomTrailing)
-            // Figma "Ellipse 2" and "Ellipse 3": layer blur 115.
-            Ellipse()
-                .fill(Color(hex: 0x1E78BE))
-                .frame(width: 86 * scale, height: 137 * scale)
-                .blur(radius: 57 * scale)
-                .position(x: (153 + 40 * (1 - eased)) * scale, y: 61 * scale)
-            Ellipse()
-                .fill(Color(hex: 0x5CC6D8))
-                .frame(width: 86 * scale, height: 137 * scale)
-                .blur(radius: 57 * scale)
-                .position(x: (-21 - 40 * (1 - eased)) * scale, y: 111 * scale)
-        }
-        .accessibilityHidden(true)
-    }
-
-    private var logo: some View {
-        ShooBirdLogo()
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: "Shoo"))
-            .accessibilityIdentifier("splash.logo")
-            .scaleEffect(logoIn ? 1 : 0.7)
-            .opacity(logoIn ? 1 : 0)
-    }
-
-    private func play() {
-        start = Date()
-        guard !reduceMotion else {
-            logoIn = true
-            return
-        }
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.65)) { logoIn = true }
     }
 }
 
@@ -215,11 +110,7 @@ private struct SlidePage: View {
                     .frame(height: headerHeight, alignment: .bottom)
                     .frame(maxWidth: .infinity)
                     .clipped()
-                    .overlay(alignment: .bottom) {
-                        // Figma "Rectangle 953": the picture fades into the white page.
-                        LinearGradient(colors: [OnboardingTheme.card.opacity(0), OnboardingTheme.card], startPoint: .top, endPoint: .bottom)
-                            .frame(height: headerHeight * 153 / 463)
-                    }
+                    // The asset already ends in Figma "Rectangle 953", the fade into the white page.
                     .accessibilityHidden(true)
 
                 VStack(spacing: 8) {

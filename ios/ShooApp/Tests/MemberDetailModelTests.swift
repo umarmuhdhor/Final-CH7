@@ -7,11 +7,16 @@ struct MemberDetailModelTests {
     /// 14 Sep 2026, the mock members' `connectedAt`.
     static let start = Date(timeIntervalSince1970: 1_789_351_800)
 
-    func model(_ deviceId: String = "dev_mom", repository: (any ShooRepository)? = nil) -> MemberDetailModel {
+    func model(
+        _ deviceId: String = "dev_mom",
+        repository: (any ShooRepository)? = nil,
+        onDisconnected: @escaping @MainActor () -> Void = {}
+    ) -> MemberDetailModel {
         MemberDetailModel(
             deviceId: deviceId,
             repository: repository ?? MockRepository(mode: .guardian, latency: .zero),
-            now: { Self.start.addingTimeInterval(2 * 86_400) }
+            now: { Self.start.addingTimeInterval(2 * 86_400) },
+            onDisconnected: onDisconnected
         )
     }
 
@@ -43,6 +48,17 @@ struct MemberDetailModelTests {
         #expect(model.state == .failed)
     }
 
+    /// A-03 (fase 28m): a member list the app can't read says "Something went wrong", not "Check your internet
+    /// connection".
+    @Test(arguments: [RepositoryError.decoding, .api(.internal, message: "HTTP 500")])
+    func aServerFailureShowsTheGeneralSentence(_ error: RepositoryError) async {
+        let model = model(repository: FailingRepository(error: error))
+        await model.load()
+        #expect(model.state == .failed)
+        #expect(text(model.loadFailure.message(connection: "Check your internet connection, then try again."))
+            == "Something went wrong. Try again.")
+    }
+
     /// The member still shows when only the activity could not be read.
     @Test func failingActivityKeepsTheMember() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
@@ -61,6 +77,27 @@ struct MemberDetailModelTests {
         await model.setNotify(false)
         #expect(model.member?.notify == false)
         #expect(try await repository.familyMembers().first { $0.deviceId == "dev_mom" }?.notify == false)
+    }
+
+    /// BH-30: a second tap while the first change is still on its way is ignored, so two failures arriving
+    /// in any order cannot leave the switch on a value the server never had.
+    @Test func secondNotifyTapWhileOneIsInFlightIsIgnored() async throws {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        repository.notifyFailure = RepositoryError.network
+        let first = NotifyGate(), second = NotifyGate()
+        repository.beforeNotify = { on in on ? await second.wait() : await first.wait() }
+        let model = model(repository: repository)
+        await model.load()
+        #expect(model.member?.notify == true)
+        let t1 = Task { await model.setNotify(false) }
+        try await Task.sleep(for: .milliseconds(50))
+        let t2 = Task { await model.setNotify(true) }
+        try await Task.sleep(for: .milliseconds(50))
+        first.release()
+        await t1.value
+        second.release()
+        await t2.value
+        #expect(model.member?.notify == true)
     }
 
     @Test func failedNotifyGoesBackAndSaysSo() async {
@@ -108,8 +145,107 @@ struct MemberDetailModelTests {
     }
 
     @Test func failedDisconnectSaysSo() async {
-        let model = model(repository: FailingRepository())
+        var cleared = 0
+        let model = model(repository: FailingRepository(), onDisconnected: { cleared += 1 })
         #expect(await model.disconnect() == false)
         #expect(model.actionError != nil)
+        #expect(cleared == 0, "the member is still connected: their pushes stay")
+    }
+
+    /// Fase 27g (F-N3, K9, P13): disconnecting from the member page clears the shown pushes, as the
+    /// family list does (`FamilyCodeModel.remove`).
+    @Test func disconnectClearsDeliveredPushes() async {
+        var cleared = 0
+        let model = model(onDisconnected: { cleared += 1 })
+        await model.load()
+        #expect(await model.disconnect())
+        #expect(cleared == 1)
+    }
+
+    /// Already removed (an earlier answer got lost): the pushes go too.
+    @Test func disconnectThatAlreadyHappenedClearsDeliveredPushes() async throws {
+        var cleared = 0
+        let repository = MockRepository(mode: .guardian, latency: .zero)
+        let model = model(repository: repository, onDisconnected: { cleared += 1 })
+        await model.load()
+        try await repository.removeMember(deviceId: "dev_mom")
+        #expect(await model.disconnect())
+        #expect(cleared == 1)
+    }
+
+    /// A-12: a push while a member's page is open reloads it once (their newest scans, notify, reminder).
+    /// The same counter value again (a view redrawn) does not reload a second time.
+    @Test func pushWhileOpenReloadsOnce() async {
+        let env = tabsEnvironment(mode: .guardian)
+        let repository = CountingScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let model = model(repository: repository)
+        await model.load()
+        #expect(repository.scanCalls == 1)
+        env.pushArrivedWhileOpen()
+        await model.pushesWhileOpenChanged(to: env.pushesWhileOpen)
+        #expect(repository.scanCalls == 2)
+        await model.pushesWhileOpenChanged(to: env.pushesWhileOpen)
+        #expect(repository.scanCalls == 2)
+    }
+
+    /// A-12 review: a push reload and the first load can overlap. The older one answering last must not put
+    /// its list back over the newer one.
+    @Test func anOlderLoadAnsweringLastKeepsTheNewerList() async throws {
+        let base = MockRepository(mode: .guardian, latency: .zero)
+        let scan = try #require(try await base.scans(owner: .device("dev_mom"), status: nil, cursor: nil).items.first)
+        let repository = GatedScansRepository(base: base)
+        let model = model(repository: repository)
+        await repository.hold(.first)
+        let older = Task { await model.load() }
+        await repository.waitUntilHeld()
+        let decided: Verdict.Value = scan.verdict?.value == .safe ? .notSafe : .safe
+        _ = try await base.setVerdict(scanId: scan.id, value: decided)
+        await model.load()
+        #expect(model.recent.first { $0.id == scan.id }?.verdict?.value == decided)
+        await repository.release()
+        await older.value
+        #expect(model.recent.first { $0.id == scan.id }?.verdict?.value == decided)
+    }
+
+    /// A-12 review: a push reload while "Kabari saya" is on its way keeps the switch where the guardian put it.
+    @Test func reloadWhileANotifyChangeIsOnItsWayKeepsTheSwitch() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let gate = AsyncGate()
+        repository.beforeNotify = { _ in await gate.hold() }
+        let model = model(repository: repository)
+        await model.load()
+        #expect(model.member?.notify == true)
+        let change = Task { await model.setNotify(false) }
+        await gate.arrival()
+        await model.load()
+        #expect(model.member?.notify == false)
+        gate.open()
+        await change.value
+        #expect(model.member?.notify == false)
+    }
+}
+
+/// Holds a call until `release` (BH-30).
+final class NotifyGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isOpen = false
+    private var waiter: CheckedContinuation<Void, Never>?
+
+    func wait() async {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            if isOpen { lock.unlock(); continuation.resume(); return }
+            waiter = continuation
+            lock.unlock()
+        }
+    }
+
+    func release() {
+        lock.lock()
+        isOpen = true
+        let waiter = waiter
+        self.waiter = nil
+        lock.unlock()
+        waiter?.resume()
     }
 }

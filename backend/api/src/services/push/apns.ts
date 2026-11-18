@@ -89,7 +89,21 @@ export class ApnsSender implements PushSender {
   }
 
   async send(message: PushMessage): Promise<SendResult> {
-    if (!HEX.test(message.apnsToken)) return { result: "failed:400 BadDeviceToken" };
+    return this.post(message.apnsToken, {
+      pushType: "alert",
+      topic: this.config.topic,
+      priority: 10,
+      // A guardian offline for over an hour gets no stale alert; Activity still has the scan.
+      expiresInSeconds: 3600,
+      body: { aps: { alert: { body: message.body }, sound: "default" }, ...(message.scanId ? { scanId: message.scanId } : {}) },
+    });
+  }
+
+  private async post(
+    token: string,
+    p: { pushType: "alert"; topic: string; priority: 10; expiresInSeconds: number; body: unknown },
+  ): Promise<SendResult> {
+    if (!HEX.test(token)) return { result: "failed:400 BadDeviceToken" };
     const e = entry(this.config);
     const { ref } = await this.tokenRef(e);
     let jwt: string;
@@ -104,18 +118,17 @@ export class ApnsSender implements PushSender {
 
     let res: Response;
     try {
-      res = await this.fetch(`${HOST[this.config.env]}/3/device/${message.apnsToken}`, {
+      res = await this.fetch(`${HOST[this.config.env]}/3/device/${token}`, {
         method: "POST",
         headers: {
           authorization: `bearer ${jwt}`,
-          "apns-push-type": "alert",
-          "apns-topic": this.config.topic,
-          "apns-priority": "10",
-          // A guardian offline for over an hour gets no stale alert; Activity still has the scan.
-          "apns-expiration": String(Math.floor(this.now() / 1000) + 3600),
+          "apns-push-type": p.pushType,
+          "apns-topic": p.topic,
+          "apns-priority": String(p.priority),
+          "apns-expiration": String(Math.floor(this.now() / 1000) + p.expiresInSeconds),
           "content-type": "application/json",
         },
-        body: JSON.stringify({ aps: { alert: { body: message.body }, sound: "default" }, ...(message.scanId ? { scanId: message.scanId } : {}) }),
+        body: JSON.stringify(p.body),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (err) {

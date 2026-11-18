@@ -34,7 +34,8 @@ function world() {
         globalThis.fetch = async (url, init = {}) => {
             if (init.method === "POST" && url.endsWith("/scans")) {
                 posts.push(JSON.parse(init.body));
-                return new Response(JSON.stringify({ id: `scan_${posts.length}` }), { status: 201 });
+                const notified = state.notified === undefined ? {} : { notified: state.notified };
+                return new Response(JSON.stringify({ id: `scan_${posts.length}`, ...notified }), { status: 201 });
             }
             return new Response(JSON.stringify({ domains: [], nextSince: null, verdict: null }), { status: 200 });
         };
@@ -112,4 +113,75 @@ test("no message ever answers with the token", async () => {
     const reply = await send({ type: "profile" });
     assert.ok(!("token" in reply));
     assert.equal(reply.onboarded, true);
+});
+
+test("#375: POST /scans and block memory use the PSL domain of the URL, not the full host the page sent", async () => {
+    const w = world();
+    const send = await w.boot();
+    const host = "login.bca-verifikasi.site";
+    const fromPage = { ...report("k1", host), scan: { ...report("k1", host).scan, domain: host } };
+    await send(fromPage);
+    await settled(send, "k1");
+    assert.equal(w.posts[0].domain, "bca-verifikasi.site");
+    await send({ type: "rememberBlock", url: `https://${host}/pin`, domain: host, score: 90, signals: [] });
+    const { memory } = await send({ type: "recallBlock", url: `https://${host}/pin` });
+    assert.equal(memory.domain, "bca-verifikasi.site");
+});
+
+test("#487, #495: `domain` is the full host for shared host_path platforms and hosts without a registrable domain", async () => {
+    const w = world();
+    const send = await w.boot();
+    const cases = [
+        ["http://[2001:db8::1]/login", "[2001:db8::1]"],
+        ["http://router/login", "router"],
+        ["http://www.co.id/x", "www.co.id"],
+        ["http://www.com/x", "www.com"],
+        ["https://bca-verifikasi.site./login", "bca-verifikasi.site"],
+        ["https://sites.google.com/view/x", "sites.google.com"],
+        ["https://docs.google.com/forms/d/x", "docs.google.com"],
+        ["https://forms.office.com/r/x", "forms.office.com"],
+        ["https://login.bca.co.id/", "bca.co.id"],
+    ];
+    for (const [i, [url, expected]] of cases.entries()) {
+        const { hostname } = new URL(url);
+        assert.equal((await send({ type: "domain", hostname })).domain, expected, `domain message ${url}`);
+        // what the page sent is ignored: background works it out from the URL (#375)
+        const key = `k${i}`;
+        await send({ type: "report", key, scan: { ...report(key).scan, url, domain: "google.com" }, replica: null, fragments: null });
+        await settled(send, key);
+        assert.equal(w.posts.at(-1).domain, expected, `POST /scans ${url}`);
+        await send({ type: "rememberBlock", url, domain: "google.com", score: 90, signals: [] });
+        const { memory } = await send({ type: "recallBlock", url });
+        assert.equal(memory?.domain, expected, `block memory ${url}`);
+    }
+});
+
+test("#377: the block page's Guardian name is read fresh, not from the 30 s session cache", async () => {
+    const w = world();
+    w.state.session = { ...SESSION, mode: "protected", guardianName: "Adhella" };
+    const send = await w.boot();
+    assert.equal((await send({ type: "profile" })).guardianName, "Adhella");
+    w.state.session = { ...SESSION, mode: "protected", guardianName: null };
+    assert.equal((await send({ type: "profile" })).guardianName, null);
+});
+
+test("#377: the record carries who the backend pushed — a name, null, or nothing from an older backend", async () => {
+    const w = world();
+    const send = await w.boot();
+    await send(report("old"));
+    await settled(send, "old");
+    assert.ok(!("notified" in (await send({ type: "recordId", key: "old" }))));
+
+    w.state.notified = null;
+    await send(report("none", "other.site"));
+    await settled(send, "none");
+    assert.equal((await send({ type: "recordId", key: "none" })).notified, null);
+
+    w.state.notified = { name: "Adhella" };
+    await send(report("named", "third.site"));
+    await settled(send, "named");
+    assert.equal((await send({ type: "recordId", key: "named" })).notified, "Adhella");
+    const restarted = await w.boot(); // from the stored log, after Safari restarted the background page
+    assert.equal((await restarted({ type: "recordId", key: "named" })).notified, "Adhella");
+    assert.equal((await restarted({ type: "recordId", key: "none" })).notified, null);
 });

@@ -8,8 +8,8 @@
   // and the CPU flamegraph readable. Function names stay (wrangler's default esbuild keepNames), so log lines do not change.
   "minify": true,
   "upload_source_maps": true,
-  // Images bundled into the Worker as ArrayBuffer (PR-03 invite link preview, src/routes/join-page.ts).
-  "rules": [{ "type": "Data", "globs": ["**/*.jpg"], "fallthrough": false }],
+  // Images bundled into the Worker as ArrayBuffer (PR-03 invite link preview and page hero, src/routes/join-page.ts).
+  "rules": [{ "type": "Data", "globs": ["**/*.jpg", "**/*.png", "**/*.ico"], "fallthrough": false }],
   // Our own JSON logs only: invocation logs record full request URLs, which carry
   // screenshot link ids/signatures and invite codes (SECURITY §3, D-alief-40).
   "observability": { "enabled": true, "logs": { "invocation_logs": false } },
@@ -24,8 +24,9 @@
     }
   ],
   "vars": {
-    // Cloud Worker URL (fase 07 manual step 4).
-    "INVITE_BASE_URL": "https://shoo-api.afindo-mi01.workers.dev",
+    // Public host of every link the Worker hands out (invite /j/<code>, /get, signed images): the
+    // Custom Domain join.shoo.ai.id on this Worker (PR-03). The API itself stays on workers.dev.
+    "INVITE_BASE_URL": "https://join.shoo.ai.id",
     // PR-03 invite page: TestFlight public link now, App Store later. Empty → https://apps.apple.com/.
     "APP_STORE_URL": "",
     // Universal Link (issue #129): `<Team ID>.<bundle ID>` of the builds that open /j/<code>, comma-separated.

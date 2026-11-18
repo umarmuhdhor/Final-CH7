@@ -2,7 +2,7 @@
 
 Detail lengkap + checkbox progres: [umar.md](umar.md) · [imelda.md](imelda.md) · [alief.md](alief.md). Kalau ada perbedaan, yang berlaku file detail.
 
-## Umar — Lead (`contracts/`, `ios/ShooExtension/`, `ios/ShooLiveActivity/`, `ios/ShooShared/`, `ios/project.yml`)
+## Umar — Lead (`contracts/`, `ios/ShooExtension/`, `ios/ShooShared/`, `ios/project.yml`)
 
 | # | PRD ID | Tugas | Selesai kalau |
 |---|---|---|---|
@@ -57,9 +57,9 @@ Bukan tugas Imelda: hoaks (Fase 2), AI belajar dari keputusan keluarga (menunggu
 | # | Tugas | Isi singkat | Dibutuhkan oleh |
 |---|---|---|---|
 | B1 | Devices | Daftar perangkat + token (tanpa login) | Semua |
-| B2 | Family | Kode 4 digit (60 detik), join, hapus anggota, maks. 3 orang | GD-04, PR-01 |
-| B3 | Scans | Simpan + ambil riwayat (skor ≥ 30) + screenshot | Activity, extension |
-| B4 | Verdicts | Safe / Not safe per domain | GD-07, layar blokir |
+| B2 | Family | Kode 6 digit (30 menit, issue #128; awalnya 4 digit 60 detik), join, hapus anggota, maks. 3 orang | GD-04, PR-01 |
+| B3 | Scans | Simpan + ambil riwayat (skor ≥ 30) + salinan halaman (screenshot diabaikan sejak fase 20a) | Activity, extension |
+| B4 | Verdicts | Safe / Not safe per link (origin + path, #241; awalnya per domain) | GD-07, layar blokir |
 | B5 | Blocklist | Daftar domain Not safe | **Imelda M5, kerjakan lebih awal** |
 | B6 | Push | Notifikasi ke Guardian | GD-06 |
 | B7 | Retensi & keamanan | Hapus otomatis 14 hari, batas percobaan kode | PRD §10 |
@@ -73,5 +73,5 @@ Bukan tugas Imelda: hoaks (Fase 2), AI belajar dari keputusan keluarga (menunggu
 | C4 | GD-06 | Tap push → buka Detail |
 | C5 | GD-07 | Tombol It's safe / Not safe |
 
-**Ditahan:** Live Activity lewat push (kalau spike S3 Umar memutuskan begitu).
+**Live Activity lewat push:** dibatalkan 17 Nov 2026 (#555). Path C (#49: `POST /live` + token Live Activity, #356, #386, #442) dihapus; skor live cukup di pill.
 Bukan tugas Alief: popup & layar blokir di Safari (Umar), skor & teks alasan (Imelda), hoaks (Fase 2).

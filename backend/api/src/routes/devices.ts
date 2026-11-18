@@ -2,17 +2,21 @@ import { Hono } from "hono";
 import postgres from "postgres";
 import * as z from "zod";
 import type { AppEnv } from "../env";
-import { deleteDevice, findProfile, insertDevice, insertProtectedCopy, updateDevice } from "../db/repo/devices";
-import { guardianOf } from "../db/repo/families";
+import { deleteDevice, findProfile, insertDevice, updateDevice } from "../db/repo/devices";
+import { familyContacts, guardianOf } from "../db/repo/families";
 import { keyHash } from "../http/keyHash";
-import { joinFamily } from "../services/family";
+import { becomeProtected } from "../services/becomeProtected";
 import { deleteScreenshots } from "../services/screenshots";
 import { requireDevice, requireMode } from "../http/auth";
 import { base64url, randomBytes, sha256 } from "../http/crypto";
-import { errors } from "../http/errors";
+import { ApiError, errors } from "../http/errors";
 import { clientIp, hit, limits } from "../http/rateLimit";
 import { displayName, isoTime, readJson } from "../http/validate";
 import { fromClock, isTimeZone, toClock } from "../services/push/quiet";
+import { deliverPush } from "../services/push/deliver";
+import { familyPushText } from "../services/push/messages";
+import { pushSender } from "../services/push/sender";
+import { errorInfo } from "../http/logError";
 
 const name = displayName;
 // APNs device tokens are hex; Apple says not to assume a fixed length.
@@ -46,6 +50,9 @@ const notificationsBody = z
   .partial()
   .strict();
 
+// Not .strict(), on purpose: unknown keys are stripped. Older app builds still send the Dynamic Island
+// tokens `liveActivityStartToken` / `liveActivityUpdateToken` (EX-03 removed, #555); they get a 200 and
+// nothing is stored, so the rest of their PATCH still lands.
 const patchBody = z.object({
   name: name.optional(),
   apnsToken: apnsToken.nullable().optional(),
@@ -146,32 +153,36 @@ const becomeProtectedBody = z.object({ code: z.string().regex(/^\d{6}$/, "must b
 
 /**
  * PF-01 "Punya kode undangan?" (proposed): a guardian without members joins a family as protected.
- * Device mode never changes (I1), so a protected copy is made, joined with the code (same checks
- * and attempt limits as POST /family/join), and only then the old device is deleted. A failed join
- * removes the copy and leaves the guardian as it was. The new token exists only in this response.
+ * Device mode never changes (I1), so a protected copy is made. Since fase 27a the copy, the join
+ * and the old device's delete are one transaction (services/becomeProtected.ts): validation and the
+ * attempt limits run first, with the old device's own attempt budget, so a failure makes no copy and
+ * leaves the guardian as it was. The new token exists only in this response.
  */
 devices.post("/devices/me/protected", requireDevice, requireMode("guardian"), async (c) => {
   const sql = c.get("sql");
   const ip = clientIp((n) => c.req.header(n));
-  await hit(sql, limits.createDevice, ip);
-  const { code } = await readJson(c, becomeProtectedBody);
   const oldId = c.get("principal").deviceId;
+  try {
+    await hit(sql, limits.becomeProtected, oldId);
+  } catch (err) {
+    // A join route: the app shows "too many tries" for this device, not the per-network sign-up limit.
+    if (err instanceof ApiError && err.code === "rate_limited") throw errors.tooManyAttempts(err.retryAfter ?? 1);
+    throw err;
+  }
+  const { code } = await readJson(c, becomeProtectedBody);
+  // Cheap early 409 that spends no attempt; the transaction checks again under the lock.
   const [{ n } = { n: 0 }] = await sql<{ n: number }[]>`select count(*)::int as n from family_links where guardian_id = ${oldId}`;
   if (n > 0) throw errors.hasMembers();
 
   const token = `shoo_${base64url(randomBytes(32))}`;
-  const copy = await insertProtectedCopy(sql, oldId, await sha256(token));
-  if (!copy) throw errors.unauthorized();
-  let guardian;
-  try {
-    guardian = await joinFamily(sql, copy.id, await keyHash(`join:${ip}`), code);
-  } catch (err) {
-    await deleteDevice(sql, copy.id);
-    throw err;
-  }
-  const paths = await deleteDevice(sql, oldId);
-  c.executionCtx.waitUntil(deleteScreenshots(sql, c.env, paths));
-  return c.json({ deviceId: copy.id, token, avatarId: copy.avatarId, guardian });
+  const done = await becomeProtected(sql, {
+    oldId,
+    ipHash: await keyHash(`join:${ip}`),
+    code,
+    tokenHash: await sha256(token),
+  });
+  c.executionCtx.waitUntil(deleteScreenshots(sql, c.env, done.paths));
+  return c.json({ deviceId: done.deviceId, token, avatarId: done.avatarId, guardian: done.guardian });
 });
 
 /**
@@ -179,6 +190,10 @@ devices.post("/devices/me/protected", requireDevice, requireMode("guardian"), as
  * Storage objects go after the DB commit; a Storage failure never brings the data back.
  */
 devices.delete("/devices/me", requireDevice, async (c) => {
+  const me = c.get("principal");
+  // QA 2026-11-10 #6: the other side hears about it. Members: "<guardian> stopped protecting you", as on a
+  // disconnect. The guardian: "<member> deleted their Shoo account". Read now, the delete removes the links.
+  const contacts = await familyContacts(c.get("sql"), me.deviceId);
   let paths: string[] | undefined;
   for (let attempt = 1; !paths; attempt++) {
     try {
@@ -195,5 +210,14 @@ devices.delete("/devices/me", requireDevice, async (c) => {
     }
   }
   c.executionCtx.waitUntil(deleteScreenshots(c.get("sql"), c.env, paths));
+  const sender = pushSender(c.env);
+  for (const contact of contacts) {
+    const body = familyPushText(contact.language, me.mode === "guardian" ? "disconnected" : "memberLeft", me.name);
+    c.executionCtx.waitUntil(
+      deliverPush(c.get("sql"), sender, { toDeviceId: contact.deviceId, apnsToken: contact.apnsToken, body }).catch((err) =>
+        console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
+      ),
+    );
+  }
   return c.json({ ok: true });
 });

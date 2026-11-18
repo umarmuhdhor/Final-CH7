@@ -121,7 +121,7 @@ final class APIClient: Sendable {
         }
         guard let http = response as? HTTPURLResponse else { throw RepositoryError.network }
         guard (200..<300).contains(http.statusCode) else {
-            let error = Self.error(status: http.statusCode, body: data)
+            let error = Self.error(status: http.statusCode, body: data, retryAfter: Self.retryAfter(http.value(forHTTPHeaderField: "Retry-After")))
             // Only the backend's own `unauthorized` body ends the session. A 401 from a captive portal,
             // proxy or edge has no contract body and must not wipe the token and the guardian link.
             if Self.isContractUnauthorized(data), request.reportsUnauthorized, let usedToken {
@@ -140,9 +140,11 @@ final class APIClient: Sendable {
 
     /// The contract error body, or a common code from the HTTP status when the body is not one
     /// (a proxy page, an empty 502).
-    static func error(status: Int, body: Data) -> RepositoryError {
+    static func error(status: Int, body: Data, retryAfter: TimeInterval? = nil) -> RepositoryError {
         if let detail = try? JSONDecoder().decode(APIErrorBody.self, from: body).error {
-            return .api(APIErrorCode(rawValue: detail.code), message: detail.message)
+            let code = APIErrorCode(rawValue: detail.code)
+            if status == 429, let retryAfter { return .throttled(code, message: detail.message, retryAfter: retryAfter) }
+            return .api(code, message: detail.message)
         }
         let code: APIErrorCode = switch status {
         case 401: .unauthorized
@@ -152,8 +154,34 @@ final class APIClient: Sendable {
         case 429: .rateLimited
         default: .internal
         }
+        if status == 429, let retryAfter { return .throttled(code, message: "HTTP 429", retryAfter: retryAfter) }
         return .api(code, message: "HTTP \(status)")
     }
+
+    /// The longest wait taken from a `Retry-After`: a bad header can't lock a screen for days.
+    static let maxRetryAfter: TimeInterval = 24 * 60 * 60
+
+    /// `Retry-After` as seconds (what the backend sends) or an HTTP date (RFC 9110 §10.2.3); `nil` when absent or unreadable.
+    static func retryAfter(_ value: String?, now: Date = Date()) -> TimeInterval? {
+        guard let value = value?.trimmingCharacters(in: .whitespaces), !value.isEmpty else { return nil }
+        let seconds: TimeInterval
+        if let whole = Int(value) {
+            seconds = TimeInterval(whole)
+        } else if let date = httpDate.date(from: value) {
+            seconds = date.timeIntervalSince(now).rounded(.up)
+        } else {
+            return nil
+        }
+        return min(max(seconds, 0), maxRetryAfter)
+    }
+
+    private static let httpDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "GMT")
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+        return formatter
+    }()
 }
 
 /// `{ "ok": true }` answers.

@@ -2,23 +2,77 @@ import { Hono } from "hono";
 import postgres from "postgres";
 import * as z from "zod";
 import type { AppEnv } from "../env";
-import { decideVerdict, findVerdict, type VerdictResult } from "../db/repo/verdicts";
+import { decideVerdict, findDomainVerdict, findVerdict, type VerdictResult } from "../db/repo/verdicts";
 import { requireDevice, requireMode } from "../http/auth";
 import { errors } from "../http/errors";
 import { hit, hitEdge, limits } from "../http/rateLimit";
-import { DOMAIN, parse, readJson, UUID } from "../http/validate";
+import { codePoints, DOMAIN, DOMAIN_MESSAGE, hasUnsafe, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 
-const MAX_BODY = 1024;
+/** 280 code points of notes can be up to 1120 bytes of UTF-8, plus JSON escapes. */
+const MAX_BODY = 4096;
+const MAX_NOTES = 280;
 
-const body = z.strictObject({ scanId: z.string().max(64), value: z.enum(["safe", "not_safe"]) });
-// The extension sends the registrable domain; tolerate case, spaces and a leading www.
-const lookupQuery = z.object({
-  domain: z
-    .string()
-    .max(260)
-    .transform((s) => s.trim().toLowerCase().replace(/\.$/, "").replace(/^www\./, ""))
-    .pipe(z.string().max(253).regex(DOMAIN, "must be a registrable domain")),
-});
+/**
+ * #241: why the Guardian decided. Line breaks and tabs become spaces, other control and bidi
+ * characters go (the dashboard shows the note); empty after trim = no note. Never logged.
+ */
+const notes = z
+  .string()
+  .max(4 * MAX_NOTES)
+  .nullish()
+  .transform((s) => stripUnsafe((s ?? "").replace(/[\r\n\t]+/g, " ")).trim() || null)
+  .refine((s) => s === null || codePoints(s) <= MAX_NOTES, `must be at most ${MAX_NOTES} characters`);
+
+const body = z.strictObject({ scanId: z.string().max(64), value: z.enum(["safe", "not_safe"]), notes });
+// The extension sends the scan's `domain` (contracts/api.md Scans "`domain`"); tolerate case, spaces and a
+// trailing dot. With url= a leading www. stays (#487: `www.co.id` is the full host, not `co.id`).
+const normDomain = (s: string) => s.trim().toLowerCase().replace(/\.$/, "");
+const domainParam = z
+  .string()
+  .max(260, { abort: true })
+  .transform(normDomain)
+  .pipe(z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE));
+// Deprecated ?domain= alone (builds from before #241): a leading www. still goes, and what is left is checked.
+const legacyDomainParam = z
+  .string()
+  .max(260, { abort: true })
+  .transform((s) => normDomain(s).replace(/^www\./, ""))
+  .pipe(z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE));
+// The link (origin + path) as the extension's shareableUrl gives it; a query or fragment is dropped.
+// B-06: the length check aborts, so a too-long url never reaches the transform or the object refine
+// below (which reads url.hostname and threw a TypeError → 500 instead of 422).
+const linkParam = z
+  .string()
+  .max(2048, { abort: true })
+  .transform((s, ctx) => {
+    let u: URL | undefined;
+    try {
+      u = hasUnsafe(s) ? undefined : new URL(s.trim());
+    } catch {
+      u = undefined;
+    }
+    if (!u || (u.protocol !== "http:" && u.protocol !== "https:")) {
+      ctx.addIssue({ code: "custom", message: "must be an http(s) URL" });
+      return z.NEVER;
+    }
+    return u;
+  });
+const lookupQuery = z.union([
+  z
+    .object({ url: linkParam, domain: domainParam })
+    .refine(
+      ({ url, domain }) => {
+        // Zod skips this refine after an aborted field issue; the guard keeps it safe if that changes.
+        if (!(url instanceof URL) || typeof domain !== "string") return false;
+        const host = url.hostname.replace(/\.$/, "");
+        return host === domain || host.endsWith(`.${domain}`);
+      },
+      { message: "url host must be the domain or a subdomain of it", path: ["url"] },
+    )
+    .transform(({ url, domain }) => ({ link: url.origin + url.pathname, domain })),
+  // Deprecated: builds from before #241 send the domain only.
+  z.object({ url: z.undefined(), domain: legacyDomainParam }).transform(({ domain }) => ({ link: null, domain })),
+]);
 
 export const verdicts = new Hono<AppEnv>();
 
@@ -29,14 +83,14 @@ verdicts.post("/verdicts", requireMode("guardian"), async (c) => {
   const sql = c.get("sql");
   const principal = c.get("principal");
   await hit(sql, limits.createVerdict, principal.deviceId);
-  const { scanId, value } = await readJson(c, body, MAX_BODY);
+  const { scanId, value, notes } = await readJson(c, body, MAX_BODY);
   // An id that is not a UUID cannot name a scan.
   if (!UUID.test(scanId)) throw errors.notFound();
 
   let result: VerdictResult | undefined;
   for (let attempt = 1; !result; attempt++) {
     try {
-      result = await decideVerdict(sql, principal, scanId, value);
+      result = await decideVerdict(sql, principal, scanId, value, notes);
     } catch (err) {
       const code = err instanceof postgres.PostgresError ? err.code : undefined;
       // The scan, its owner or this guardian was deleted mid-request (foreign key gone).
@@ -48,19 +102,23 @@ verdicts.post("/verdicts", requireMode("guardian"), async (c) => {
   }
   if ("verdict" in result) return c.json({ verdict: result.verdict });
   if (result.error === "not_found") throw errors.notFound();
+  if (result.error === "locked") throw errors.verdictLocked(result.lockedUntil);
   throw errors.verdictNotAllowed(403, "Not the owner's guardian");
 });
 
 /** Fase 25 K7: verdicts seen within this many ms of the decision are logged, to measure EX-06 latency. */
 const VERDICT_SEEN_WINDOW_MS = 120_000;
 
-/** EX-06: polled by the extension of either mode while a block screen is open. */
+/** EX-06: polled by the extension of either mode while a block screen is open (?url=&domain=, #241). */
 verdicts.get("/verdicts", async (c) => {
   const sql = c.get("sql");
   const principal = c.get("principal");
   await hitEdge(c.env.VERDICTS_GET_LIMITER, sql, limits.getVerdict, principal.deviceId);
-  const { domain } = parse(lookupQuery, { domain: c.req.query("domain") });
-  const verdict = await findVerdict(sql, principal.deviceId, domain);
+  const { link, domain } = parse(lookupQuery, { url: c.req.query("url"), domain: c.req.query("domain") });
+  const verdict =
+    link === null
+      ? await findDomainVerdict(sql, principal.deviceId, domain)
+      : await findVerdict(sql, principal.deviceId, link, domain);
   if (verdict) logFreshVerdict(verdict);
   return c.json({ verdict });
 });

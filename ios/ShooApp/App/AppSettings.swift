@@ -22,6 +22,7 @@ final class AppSettings {
         static let familyModeOn = "settings.familyModeOn"
         static let onboardingConnectPassed = "settings.onboardingConnectPassed"
         static let dataConsent = "settings.dataConsent"
+        static let inviteRegistrationPending = "settings.inviteRegistrationPending"
         /// Before the text size slider: "Teks besar" on/off. Read once to pick the slider's start.
         static let largeText = "settings.largeText"
         static let theme = "settings.theme"
@@ -36,11 +37,14 @@ final class AppSettings {
 
         static let dismissedHomeScanIds = "settings.dismissedHomeScanIds"
         static let guardianCardDismissed = "settings.guardianCardDismissed"
+        static let supervisedCardDismissed = "settings.supervisedCardDismissed"
+        static let guardianIntroSeen = "settings.guardianIntroSeen"
 
         static let all = [
-            language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, dataConsent, largeText,
+            language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, dataConsent,
+            inviteRegistrationPending, largeText,
             theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
-            dismissedHomeScanIds, guardianCardDismissed, demoMode,
+            dismissedHomeScanIds, guardianCardDismissed, supervisedCardDismissed, guardianIntroSeen, demoMode,
         ]
     }
 
@@ -62,6 +66,14 @@ final class AppSettings {
     /// Protected passed the Connect step of onboarding (resume point after a relaunch).
     var onboardingConnectPassed: Bool {
         didSet { defaults.set(onboardingConnectPassed, forKey: Keys.onboardingConnectPassed) }
+    }
+
+    /// Fase 27d (K6): onboarding registered this device for an invite join that has not succeeded yet. While
+    /// set, Back or "Not now" on Connect deletes the device again (a Protected mode is for good on the server),
+    /// and an `already_connected` answer means an earlier join went through. Cleared by a join, a cancel, or
+    /// at launch when no mode was saved (the app died during `POST /devices`).
+    var inviteRegistrationPending: Bool {
+        didSet { defaults.set(inviteRegistrationPending, forKey: Keys.inviteRegistrationPending) }
     }
 
     /// `nil` = not asked yet. Change it through `AppEnvironment.setDataConsent`, which also tells the session.
@@ -122,6 +134,16 @@ final class AppSettings {
         didSet { defaults.set(guardianCardDismissed, forKey: Keys.guardianCardDismissed) }
     }
 
+    /// Home's "Mode Terawasi" card (Pribadi without family, protected without a guardian) was closed with X.
+    var supervisedCardDismissed: Bool {
+        didSet { defaults.set(supervisedCardDismissed, forKey: Keys.supervisedCardDismissed) }
+    }
+
+    /// Figma "To be guardian" was passed with "Mulai" once; Family mode then turns on without it.
+    var guardianIntroSeen: Bool {
+        didSet { defaults.set(guardianIntroSeen, forKey: Keys.guardianIntroSeen) }
+    }
+
     /// "Try the demo": sample data on this phone, no device on the server. Read at launch (`AppEnvironment.live`).
     private(set) var demoMode: Bool {
         didSet { defaults.set(demoMode, forKey: Keys.demoMode) }
@@ -136,6 +158,7 @@ final class AppSettings {
         familyModeOn = defaults.bool(forKey: Keys.familyModeOn)
         onboardingConnectPassed = defaults.bool(forKey: Keys.onboardingConnectPassed)
         dataConsent = defaults.string(forKey: Keys.dataConsent).flatMap(DataConsent.init(rawValue:))
+        inviteRegistrationPending = defaults.bool(forKey: Keys.inviteRegistrationPending)
         theme = defaults.string(forKey: Keys.theme).flatMap(AppTheme.init(rawValue:)) ?? .system
         if defaults.object(forKey: Keys.textSize) != nil {
             textSize = TextSizeLevel(rawValue: defaults.integer(forKey: Keys.textSize)) ?? .standard
@@ -151,6 +174,8 @@ final class AppSettings {
         readAloud = defaults.bool(forKey: Keys.readAloud)
         dismissedHomeScanIds = defaults.stringArray(forKey: Keys.dismissedHomeScanIds) ?? []
         guardianCardDismissed = defaults.bool(forKey: Keys.guardianCardDismissed)
+        supervisedCardDismissed = defaults.bool(forKey: Keys.supervisedCardDismissed)
+        guardianIntroSeen = defaults.bool(forKey: Keys.guardianIntroSeen)
         demoMode = defaults.bool(forKey: Keys.demoMode)
     }
 
@@ -165,6 +190,7 @@ final class AppSettings {
         demoMode = true
         mode = .guardian
         familyModeOn = true
+        guardianIntroSeen = true
         dataConsent = .granted
         onboardingCompleted = true
     }
@@ -185,6 +211,15 @@ final class AppSettings {
         onboardingConnectPassed = true
     }
 
+    /// Fase 27d (K6): the device from a failed invite join was deleted on the server. Onboarding starts over
+    /// from the name: the mode and Connect progress go. The language and the consent answer were the
+    /// person's own choices, so they stay (unlike `reset()`).
+    func forgetInviteRegistration() {
+        mode = nil
+        onboardingConnectPassed = false
+        inviteRegistrationPending = false
+    }
+
     /// Removes every stored preference (fresh install), e.g. `-UITestReset YES` before launch.
     static func clear(defaults: UserDefaults) {
         for key in Keys.all {
@@ -201,6 +236,8 @@ final class AppSettings {
         familyModeOn = false
         onboardingConnectPassed = false
         dataConsent = nil
+        // `clear` empties the defaults only; the value in memory goes here.
+        inviteRegistrationPending = false
         theme = .system
         textSize = .standard
         boldText = false
@@ -212,5 +249,7 @@ final class AppSettings {
         demoMode = false
         dismissedHomeScanIds = []
         guardianCardDismissed = false
+        supervisedCardDismissed = false
+        guardianIntroSeen = false
     }
 }

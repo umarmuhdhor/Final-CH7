@@ -109,12 +109,87 @@ struct APIClientTests {
         #expect(server.unauthorizedCount == 0)
     }
 
+    /// Row 2 (Connect countdown): a 429 with `Retry-After` keeps the code and says how long to wait.
+    @Test func tooManyAttemptsCarriesRetryAfter() async {
+        let server = StubServer()
+        server.reply { _ in
+            .json(429, #"{"error":{"code":"too_many_attempts","message":"Too many join attempts"}}"#, headers: ["Retry-After": "299"])
+        }
+        await #expect(throws: RepositoryError.throttled(.tooManyAttempts, message: "Too many join attempts", retryAfter: 299)) {
+            let _: OkResponse = try await server.client().send(.init(method: .post, path: ["family", "join"]))
+        }
+    }
+
+    @Test func throttledStillReadsAsItsCode() {
+        let error = RepositoryError.throttled(.rateLimited, message: "Too many requests", retryAfter: 60)
+        #expect(error.apiCode == .rateLimited)
+        #expect(error.retryAfter == 60)
+        #expect(RepositoryError.api(.rateLimited, message: "x").retryAfter == nil)
+        // Only a 429 waits: other statuses keep the plain contract error.
+        #expect(APIClient.error(status: 409, body: Data(#"{"error":{"code":"has_members","message":"m"}}"#.utf8), retryAfter: 5)
+            == .api(.hasMembers, message: "m"))
+        #expect(APIClient.error(status: 429, body: Data(), retryAfter: 5) == .throttled(.rateLimited, message: "HTTP 429", retryAfter: 5))
+    }
+
+    @Test func retryAfterReadsSecondsAndDates() {
+        let now = Date(timeIntervalSince1970: 1_792_000_000)
+        #expect(APIClient.retryAfter("120", now: now) == 120)
+        #expect(APIClient.retryAfter(" 0 ", now: now) == 0)
+        #expect(APIClient.retryAfter("-5", now: now) == 0)
+        #expect(APIClient.retryAfter("99999999", now: now) == APIClient.maxRetryAfter)
+        #expect(APIClient.retryAfter(nil, now: now) == nil)
+        #expect(APIClient.retryAfter("soon", now: now) == nil)
+        // 1_792_000_000 is Wed, 14 Oct 2026 17:46:40 GMT.
+        #expect(APIClient.retryAfter("Wed, 14 Oct 2026 17:47:40 GMT", now: now) == 60)
+    }
+
     @Test func successThatBreaksTheContractIsADecodingError() async {
         let server = StubServer()
         server.reply { _ in .json(200, #"{"unexpected":true}"#) }
         await #expect(throws: RepositoryError.decoding) {
             let _: DeviceProfile = try await server.client().send(.init(method: .get, path: ["devices", "me"]))
         }
+    }
+
+    /// A-03 (fase 28m): a 5xx or an answer the app can't read is not the person's connection. The screen shows
+    /// the general sentence ("Something went wrong. Try again."), never "Check your connection".
+    @Test(arguments: ["500 contract", "500 empty", "502 html", "200 not the contract"])
+    func aServerFailureDoesNotAskToCheckTheConnection(_ kind: String) async throws {
+        let server = StubServer()
+        server.reply { _ in
+            switch kind {
+            case "500 contract": .json(500, #"{"error":{"code":"internal","message":"Something went wrong"}}"#)
+            case "500 empty": .json(500, "")
+            case "502 html": .json(502, "<html>Bad gateway</html>")
+            default: .json(200, #"{"unexpected":true}"#)
+            }
+        }
+        var thrown: (any Error)?
+        do {
+            let _: DeviceProfile = try await server.client().send(.init(method: .get, path: ["devices", "me"]))
+        } catch {
+            thrown = error
+        }
+        let failure = LoadFailure(try #require(thrown))
+        #expect(L10n.string(failure.message(connection: "Check your connection."), language: .english)
+            == "Something went wrong. Try again.")
+        #expect(L10n.string(failure.message(connection: "Check your connection."), language: .indonesian)
+            == "Ada yang salah. Coba lagi.")
+    }
+
+    /// A-03 guard: no connection still asks to check it, in the screen's own words.
+    @Test func offlineStillAsksToCheckTheConnection() async throws {
+        let server = StubServer()
+        server.reply { _ in .offline() }
+        var thrown: (any Error)?
+        do {
+            let _: DeviceProfile = try await server.client().send(.init(method: .get, path: ["devices", "me"]))
+        } catch {
+            thrown = error
+        }
+        let failure = LoadFailure(try #require(thrown))
+        #expect(L10n.string(failure.message(connection: "Check your connection."), language: .english) == "Check your connection.")
+        #expect(L10n.string(failure.message(connection: "Check your connection."), language: .indonesian) == "Periksa koneksi Anda.")
     }
 
     @Test func offlineIsANetworkError() async {

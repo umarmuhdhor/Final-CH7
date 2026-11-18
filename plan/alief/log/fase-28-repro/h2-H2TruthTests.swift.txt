@@ -1,0 +1,580 @@
+// Fase 28 hunt, hunter 2 (ios/ShooApp logic). Repro tests: each `BUG` test asserts the CORRECT behaviour and
+// FAILS on main 9e5403ba. `cell` tests are the logic matrix (they print one line per cell).
+// Copy to ios/ShooApp/Tests/H2TruthTests.swift, `cd ios && xcodegen`, then:
+//   xcodebuild test -project Shoo.xcodeproj -scheme Shoo -destination 'platform=iOS Simulator,id=<own sim>' \
+//     -derivedDataPath <scratch>/dd -only-testing:ShooAppTests/H2TruthTests \
+//     -test-timeouts-enabled YES -maximum-test-execution-time-allowance 60
+import Foundation
+import Testing
+@testable import Shoo
+
+/// A repository whose calls a test can replace one by one; everything else goes to the fixtures.
+final class H2Repo: ShooRepository, @unchecked Sendable {
+    let base: MockRepository
+    var onMe: (() async throws -> DeviceProfile)?
+    var onScans: ((ScanOwnerFilter, ScanStatus?, String?) async throws -> ScanPage)?
+    var onScan: ((String) async throws -> ScanResult)?
+    var onVerdict: ((String, Verdict.Value) async throws -> Verdict)?
+    var onMembers: (() async throws -> [FamilyMember])?
+    var onCode: ((Bool) async throws -> FamilyCode)?
+
+    init(mode: UserMode = .guardian) { base = MockRepository(mode: mode, latency: .zero) }
+
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
+        try await base.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken)
+    }
+    func me() async throws -> DeviceProfile { if let onMe { return try await onMe() }; return try await base.me() }
+    func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }
+    func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
+        if let onCode { return try await onCode(refresh) }
+        return try await base.createFamilyCode(refresh: refresh)
+    }
+    func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }
+    func familyMembers() async throws -> [FamilyMember] {
+        if let onMembers { return try await onMembers() }
+        return try await base.familyMembers()
+    }
+    func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
+    func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
+    func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
+    func leaveGuardian() async throws { try await base.leaveGuardian() }
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
+    func deleteMe() async throws { try await base.deleteMe() }
+    func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
+        if let onScans { return try await onScans(owner, status, cursor) }
+        return try await base.scans(owner: owner, status: status, cursor: cursor)
+    }
+    func scan(id: String) async throws -> ScanResult { if let onScan { return try await onScan(id) }; return try await base.scan(id: id) }
+    func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
+        if let onVerdict { return try await onVerdict(scanId, value) }
+        return try await base.setVerdict(scanId: scanId, value: value)
+    }
+}
+
+@MainActor
+struct H2TruthTests {
+    nonisolated static let fixtureNow = Date(timeIntervalSince1970: 1_792_584_000) // 2026-10-21T12:00:00Z
+    static let blocked92 = "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+
+    static func settings(mode: UserMode = .guardian, family: Bool = true) -> AppSettings {
+        let settings = AppSettings(defaults: UserDefaults(suiteName: "h2.\(UUID().uuidString)")!)
+        settings.chooseMode(mode)
+        settings.familyModeOn = mode == .guardian && family
+        settings.onboardingCompleted = true
+        return settings
+    }
+
+    /// A model says "what you see may be old" through some Bool: `refreshFailed`, `isStale`, `loadFailed` …
+    /// (`ActivityModel.refreshFailed` is the existing one, D-alief-A12). Any true one counts.
+    static func saysItMayBeOld(_ model: Any) -> Bool {
+        Mirror(reflecting: model).children.contains { child in
+            let name = (child.label ?? "").lowercased()
+            let hit = ["refreshfailed", "stale", "outdated", "reloadfailed", "loadfailed"].contains { name.contains($0) }
+            return hit && (child.value as? Bool) == true
+        }
+    }
+
+    // MARK: A-01: a failed refresh keeps a reassuring screen and says nothing
+
+    @Test func BUG_A01_guardianHomeStillSaysFamilyProtectedAfterAFailedRefresh() async throws {
+        let repository = H2Repo()
+        let settings = Self.settings()
+        let model = GuardianHomeModel(repository: repository, settings: settings, scope: .family,
+                                      extensionStatus: { .active(lastSeen: nil) }, now: { Self.fixtureNow })
+        await model.refresh()
+        model.dismissPending()
+        model.dismissPending()
+        #expect(model.state == .loaded && model.pendingScan == nil) // hero: "Family protected!"
+
+        // Mom is blocked on a new site five minutes later; the Guardian's phone has no connection.
+        var fresh = try await repository.base.scan(id: Self.blocked92)
+        fresh.id = "11111111-2222-4333-8444-555555555555"
+        fresh.url = URL(string: "https://klik-bca-login.xyz/masuk")!
+        fresh.domain = "klik-bca-login.xyz"
+        fresh.detectedAt = Self.fixtureNow.addingTimeInterval(-60)
+        fresh.verdict = nil
+        await repository.base.insertScan(fresh)
+        repository.onScans = { _, _, _ in throw RepositoryError.network }
+        repository.onMe = { throw RepositoryError.network }
+        await model.refresh()
+
+        let heroSaysProtected = model.state == .loaded && model.pendingScan == nil && !model.hasNoFamily
+        print("H2 A-01 guardian-home | server has undecided blocked scan: true | hero 'Family protected!': \(heroSaysProtected) | says it may be old: \(Self.saysItMayBeOld(model))")
+        #expect(!heroSaysProtected || Self.saysItMayBeOld(model))
+    }
+
+    @Test func BUG_A01_protectedHomeStillNamesAGuardianWhoRemovedThem() async throws {
+        let repository = H2Repo(mode: .protected)
+        let model = ShieldModel(repository: repository, extensionStatus: { .active(lastSeen: Date()) }, now: { Self.fixtureNow })
+        await model.refresh()
+        #expect(model.guardian?.name == "Adhella")
+        // The Guardian disconnects this phone; the next refresh fails (timeout).
+        repository.onMe = { throw RepositoryError.network }
+        await model.refresh()
+        print("H2 A-01 protected-home | pill 'Protected by \(model.guardian?.name ?? "-")' | state \(model.state) | says it may be old: \(Self.saysItMayBeOld(model))")
+        #expect(model.guardian == nil || Self.saysItMayBeOld(model))
+    }
+
+    /// The matrix behind A-01: every screen model, loaded once, then one refresh that fails.
+    @Test(arguments: ["guardianHome.family", "guardianHome.personal", "protectedHome", "activity.me", "activity.family",
+                      "detail", "profile", "memberDetail"])
+    func cell_refreshFailsAfterALoad(_ screen: String) async throws {
+        let mode: UserMode = ["protectedHome", "activity.me"].contains(screen) ? .protected : .guardian
+        let repository = H2Repo(mode: mode)
+        let fail: () -> Void = {
+            repository.onMe = { throw RepositoryError.network }
+            repository.onScans = { _, _, _ in throw RepositoryError.network }
+            repository.onScan = { _ in throw RepositoryError.network }
+            repository.onMembers = { throw RepositoryError.network }
+        }
+        var model: Any
+        var loaded = false
+        switch screen {
+        case "guardianHome.family", "guardianHome.personal":
+            let m = GuardianHomeModel(repository: repository, settings: Self.settings(), scope: screen.hasSuffix("family") ? .family : .personal,
+                                      extensionStatus: { .active(lastSeen: nil) }, now: { Self.fixtureNow })
+            await m.refresh(); fail(); await m.refresh()
+            loaded = m.state == .loaded; model = m
+        case "protectedHome":
+            let m = ShieldModel(repository: repository, extensionStatus: { .active(lastSeen: Date()) }, now: { Self.fixtureNow })
+            await m.refresh(); fail(); await m.refresh()
+            loaded = m.state == .loaded; model = m
+        case "activity.me", "activity.family":
+            let m = ActivityModel(repository: repository, owner: screen.hasSuffix("family") ? .family : .me)
+            await m.load(); fail(); await m.refresh()
+            loaded = m.state == .loaded; model = m
+        case "detail":
+            let m = DetailModel(scanId: Self.blocked92, repository: repository, now: { Self.fixtureNow })
+            await m.load(); fail(); await m.load()
+            loaded = m.state == .loaded; model = m
+        case "profile":
+            let m = ProfileModel(repository: repository, settings: Self.settings())
+            await m.load(); fail(); await m.load()
+            // `membersFailed` only covers the family list; the profile itself (name, guardian, stats, settings) is the cell.
+            loaded = m.state == .loaded; model = m
+            print("H2 cell refresh-fails | profile | membersFailed \(m.membersFailed)")
+        default:
+            let m = MemberDetailModel(deviceId: "dev_mom", repository: repository, now: { Self.fixtureNow })
+            await m.load(); fail(); await m.load()
+            loaded = m.state == .loaded; model = m
+        }
+        let says = Self.saysItMayBeOld(model)
+        print("H2 cell refresh-fails | \(screen) | still loaded \(loaded) | says it may be old \(says) | \(loaded && !says ? "FAIL" : "pass")")
+        #expect(!loaded || says)
+    }
+
+    /// First load fails: no screen may reach `.loaded`. 8 screens x 5 errors.
+    @Test(arguments: ["guardianHome.family", "guardianHome.personal", "protectedHome", "activity.me", "activity.family",
+                      "detail", "profile", "memberDetail"],
+          ["network", "decoding", "internal", "rate_limited", "forbidden"])
+    func cell_firstLoadFails(_ screen: String, _ kind: String) async throws {
+        let error: RepositoryError = switch kind {
+        case "network": .network
+        case "decoding": .decoding
+        case "internal": .api(.internal, message: "HTTP 500")
+        case "rate_limited": .throttled(.rateLimited, message: "slow", retryAfter: 30)
+        default: .api(.forbidden, message: "no")
+        }
+        let mode: UserMode = ["protectedHome", "activity.me"].contains(screen) ? .protected : .guardian
+        let repository = H2Repo(mode: mode)
+        repository.onMe = { throw error }
+        repository.onScans = { _, _, _ in throw error }
+        repository.onScan = { _ in throw error }
+        repository.onMembers = { throw error }
+        let state: String
+        switch screen {
+        case "guardianHome.family", "guardianHome.personal":
+            let m = GuardianHomeModel(repository: repository, settings: Self.settings(), scope: screen.hasSuffix("family") ? .family : .personal,
+                                      extensionStatus: { .active(lastSeen: nil) }, now: { Self.fixtureNow })
+            await m.refresh(); state = "\(m.state)"
+            #expect(m.pendingScan == nil && m.recent.isEmpty && !m.hasNoFamily)
+        case "protectedHome":
+            let m = ShieldModel(repository: repository, extensionStatus: { .active(lastSeen: Date()) }, now: { Self.fixtureNow })
+            await m.refresh(); state = "\(m.state)"
+            #expect(m.guardian == nil && m.cardScan == nil)
+        case "activity.me", "activity.family":
+            let m = ActivityModel(repository: repository, owner: screen.hasSuffix("family") ? .family : .me)
+            await m.load(); state = "\(m.state)"
+            #expect(!m.isEmpty)
+        case "detail":
+            let m = DetailModel(scanId: Self.blocked92, repository: repository)
+            await m.load(); state = "\(m.state)"
+        case "profile":
+            let m = ProfileModel(repository: repository, settings: Self.settings())
+            await m.load(); state = "\(m.state)"
+        default:
+            let m = MemberDetailModel(deviceId: "dev_mom", repository: repository)
+            await m.load(); state = "\(m.state)"
+        }
+        print("H2 cell first-load | \(screen) | \(kind) | state \(state) | \(state == "failed" ? "pass" : "FAIL")")
+        #expect(state == "failed")
+    }
+
+    // MARK: A-02: verdict_locked leaves Detail on a state the server does not have
+
+    @Test func BUG_A02_detailShowsNoVerdictAfterTheServerSaysTheLinkIsLockedSafe() async throws {
+        let repository = H2Repo()
+        var stored = try await repository.base.scan(id: Self.blocked92)
+        stored.verdict = nil
+        let box = Box(stored)
+        repository.onScan = { _ in box.value }
+        // 1. "Aman": the server saves it, the answer is lost (timeout). 2. Any second tap: 409 verdict_locked (#476).
+        let calls = Box(0)
+        repository.onVerdict = { _, _ in
+            calls.value += 1
+            if calls.value == 1 {
+                box.value.verdict = Verdict(value: .safe, byDeviceId: "dev_me", byName: "Adhella", decidedAt: Self.fixtureNow)
+                throw RepositoryError.network
+            }
+            throw RepositoryError.api(.verdictLocked, message: "locked")
+        }
+        let model = DetailModel(scanId: Self.blocked92, repository: repository, now: { Self.fixtureNow })
+        await model.load()
+        _ = await model.setVerdict(.safe)
+        #expect(model.verdictError == .connection)
+        _ = await model.setVerdict(.safe)
+        print("H2 A-02 | server verdict: \(box.value.verdict?.value.rawValue ?? "none") | Detail badge: \(model.badge.map { "\($0)" } ?? "-") | error: \(String(describing: model.verdictError))")
+        #expect(model.verdictError == .locked)
+        // The server just said the link IS safe and locked: the screen must show that, not "Blocked" + Aman/Bahaya.
+        #expect(model.scan?.verdict?.value == .safe)
+        #expect(model.badge == .markedSafe)
+    }
+
+    // MARK: A-03: one row the app cannot read hides every row
+
+    static func page(_ mutate: (inout [String: Any]) -> Void) throws -> Data {
+        let url = try #require(Bundle.main.url(forResource: "blocked-92", withExtension: "json"))
+        let good = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        var bad = good
+        bad["id"] = "99999999-2222-4333-8444-555555555555"
+        mutate(&bad)
+        return try JSONSerialization.data(withJSONObject: ["items": [good, bad], "nextCursor": NSNull()])
+    }
+
+    @Test(arguments: ["status=reviewing", "verdict.value=unsure", "signal.layer=six", "score=91.5", "detectedAt=1792584000",
+                      "ownerName=null", "faviconUrl=empty", "pageTitle=number"])
+    func BUG_A03_oneUnreadableRowHidesTheWholeActivity(_ poison: String) async throws {
+        let body = try Self.page { row in
+            switch poison {
+            case "status=reviewing": row["status"] = "reviewing"
+            case "verdict.value=unsure":
+                row["verdict"] = ["value": "unsure", "byDeviceId": "dev_me", "byName": "Adhella", "decidedAt": "2026-10-21T04:05:00.000Z"]
+            case "signal.layer=six":
+                var signals = row["signals"] as? [[String: Any]] ?? []
+                if !signals.isEmpty { signals[0]["layer"] = "six" }
+                row["signals"] = signals
+            case "score=91.5": row["score"] = 91.5
+            case "detectedAt=1792584000": row["detectedAt"] = 1_792_584_000
+            case "ownerName=null": row["ownerName"] = NSNull()
+            case "faviconUrl=empty": row["faviconUrl"] = ""
+            default: row["pageTitle"] = 42
+            }
+        }
+        let server = StubServer()
+        server.reply { _ in HostStubProtocol.Reply(status: 200, body: body) }
+        var shown = 0
+        var thrown = "-"
+        do { shown = try await server.repository().scans(owner: .family, status: nil, cursor: nil).items.count } catch { thrown = "\(error)" }
+        print("H2 A-03 | \(poison) | rows shown \(shown) of 1 readable | thrown \(thrown)")
+        // The readable row must still reach the Guardian.
+        #expect(shown >= 1)
+    }
+
+    /// URLs the backend accepts (`new URL()` http/https, stored as sent) must not break the list either.
+    @Test(arguments: [
+        "https://toko.example/a b", "https://toko.example/p%C3%A4th", "https://toko.example/päth", "https://toko.example/%zz",
+        "https://toko.example:/a", "https://toko.example/x/../a", "https://toko.example/?q=%", "https://toko.example/#a#b",
+        "https://user:pa ss@toko.example/", "https://toko.example\\path", "https://toko.example/{id}|x^`", "HTTPS://TOKO.EXAMPLE/A",
+        "https://toko.example/\u{202E}di.oc.acb", "https://toko.example./a", "https://toko.example/[x]", "https://toko.example/a\tb",
+        " https://toko.example/a ", "https://toko.example/%", "https://toko.example/\"><x>", "https:toko.example/a", "https:///toko.example/a",
+    ])
+    func cell_urlsTheBackendStoresDecode(_ text: String) async throws {
+        let body = try Self.page { $0["url"] = text }
+        let server = StubServer()
+        server.reply { _ in HostStubProtocol.Reply(status: 200, body: body) }
+        var shown = 0
+        var host = "-"
+        do {
+            let items = try await server.repository().scans(owner: .family, status: nil, cursor: nil).items
+            shown = items.count
+            host = items.last?.url.host() ?? "nil"
+        } catch {}
+        print("H2 cell url | \(text.debugDescription) | rows \(shown) | host \(host) | \(shown == 2 ? "pass" : "FAIL")")
+        #expect(shown == 2)
+    }
+
+    /// A-03 end to end on the app side: the member's device posted `https://toko.example\path` (backend: 201, stored
+    /// and returned as sent, see h2-poison.test.ts.txt). Every Guardian screen that reads scans or members.
+    @Test func BUG_A03_oneStoredURLBlindsEveryGuardianScreen() async throws {
+        let poison = #"https://toko.example\path"#
+        let scans = try Self.page { $0["url"] = poison; $0["ownerDeviceId"] = "dev_mom"; $0["ownerName"] = "Mom" }
+        let members = try JSONSerialization.data(withJSONObject: ["members": [[
+            "deviceId": "dev_mom", "name": "Mom", "avatarId": "avatar_02", "extensionActive": true,
+            "lastScan": ["status": "blocked", "score": 92, "url": poison, "detectedAt": "2026-10-21T04:05:00.000Z"],
+        ]]])
+        let server = StubServer()
+        server.reply { seen in
+            switch seen.path {
+            case "/devices/me": .json(200, #"{"deviceId":"dev_me","name":"Adhella","avatarId":"avatar_01","mode":"guardian","language":"en","guardian":null}"#)
+            case "/family/members": HostStubProtocol.Reply(status: 200, body: members)
+            default: HostStubProtocol.Reply(status: 200, body: scans)
+            }
+        }
+        let repository = server.repository()
+        let home = GuardianHomeModel(repository: repository, settings: Self.settings(), scope: .family,
+                                     extensionStatus: { .active(lastSeen: nil) }, now: { Self.fixtureNow })
+        await home.refresh()
+        let activity = ActivityModel(repository: repository, owner: .family, ownDeviceId: "dev_me")
+        await activity.load()
+        let profile = ProfileModel(repository: repository, settings: Self.settings())
+        await profile.load()
+        let member = MemberDetailModel(deviceId: "dev_mom", repository: repository)
+        await member.load()
+        print("H2 A-03 screens | Home \(home.state) | Family Activity \(activity.state) | Profile family list failed \(profile.membersFailed) | Member detail \(member.state)")
+        #expect(home.state == .loaded)
+        #expect(activity.state == .loaded)
+        #expect(!profile.membersFailed)
+        #expect(member.state == .loaded)
+    }
+
+    /// How the HTTP layer names each failure (the copy depends on it). All expected to pass.
+    @Test(arguments: ["500 empty", "502 html", "200 not json", "200 missing field", "200 null body", "401 proxy", "401 contract",
+                      "429 with Retry-After", "429 without", "offline", "404 html", "503 code_unavailable", "200 unknown mode"])
+    func cell_httpFailureKinds(_ kind: String) async throws {
+        let server = StubServer()
+        server.reply { _ in
+            switch kind {
+            case "500 empty": .json(500, "")
+            case "502 html": .json(502, "<html>Bad gateway</html>")
+            case "200 not json": .json(200, "<html>captive portal</html>")
+            case "200 missing field": .json(200, #"{"deviceId":"dev_me","avatarId":"avatar_01","mode":"guardian"}"#)
+            case "200 null body": .json(200, "null")
+            case "401 proxy": .json(401, "<html>login</html>")
+            case "401 contract": .json(401, #"{"error":{"code":"unauthorized","message":"x"}}"#)
+            case "429 with Retry-After": .json(429, #"{"error":{"code":"rate_limited","message":"x"}}"#, headers: ["Retry-After": "30"])
+            case "429 without": .json(429, #"{"error":{"code":"rate_limited","message":"x"}}"#)
+            case "offline": .offline()
+            case "404 html": .json(404, "<html>nope</html>")
+            case "503 code_unavailable": .json(503, #"{"error":{"code":"code_unavailable","message":"x"}}"#)
+            default: .json(200, #"{"deviceId":"dev_me","name":"A","avatarId":"avatar_01","mode":"supervisor","language":"en","guardian":null}"#)
+            }
+        }
+        var got = "ok"
+        do { _ = try await server.repository().me() } catch { got = "\(error)" }
+        let expected: String = switch kind {
+        case "500 empty", "502 html": "api(Shoo.APIErrorCode(rawValue: \"internal\")"
+        case "200 not json", "200 missing field", "200 null body", "200 unknown mode": "decoding"
+        case "401 proxy", "401 contract": "api(Shoo.APIErrorCode(rawValue: \"unauthorized\")"
+        case "429 with Retry-After": "throttled("
+        case "429 without": "api(Shoo.APIErrorCode(rawValue: \"rate_limited\")"
+        case "offline": "network"
+        case "404 html": "api(Shoo.APIErrorCode(rawValue: \"not_found\")"
+        default: "api(Shoo.APIErrorCode(rawValue: \"code_unavailable\")"
+        }
+        let unauthorized = server.unauthorizedCount
+        print("H2 cell http | \(kind) | \(got.prefix(70)) | session-ending 401s \(unauthorized) | \(got.hasPrefix(expected) ? "pass" : "FAIL")")
+        #expect(got.hasPrefix(expected))
+        // Only the backend's own 401 body may end the session.
+        #expect(unauthorized == (kind == "401 contract" ? 1 : 0))
+    }
+
+    // MARK: A-04: family code countdown with a phone clock that is off
+
+    @Test(arguments: [0, 60, 300, 600, 2400, -60, -600, -2400])
+    func BUG_A04_codeCountdownFollowsThePhoneClock(_ phoneAheadSeconds: Int) async throws {
+        // The server's code has exactly 6 minutes left (it is reused while more than 5 are left).
+        let serverNow = Self.fixtureNow
+        let phoneNow = serverNow.addingTimeInterval(TimeInterval(phoneAheadSeconds))
+        let repository = H2Repo()
+        repository.onCode = { _ in
+            FamilyCode(code: "482193", expiresAt: serverNow.addingTimeInterval(360), inviteUrl: URL(string: "https://api.shoo.test/j/482193")!)
+        }
+        let model = FamilyCodeModel(repository: repository, now: { phoneNow }, throttle: RefreshThrottle())
+        await model.loadMembers()
+        await model.refreshCode()
+        let off = model.secondsLeft - 360
+        print("H2 A-04 | phone clock \(phoneAheadSeconds >= 0 ? "+" : "")\(phoneAheadSeconds) s | really left 360 s | shown \(model.secondsLeft) s (\(model.timeLeft)) | \(abs(off) <= 5 ? "pass" : "FAIL")")
+        #expect(abs(off) <= 5)
+    }
+
+    // MARK: A-05: a heartbeat from the future is "Active" for good
+
+    @Test(arguments: [60.0, 301, 3600, 86_400, 30 * 86_400, 365 * 86_400])
+    func BUG_A05_heartbeatFromTheFutureCountsAsActive(_ ahead: Double) {
+        let now = Self.fixtureNow
+        let status = ExtensionStatus.evaluate(lastSeen: now.addingTimeInterval(ahead), allSites: nil, enabled: nil, now: now)
+        // Up to 5 minutes is clock noise (the backend's own skew allowance). Beyond that it is no evidence of "recent".
+        let expectedActive = ahead <= 300
+        print("H2 A-05 | heartbeat +\(Int(ahead)) s | active \(status.isActive) | expected \(expectedActive) | \(status.isActive == expectedActive ? "pass" : "FAIL")")
+        #expect(status.isActive == expectedActive)
+    }
+
+    /// The other edges of the Active/Off rule (#40). All expected to pass.
+    @Test func cell_extensionStatusEdges() {
+        let now = Self.fixtureNow
+        let day = AppGroup.extensionActiveWindow
+        let cells: [(String, ExtensionStatus, Bool)] = [
+            ("no heartbeat, Safari unknown", .evaluate(lastSeen: nil, now: now), false),
+            ("24 h - 1 s", .evaluate(lastSeen: now.addingTimeInterval(-day + 1), now: now), true),
+            ("24 h exactly", .evaluate(lastSeen: now.addingTimeInterval(-day), now: now), false),
+            ("24 h + 1 s", .evaluate(lastSeen: now.addingTimeInterval(-day - 1), now: now), false),
+            ("recent, allSites false", .evaluate(lastSeen: now, allSites: false, now: now), false),
+            ("recent, Safari switch off", .evaluate(lastSeen: now, allSites: true, enabled: false, now: now), false),
+            ("Safari on, allSites false", .evaluate(lastSeen: now, allSites: false, enabled: true, now: now), false),
+            ("Safari on, never seen", .evaluate(lastSeen: nil, enabled: true, now: now), true),
+            ("Safari on, heartbeat 30 d old", .evaluate(lastSeen: now.addingTimeInterval(-30 * day), allSites: true, enabled: true, now: now), true),
+        ]
+        for (name, status, expected) in cells {
+            print("H2 cell ext | \(name) | active \(status.isActive) | next \(String(describing: status.nextStep)) | \(status.isActive == expected ? "pass" : "FAIL")")
+            #expect(status.isActive == expected)
+        }
+    }
+
+    // MARK: A-06: Pribadi Home says "not protected" before it has asked
+
+    @Test func BUG_A06_personalHomeClaimsOffBeforeTheFirstRead() {
+        let model = GuardianHomeModel(repository: H2Repo(), settings: Self.settings(family: false), scope: .personal,
+                                      extensionStatus: { .active(lastSeen: Date()) })
+        let checked = Mirror(reflecting: model).children.contains { ($0.label ?? "").lowercased().contains("extensionchecked") }
+        print("H2 A-06 | before the first read: isActive \(model.extensionStatus.isActive) (hero 'You're not protected yet') | has an 'unknown yet' state: \(checked)")
+        // ShieldModel has `extensionChecked` for this ("Checking Shoo…"); Pribadi Home has nothing.
+        #expect(model.extensionStatus.isActive || checked)
+    }
+
+    // MARK: A-07: "Delete account" does not say the family is disconnected when the list failed
+
+    @Test func BUG_A07_deleteSheetForgetsTheFamilyWhenItsListFailed() async {
+        let repository = H2Repo()
+        repository.onMembers = { throw RepositoryError.network }
+        let model = ProfileModel(repository: repository, settings: Self.settings())
+        await model.load()
+        let alone = H2Repo()
+        alone.onMembers = { [] }
+        let nobody = ProfileModel(repository: alone, settings: Self.settings())
+        await nobody.load()
+        let text = model.deleteMessage(language: .english)
+        print("H2 A-07 | members on server 2 | list failed \(model.membersFailed) | sheet: \(text)")
+        // A Guardian of two people must not read the same sheet as a Guardian of nobody.
+        #expect(text != nobody.deleteMessage(language: .english))
+    }
+
+    // MARK: Counts, thresholds, time (expected to pass unless marked)
+
+    @Test func cell_scoreBandsAndBadges() throws {
+        for (score, level) in [(0, ScoreLevel.normal), (29, .normal), (30, .firstWarning), (31, .firstWarning), (49, .firstWarning),
+                               (50, .secondWarning), (51, .secondWarning), (79, .secondWarning), (80, .blocked), (81, .blocked),
+                               (100, .blocked), (-1, .normal), (101, .blocked)] {
+            print("H2 cell score | \(score) | \(ScoreLevel(score: score)) | \(ScoreLevel(score: score) == level ? "pass" : "FAIL")")
+            #expect(ScoreLevel(score: score) == level)
+        }
+        for language in [AppLanguage.english, .indonesian] {
+            for score in [0, 1, 29, 30, 79, 80, 100] {
+                let text = Formatters.percent(score, language: language)
+                print("H2 cell percent | \(language) | \(score) | \(text)")
+                #expect(text.contains("\(score)"))
+            }
+        }
+    }
+
+    @Test func cell_daysAndCounts() async throws {
+        let utc = TimeZone(identifier: "UTC")!
+        var jakarta = Calendar(identifier: .gregorian); jakarta.timeZone = TimeZone(identifier: "Asia/Jakarta")!
+        var utcCal = Calendar(identifier: .gregorian); utcCal.timeZone = utc
+        // 2026-10-21T17:30Z = 22 Oct 00:30 WIB. Registered 2026-10-20T16:59Z = 20 Oct 23:59 WIB.
+        let now = Date(timeIntervalSince1970: 1_792_603_800)
+        let model = ProfileModel(repository: H2Repo(), settings: Self.settings(), now: { now })
+        let since = Date(timeIntervalSince1970: 1_792_515_540)
+        print("H2 cell days | WIB \(model.days(since: since, calendar: jakarta)) (expected 3) | UTC \(model.days(since: since, calendar: utcCal)) (expected 2)")
+        #expect(model.days(since: since, calendar: jakarta) == 3)
+        #expect(model.days(since: since, calendar: utcCal) == 2)
+        // Registered "tomorrow" (clock skew) still counts as day 1, never 0 or negative.
+        #expect(model.days(since: now.addingTimeInterval(86_400 * 2), calendar: jakarta) == 1)
+
+        // Guardian strip: sums of the members' counters.
+        await model.load()
+        let stats = model.stats(language: .english)
+        let members = model.members
+        let blocked = members.reduce(0) { $0 + ($1.stats?.blocked ?? 0) }
+        let warnings = members.reduce(0) { $0 + ($1.stats?.warnings ?? 0) }
+        print("H2 cell stats | members \(members.count) | blocked \(blocked) warnings \(warnings) | strip \(stats.map(\.value))")
+        #expect(stats.count == 3 && stats[1].value == "\(blocked)" && stats[2].value == "\(warnings)")
+    }
+
+    @Test func cell_dayGroupingAndTimes() throws {
+        let jakarta = TimeZone(identifier: "Asia/Jakarta")!
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = jakarta
+        // 16:59:59Z = 23:59:59 WIB (20 Oct), 17:00:00Z = 00:00:00 WIB (21 Oct).
+        let before = Date(timeIntervalSince1970: 1_792_515_599), after = Date(timeIntervalSince1970: 1_792_515_600)
+        #expect(calendar.startOfDay(for: before) != calendar.startOfDay(for: after))
+        let now = after.addingTimeInterval(3600)
+        for language in [AppLanguage.english, .indonesian] {
+            let a = Formatters.dayAndTime(before, now: now, language: language, timeZone: jakarta)
+            let b = Formatters.dayAndTime(after, now: now, language: language, timeZone: jakarta)
+            let future = Formatters.dayAndTime(now.addingTimeInterval(86_400), now: now, language: language, timeZone: jakarta)
+            print("H2 cell time | \(language) | 23:59:59 WIB -> \(a) | 00:00:00 WIB -> \(b) | tomorrow -> \(future)")
+            #expect(a != b)
+            #expect(a.lowercased().contains(language == .english ? "yesterday" : "kemarin"))
+            #expect(b.lowercased().contains(language == .english ? "today" : "hari ini"))
+        }
+        // "Just now" covers a verdict a little in the future (server clock ahead of the phone).
+        let verdict = Verdict(value: .safe, byDeviceId: "dev_me", byName: "Adhella", decidedAt: now.addingTimeInterval(240))
+        let byline = VerdictNote.byline(for: verdict, viewerDeviceId: "dev_me", now: now, language: .english)
+        print("H2 cell time | verdict +240 s | \(byline)")
+        #expect(byline.contains("Just now"))
+    }
+
+    // MARK: A-08: "active in 0s"
+
+    @Test(arguments: [AppLanguage.english, .indonesian])
+    func BUG_A08_memberLastSeenAheadOfThisPhoneReadsAsTheFuture(_ language: AppLanguage) {
+        // The member's heartbeat is 3 s ahead of the Guardian's clock (the server allows 5 min).
+        let now = Self.fixtureNow
+        let ago = MemberText.ago(now.addingTimeInterval(3), now: now, language: language)
+        print("H2 A-08 | \(language) | heartbeat +3 s | 'active \(ago)'")
+        #expect(!ago.lowercased().hasPrefix("in ") && !ago.lowercased().hasPrefix("dalam ") && !ago.lowercased().hasPrefix("dlm "))
+    }
+
+    @Test func cell_verdictLockBoundaries() {
+        func date(_ text: String) -> Date { ISO8601DateFormatter().date(from: text)! }
+        let cells: [(String, String, String?)] = [
+            ("2026-11-15T17:59:59Z", "2026-11-15T17:59:59Z", "2026-11-15T18:00:00Z"),
+            ("2026-11-15T18:00:00Z", "2026-11-15T18:00:01Z", "2026-11-22T18:00:00Z"),
+            ("2026-11-15T18:00:01Z", "2026-11-22T17:59:59Z", "2026-11-22T18:00:00Z"),
+            ("2026-11-09T00:00:00Z", "2026-11-15T18:00:00Z", nil),
+        ]
+        for (decided, now, expected) in cells {
+            let verdict = Verdict(value: .safe, byDeviceId: "d", byName: "n", decidedAt: date(decided))
+            let got = VerdictLock.lockedUntil(verdict, now: date(now))
+            print("H2 cell lock | decided \(decided) now \(now) | \(got.map { ISO8601DateFormatter().string(from: $0) } ?? "open") | \(got == expected.map(date) ? "pass" : "FAIL")")
+            #expect(got == expected.map(date))
+        }
+    }
+
+    @Test func cell_homeWindowsAndRoles() async throws {
+        // Pending card window: a member's undecided scan exactly 24 h old still has a card; 24 h + 1 s has none.
+        let repository = H2Repo()
+        let scan = try await repository.base.scan(id: Self.blocked92)
+        for (offset, expected) in [(24 * 3600.0, true), (24 * 3600.0 + 1, false), (-300.0, true)] {
+            let now = scan.detectedAt.addingTimeInterval(offset)
+            let model = GuardianHomeModel(repository: repository, settings: Self.settings(), scope: .family,
+                                          extensionStatus: { .active(lastSeen: nil) }, now: { now })
+            await model.refresh()
+            let has = model.pendingScan?.id == scan.id
+            print("H2 cell window | scan age \(offset) s | card \(has) | \(has == expected ? "pass" : "FAIL")")
+            #expect(has == expected)
+        }
+        // Role x verdict: who may decide.
+        for mode in [UserMode.guardian, .protected] {
+            let detail = DetailModel(scanId: Self.blocked92, repository: H2Repo(mode: mode))
+            await detail.load()
+            print("H2 cell role | \(mode) | state \(detail.state) | canValidate \(detail.canValidate)")
+            #expect(detail.canValidate == (mode == .guardian) || detail.state != .loaded)
+        }
+    }
+}
+
+/// A mutable value a `@Sendable`-free test closure can share.
+final class Box<Value>: @unchecked Sendable {
+    var value: Value
+    init(_ value: Value) { self.value = value }
+}

@@ -26,7 +26,15 @@ final class ProfileModel {
     private(set) var members: [FamilyMember] = []
     /// The family list could not be read; the rest of Profile still works.
     private(set) var membersFailed = false
+    /// The last family list read in this Profile session worked, so `members` is the family (PF-01, #494).
+    /// A failed profile refresh does not read the list, so it keeps the last answer (the view keeps the list too).
+    private var membersLoaded = false
+    /// Why the profile (`state == .failed`) or the family list (`membersFailed`) could not be read (A-03).
+    private(set) var loadFailure: LoadFailure = .connection
+    private(set) var membersLoadFailure: LoadFailure = .connection
     private(set) var isWorking = false
+    /// Counts the name and avatar saves the server confirmed, so the view gives a success haptic.
+    private(set) var profileSaves = 0
     /// Why the name was not saved; cleared as soon as the name is edited.
     private(set) var nameError: String.LocalizationValue?
     /// Disconnect / delete / language failures, shown as an alert.
@@ -38,10 +46,15 @@ final class ProfileModel {
     private(set) var languageTask: Task<Void, Never>?
     /// "Hapus akun" sheet: who loses what.
     func deleteMessage(language: AppLanguage) -> String {
-        var text = L10n.string("Your name, family link and history are deleted right away. This can't be undone.", language: language)
+        // Figma 1115:14271 "Hapus akun?".
+        var text = L10n.string("Everything in this app, including your profile, history and family links, is deleted for good and can't be recovered.", language: language)
         switch variant {
         case .guardian, .personal:
-            if !members.isEmpty {
+            if !membersLoaded {
+                // #494: the list did not load (offline, server error, or still loading), so the count is unknown.
+                // Say it without one; delete stays allowed (Apple 5.1.1(v)).
+                text += " " + L10n.string("Anyone you protect will be disconnected.", language: language)
+            } else if !members.isEmpty {
                 text += " " + L10n.string("\(members.count) people you protect will be disconnected.", language: language)
             }
         case .protected:
@@ -66,6 +79,12 @@ final class ProfileModel {
     @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored private let notifications: (any NotificationPermission)?
     @ObservationIgnored private let now: () -> Date
+    /// The last notification update that changed each key: a failed update puts back only the keys no newer
+    /// update has changed since (fase 27i, K11). Counted, not compared by value: off → on → off is three writers.
+    @ObservationIgnored private var notificationWriters: [NotificationSettingsUpdate.Key: Int] = [:]
+    @ObservationIgnored private var notificationUpdates = 0
+    /// Switch saves still waiting for the server; a profile read that answers meanwhile can be older than the screen.
+    @ObservationIgnored private var notificationSavesInFlight = 0
 
     init(
         repository: any ShooRepository,
@@ -104,7 +123,8 @@ final class ProfileModel {
     }
 
     /// Pribadi and Protected: days protected, blocked, sites checked ("—" until the extension counts them).
-    /// Guardian: members, days since the earliest member still connected, the members' blocked total.
+    /// Guardian (Figma 1115:14611): days since the earliest member still connected, the members' blocked
+    /// and warning totals.
     /// Empty when the server sends no stats, or a guardian protects nobody yet (the strip is hidden).
     func stats(language: AppLanguage) -> [ProfileStat] {
         let number = { (n: Int) in n.formatted(.number.locale(language.locale)) }
@@ -113,16 +133,16 @@ final class ProfileModel {
             guard let stats = profile?.stats else { return [] }
             return [
                 ProfileStat(value: number(days(since: stats.since)), label: "Days protected"),
-                ProfileStat(value: number(stats.blocked), label: "Sites blocked"),
-                ProfileStat(value: linked.checkedCount.map(number) ?? "—", label: "Sites checked"),
+                ProfileStat(value: number(stats.blocked), label: "Blocked"),
+                ProfileStat(value: linked.checkedCount.map(number) ?? "—", label: "Checked"),
             ]
         case .guardian:
             guard !membersFailed, !members.isEmpty, members.allSatisfy({ $0.stats != nil }) else { return [] }
             let since = members.compactMap(\.connectedAt).min()
             return [
-                ProfileStat(value: number(members.count), label: "People protected"),
-                ProfileStat(value: since.map { number(days(since: $0)) } ?? number(0), label: "Days as guardian"),
-                ProfileStat(value: number(members.reduce(0) { $0 + ($1.stats?.blocked ?? 0) }), label: "Sites blocked"),
+                ProfileStat(value: since.map { number(days(since: $0)) } ?? number(0), label: "Days protecting"),
+                ProfileStat(value: number(members.reduce(0) { $0 + ($1.stats?.blocked ?? 0) }), label: "Blocked"),
+                ProfileStat(value: number(members.reduce(0) { $0 + ($1.stats?.warnings ?? 0) }), label: "Warnings"),
             ]
         }
     }
@@ -132,12 +152,21 @@ final class ProfileModel {
         "@" + (profile?.name ?? "").lowercased().filter { !$0.isWhitespace }
     }
 
-    /// "@adhella · Pribadi" (Figma "Handle"): the username, then the mode. Protected has none (Figma).
+    /// "Mode Pribadi" / "Mode Guardian" (Figma 1115:14409 "Handle"). Protected has none (Figma).
     func handle(language: AppLanguage) -> String {
         switch variant {
         case .protected: return ""
-        case .personal: return username + " · " + L10n.string("Personal", language: language)
-        case .guardian: return username + " · " + L10n.string("Guardian", language: language)
+        case .personal: return L10n.string("Personal mode", language: language)
+        case .guardian: return L10n.string("Guardian mode", language: language)
+        }
+    }
+
+    /// Kelola profil "Status" (Figma 1278:12092 "Pengguna pengawas").
+    var statusTitle: String.LocalizationValue {
+        switch variant {
+        case .guardian: "Guardian user"
+        case .personal: "Personal user"
+        case .protected: "Protected user"
         }
     }
 
@@ -184,8 +213,14 @@ final class ProfileModel {
     }
 
     func load() async {
+        let savesBefore = notificationUpdates
         do {
-            let me = try await repository.me()
+            var me = try await repository.me()
+            // A switch flipped while this read was out (a reload from the foreground or a push): the read may be
+            // from before its save. Keep the switches on screen; the next read catches up.
+            if notificationUpdates != savesBefore || notificationSavesInFlight > 0, let shown = profile?.notifications {
+                me.notifications = shown
+            }
             // Keep a name the user is still editing.
             if nameDraft.isEmpty || nameDraft == profile?.name { nameDraft = me.name }
             profile = me
@@ -195,17 +230,23 @@ final class ProfileModel {
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Profile load failed", error)
-            if state != .loaded { state = .failed }
+            if state != .loaded {
+                loadFailure = LoadFailure(error)
+                state = .failed
+            }
             return
         }
         guard settings.mode == .guardian else { return }
         do {
             members = try await repository.familyMembers()
             membersFailed = false
+            membersLoaded = true
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Profile members failed", error)
+            membersLoadFailure = LoadFailure(error)
             membersFailed = true
+            membersLoaded = false
         }
     }
 
@@ -225,6 +266,7 @@ final class ProfileModel {
             try await repository.updateMe(DeviceUpdate(name: trimmed))
             profile?.name = trimmed
             nameDraft = trimmed
+            profileSaves += 1
             return true
         } catch {
             Log.ui.error("Name save failed", error)
@@ -267,18 +309,37 @@ final class ProfileModel {
     /// What the notification page shows: the server's settings, or its defaults before the first load.
     var notificationSettings: NotificationSettings { profile?.notifications ?? .defaults }
 
+    /// "Jam tenang" Save: a window, not "all day" (the server reads start = end as the whole day).
+    static func canSaveQuietHours(start: String, end: String) -> Bool { start != end }
+
     /// Changes at once; the server decides which pushes go out, so a failed save goes back and says so.
     func updateNotifications(_ update: NotificationSettingsUpdate) async {
         guard profile != nil else { return }
-        let before = profile?.notifications
-        let after = notificationSettings.applying(update)
+        let before = notificationSettings
+        let after = before.applying(update)
+        // Start = end is "all day" on the server, which the sheet never offers (fase 27i, F-N6).
+        if update.quietStart != nil || update.quietEnd != nil,
+           !Self.canSaveQuietHours(start: after.quietStart, end: after.quietEnd) {
+            Log.ui.error("Quiet hours with the same start and end not sent")
+            return
+        }
+        notificationUpdates += 1
+        let token = notificationUpdates
+        for key in update.keys { notificationWriters[key] = token }
         profile?.notifications = after
+        notificationSavesInFlight += 1
+        defer { notificationSavesInFlight -= 1 }
         do {
             try await repository.updateMe(DeviceUpdate(notifications: update))
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Notification settings save failed", error)
-            profile?.notifications = before
+            // Only this update's keys go back, on top of what is on screen now: a switch that saved
+            // meanwhile stays (fase 27i, F-A11/F-N5).
+            let owned = update.keys.filter { notificationWriters[$0] == token }
+            // Read first: `profile?.notifications = …` holds `profile` for writing while the right side runs.
+            let reverted = notificationSettings.reverting(owned, to: before)
+            profile?.notifications = reverted
             actionError = "Couldn't save. Check your connection and try again."
         }
     }
@@ -293,6 +354,7 @@ final class ProfileModel {
         do {
             try await repository.updateMe(DeviceUpdate(avatarId: avatarId))
             profile?.avatarId = avatarId
+            profileSaves += 1
             return true
         } catch {
             Log.ui.error("Avatar save failed", error)
@@ -301,8 +363,23 @@ final class ProfileModel {
         }
     }
 
-    /// "Punya kode undangan?": only a guardian who protects nobody can join another family.
-    var canJoinAnotherFamily: Bool { settings.mode == .guardian && members.isEmpty && !membersFailed }
+    /// "Punya kode undangan?": a guardian who protects nobody (the server turns this iPhone into a protected one),
+    /// or a protected person whose guardian is gone (disconnected them or deleted their account), who joins with
+    /// the code as they are (QA 2026-11-10 #4).
+    /// Protected's Account row (BH-29): it opens a page that says "Not connected to a guardian yet" when no
+    /// Guardian is linked, so the row must not read "Connected" then.
+    var connectionRowTitle: String.LocalizationValue { hasNoGuardian ? "Not connected" : "Connected" }
+
+    var canJoinAnotherFamily: Bool {
+        switch settings.mode {
+        case .guardian: members.isEmpty && !membersFailed
+        case .protected: hasNoGuardian
+        case nil: false
+        }
+    }
+
+    /// Protected with nobody looking after them: Profile offers Connect again.
+    var hasNoGuardian: Bool { settings.mode == .protected && state == .loaded && profile?.guardian == nil }
 
     /// SECURITY §3 P3: gone on the server first, then a fresh install here (onboarding from the start).
     func deleteMyData() async -> Bool {
@@ -319,10 +396,9 @@ final class ProfileModel {
             return false
         }
         // `ApiRepository.deleteMe` has already cleared the Keychain token and App Group session keys.
-        linked.clear()
+        AppEnvironment.forgetDeletedDevice(linked: linked)
         onSessionEnd()
         settings.reset()
-        CheckStats.clear()
         return true
     }
 }

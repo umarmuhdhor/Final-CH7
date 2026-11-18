@@ -12,7 +12,7 @@ const fixture = (name) =>
 const snapshotFor = (result) => ({ url: result.url, domain: result.domain, title: "", lang: null, text: "", forms: [], imageAlts: [], capturedAt: "" });
 
 /** Runs a scan with fakes; returns every published state and which deps were called. */
-async function run({ local = [], remote = [], rdap, verdict = null, current = () => true, snapshot, previous, memory } = {}) {
+async function run({ local = [], remote = [], rdap, skipped, verdict = null, current = () => true, snapshot, previous, memory } = {}) {
     const states = [];
     const calls = { remote: 0, verdict: [], local: 0, fresh: [] };
     await P.runScan({
@@ -23,7 +23,8 @@ async function run({ local = [], remote = [], rdap, verdict = null, current = ()
         },
         analyzeRemote: async () => {
             calls.remote++;
-            return { signals: typeof remote === "function" ? remote() : remote, rdapRegisteredAt: rdap };
+            if (remote === "throw") throw new Error("down");
+            return { signals: typeof remote === "function" ? remote() : remote, rdapRegisteredAt: rdap, ...(skipped ? { skipped } : {}) };
         },
         lookupVerdict: async (domain, options) => {
             calls.verdict.push(domain);
@@ -282,4 +283,59 @@ test("urlChurn: a few route changes are normal, a page that keeps changing its a
     assert.equal(churn(4490), true);
     assert.equal(churn(4980), true);
     assert.equal(churn(30_000), false, "quiet again after the window");
+});
+
+test("urlChurn: an address every 3.4 s that cuts each scan is churning too", () => {
+    const churn = globalThis.ShooPipeline.urlChurn();
+    // Under CHURN_CHANGES in any 10 s window, but each one cuts a scan before /analyze answers.
+    assert.deepEqual([0, 3400, 6800].map((at) => churn(at, true)), [false, false, false]);
+    assert.equal(churn(10_200, true), true);
+    // Someone browsing: pages whose scans finished never count, however many in 30 s.
+    const browsing = globalThis.ShooPipeline.urlChurn();
+    assert.deepEqual([0, 3400, 6800, 10_200, 13_600].map((at) => browsing(at, false)), [false, false, false, false, false]);
+});
+
+test("#379: onlineChecked says whether /analyze really ran", async () => {
+    assert.equal((await run({ local: [sig("cheap_tld", 2, 14)] })).last.onlineChecked, true);
+    assert.equal((await run({ local: [sig("cheap_tld", 2, 14)], skipped: "error" })).last.onlineChecked, false);
+    assert.equal((await run({ local: [sig("cheap_tld", 2, 14)], skipped: "no_ai_url" })).last.onlineChecked, false);
+    assert.equal((await run({ local: [sig("cheap_tld", 2, 14)], remote: "throw" })).last.onlineChecked, false);
+});
+
+test("#370: a verdict on an open warning — not_safe blocks, safe clears it, none changes nothing", () => {
+    const warning = { scanId: 4, domain: "x.test", score: 40, status: "warning", signals: [sig("cheap_tld", 2, 40)], done: true, verdict: null };
+    const blocked = P.withVerdict(warning, { value: "not_safe", byName: "Adhella" });
+    assert.equal(blocked.status, "blocked");
+    assert.equal(blocked.score, 100);
+    assert.equal(blocked.scanId, 4);
+    const safe = P.withVerdict(warning, { value: "safe" });
+    assert.equal(safe.status, "normal");
+    assert.equal(safe.score, 0);
+    assert.deepEqual(safe.signals, []);
+    assert.equal(P.withVerdict(warning, null), null);
+});
+
+test("#370: an open warning asks for a verdict every 2 s, then 5 s, then 15 s", () => {
+    assert.deepEqual([0, 119999, 120000, 599999, 600000].map(P.verdictPollMs), [2000, 2000, 5000, 5000, 15000]);
+});
+
+test("#379: the phone's asks_* signals count in the score but are not sent to /analyze", async () => {
+    let sent = null;
+    const states = [];
+    await P.runScan({
+        snapshot: { url: "https://x.test/", domain: "x.test" },
+        analyzeLocal: async () => [sig("brand_plus_keyword", 2, 14), sig("asks_pin", 2, 20)],
+        analyzeRemote: async (_s, localSignals) => {
+            sent = localSignals;
+            return { signals: [sig("asks_pin", 3, 35)] };
+        },
+        lookupVerdict: async () => null,
+        isCurrent: () => true,
+        publish: (s) => states.push(s),
+    });
+    assert.deepEqual(sent.map((s) => s.id), ["brand_plus_keyword"]);
+    const last = states.at(-1);
+    assert.equal(last.signals.filter((s) => s.id === "asks_pin").length, 1);
+    assert.equal(last.signals.find((s) => s.id === "asks_pin").layer, 3); // the heavier server one wins
+    assert.equal(last.score, 49);
 });

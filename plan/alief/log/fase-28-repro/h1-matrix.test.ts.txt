@@ -1,0 +1,246 @@
+// Fase 28 hunt, hunter 1: API edge matrix (every body field / query param x dimension, auth x state).
+// Run: copy to backend/api/test/h1-matrix.test.ts, then
+//   cd backend/api && db_guard && VITE_H1_GROUP=<devices|patch|scans|verdicts|family|query|auth> npx vitest run test/h1-matrix.test.ts
+//   db_guard + SHOO_TEST_DB_URL + SHOO_TEST_ADMIN_DB_URL (both to a separate DB, never 54322): plan/alief/log/fase-28.md "Cara menunjuk vitest ke DB terpisah"
+// One group per run: a file that makes > ~500 requests runs the local Postgres out of connections (53300).
+// Every cell asserts "never 5xx". afterAll throws on purpose: its message `H1M {...}` is the status per cell
+// (vitest hides console output of hooks), so every run ends with one "error" that is the result table.
+// Format it with: node -e 'const m=require("fs").readFileSync(0,"utf8").match(/H1M (\{.*\})\s*$/m);console.log(JSON.stringify(JSON.parse(m[1]),null,1))' < run.log
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { resetDb, testSql } from "./helpers/resetDb";
+import { call, createDevice, type Created } from "./helpers/seed";
+
+const GROUP = (import.meta as unknown as { env: Record<string, string> }).env.VITE_H1_GROUP ?? "devices";
+const sql = testSql();
+const RAW = Symbol("raw");
+const MISSING = Symbol("missing");
+type V = unknown;
+const DIMS: [string, V][] = [
+  ["missing", MISSING], ["null", null], ["empty", ""], ["whitespace", "   "], ["long-5000", "a".repeat(5000)],
+  ["number-0", 0], ["negative", -1], ["NaN", { [RAW]: "NaN" }], ["float", 1.5], ["huge", 1e308], ["int-2^53", 9007199254740993],
+  ["bool", true], ["array", []], ["object", {}], ["emoji", "👨‍👩‍👧😀"], ["rtl-override", "‮abc"], ["zero-width", "a​b"],
+  ["html", "<script>alert(1)</script>"], ["unknown-enum", "unknown_value"], ["sql", "'; drop table devices; --"], ["nul", "a\u0000b"],
+];
+const results: Record<string, Record<string, string[]>> = {};
+let cells = 0, fivexx = 0;
+function record(route: string, param: string, dim: string, status: number, code: string) {
+  cells++;
+  if (status >= 500) fivexx++;
+  const key = `${status}${code ? " " + code : ""}`;
+  ((results[`${route} :: ${param}`] ??= {})[key] ??= []).push(dim);
+}
+const codeOf = async (res: Response) => {
+  try { return ((await res.clone().json()) as { error?: { code?: string } }).error?.code ?? ""; } catch { return ""; }
+};
+function bodyText(base: Record<string, unknown>, field: string, v: V): string {
+  const b: Record<string, unknown> = { ...base };
+  if (v === MISSING) { delete b[field]; return JSON.stringify(b); }
+  if (v && typeof v === "object" && RAW in (v as object)) {
+    b[field] = "__RAW__";
+    return JSON.stringify(b).replace('"__RAW__"', (v as Record<symbol, string>)[RAW]!);
+  }
+  b[field] = v;
+  return JSON.stringify(b);
+}
+const clean = async () => { await sql`delete from rate_limit_hits`; await sql`delete from join_attempts`; };
+
+let g: Created, p: Created, g2: Created, p2: Created, scanId: string;
+const scan = (over: Record<string, unknown> = {}) => ({
+  url: "https://toko.example/a", domain: "toko.example", pageTitle: "Toko", faviconUrl: null, score: 60, status: "warning",
+  signals: [{ id: "urgent_language", layer: 3, weight: 20, label: { en: "x", id: "x" }, labelSimple: { en: "x", id: "x" } }],
+  detectedAt: new Date().toISOString(), ...over,
+});
+async function fixtures() {
+  await resetDb(sql);
+  g = await createDevice("Gita", "guardian"); p = await createDevice("Ibu");
+  g2 = await createDevice("Lain", "guardian"); p2 = await createDevice("Asing");
+  for (const [gg, pp] of [[g, p], [g2, p2]] as const) {
+    const { code } = (await (await call("/family/code", { method: "POST", token: gg.token })).json()) as { code: string };
+    await call("/family/join", { method: "POST", token: pp.token, json: { code } });
+  }
+  scanId = ((await (await call("/scans", { method: "POST", token: p.token, json: scan() })).json()) as { id: string }).id;
+  await clean();
+}
+
+interface Target { route: string; method: string; path: () => string; token: () => string | undefined; base: () => Record<string, unknown>; fields: string[]; }
+const targets: Record<string, Target[]> = {
+  devices: [
+    { route: "POST /devices", method: "POST", path: () => "/devices", token: () => undefined, base: () => ({ name: "Ibu", mode: "protected", apnsToken: "a".repeat(64), avatarId: "avatar_01" }), fields: ["name", "mode", "apnsToken", "avatarId", "extraUnknown"] },
+    { route: "POST /devices/me/protected", method: "POST", path: () => "/devices/me/protected", token: () => g2.token, base: () => ({ code: "000000" }), fields: ["code", "extraUnknown"] },
+    { route: "POST /live", method: "POST", path: () => "/live", token: () => p.token, base: () => ({ domain: "toko.example", score: 60, status: "warning", analyzing: false, open: true }), fields: ["domain", "score", "status", "analyzing", "open", "extraUnknown"] },
+  ],
+  patch: [
+    { route: "PATCH /devices/me", method: "PATCH", path: () => "/devices/me", token: () => p.token, base: () => ({}), fields: ["name", "apnsToken", "language", "extensionLastSeenAt", "liveActivityStartToken", "liveActivityUpdateToken", "deviceModel", "osVersion", "avatarId", "timeZone", "notifications", "extraUnknown"] },
+  ],
+  scans: [
+    { route: "POST /scans", method: "POST", path: () => "/scans", token: () => p.token, base: () => scan({ url: `https://toko.example/${Math.random().toString(36).slice(2)}` }), fields: ["url", "domain", "pageTitle", "faviconUrl", "score", "status", "signals", "detectedAt", "pageReplicaBase64", "evidenceFragmentsBase64", "thresholdsVersion", "rdapRegisteredAt", "screenshotBase64", "ownerDeviceId", "extraUnknown"] },
+  ],
+  verdicts: [
+    { route: "POST /verdicts", method: "POST", path: () => "/verdicts", token: () => g.token, base: () => ({ scanId, value: "not_safe", notes: "alasan" }), fields: ["scanId", "value", "notes", "extraUnknown"] },
+  ],
+  family: [
+    { route: "POST /family/code", method: "POST", path: () => "/family/code", token: () => g.token, base: () => ({}), fields: ["refresh", "extraUnknown"] },
+    { route: "POST /family/join", method: "POST", path: () => "/family/join", token: () => p.token, base: () => ({ code: "000000" }), fields: ["code", "extraUnknown"] },
+    { route: "PATCH /family/members/{id}", method: "PATCH", path: () => `/family/members/${p.deviceId}`, token: () => g.token, base: () => ({ notify: true }), fields: ["notify", "extraUnknown"] },
+  ],
+};
+
+if (targets[GROUP]) {
+  describe(`matrix body: ${GROUP}`, () => {
+    beforeAll(fixtures);
+    afterAll(() => { throw new Error(`H1M ${JSON.stringify({ group: GROUP, cells, fivexx, results })}`); });
+    for (const t of targets[GROUP]!) {
+      for (const field of t.fields) {
+        it.each(DIMS)(`${t.route} ${field} = %s`, async (dim, v) => {
+          await clean();
+          const res = await call(t.path(), { method: t.method, token: t.token(), headers: { "content-type": "application/json" }, body: bodyText(t.base(), field, v) });
+          record(t.route, field, dim, res.status, await codeOf(res));
+          expect(res.status, await res.text()).toBeLessThan(500);
+        });
+      }
+      it.each([["not-json", "{"], ["empty-body", ""], ["json-array", "[]"], ["json-null", "null"], ["json-string", '"x"'], ["duplicate-keys", '{"name":"A","name":"B","mode":"guardian","mode":"protected"}'], ["17KB", JSON.stringify({ pad: "x".repeat(17_000) })], ["300KB", JSON.stringify({ pad: "x".repeat(300_000) })], ["2MB", JSON.stringify({ pad: "x".repeat(2_000_000) })]])(`${t.route} body = %s`, async (dim, body) => {
+        await clean();
+        const res = await call(t.path(), { method: t.method, token: t.token(), headers: { "content-type": "application/json" }, body });
+        record(t.route, "(body)", dim, res.status, await codeOf(res));
+        expect(res.status).toBeLessThan(500);
+      });
+    }
+  });
+}
+
+if (GROUP === "query") {
+  const Q = ["", "%20", "a".repeat(3000), "0", "-1", "NaN", "1.5", "1e308", "null", "true", "%F0%9F%98%80", "%E2%80%AEabc", "a%E2%80%8Bb", "%3Cscript%3E", "unknown_value", "'%3B%20drop%20table%20devices%3B--", "a%00b", "%ZZ"];
+  const routes: [string, (v: string) => string, () => string][] = [
+    ["GET /scans owner", (v) => `/scans?owner=${v}`, () => g.token],
+    ["GET /scans status", (v) => `/scans?status=${v}`, () => g.token],
+    ["GET /scans cursor", (v) => `/scans?cursor=${v}`, () => g.token],
+    ["GET /scans limit", (v) => `/scans?limit=${v}`, () => g.token],
+    ["GET /scans/{id}", (v) => `/scans/${v || "%20"}`, () => g.token],
+    ["GET /verdicts url", (v) => `/verdicts?domain=toko.example&url=${v}`, () => p.token],
+    ["GET /verdicts domain", (v) => `/verdicts?url=${encodeURIComponent("https://toko.example/a")}&domain=${v}`, () => p.token],
+    ["GET /verdicts domain only", (v) => `/verdicts?domain=${v}`, () => p.token],
+    ["GET /blocklist since", (v) => `/blocklist?since=${v}`, () => p.token],
+    ["DELETE /family/members/{id}", (v) => `/family/members/${v || "%20"}`, () => g2.token],
+    ["POST /family/members/{id}/remind", (v) => `/family/members/${v || "%20"}/remind`, () => g2.token],
+    ["GET /j/{code}", (v) => `/j/${v || "%20"}`, () => ""],
+    ["GET /replicas/{id}", (v) => `/replicas/${v || "%20"}?v=x&exp=1&sig=${"A".repeat(43)}`, () => ""],
+    ["GET /favicons/{id}", (v) => `/favicons/${v || "%20"}?v=x&exp=1&sig=${"A".repeat(43)}`, () => ""],
+    ["GET /screenshots/{id}", (v) => `/screenshots/${v || "%20"}?v=x&exp=1&sig=${"A".repeat(43)}`, () => ""],
+  ];
+  describe("matrix query / path", () => {
+    beforeAll(fixtures);
+    afterAll(() => { throw new Error(`H1M ${JSON.stringify({ group: GROUP, cells, fivexx, results })}`); });
+    for (const [name, path, token] of routes) {
+      it.each(Q)(`${name} = %s`, async (v) => {
+        await clean();
+        const method = name.split(" ")[0]!;
+        const res = await call(path(v), { method, token: token() || undefined });
+        record(name, "(value)", v.length > 40 ? `${v.slice(0, 12)}…(${v.length})` : v || "(empty)", res.status, await codeOf(res));
+        expect(res.status, await res.text()).toBeLessThan(500);
+      });
+    }
+    it.each([
+      ["cursor: valid shape, year 1969", btoa("1969-01-01T00:00:00.000000Z|00000000-0000-4000-8000-000000000001")],
+      ["cursor: valid shape, year 9999", btoa("9999-01-01T00:00:00.000000Z|00000000-0000-4000-8000-000000000001")],
+      ["cursor: Feb 30", btoa("2026-02-30T00:00:00.000000Z|00000000-0000-4000-8000-000000000001")],
+      ["cursor: 3 parts", btoa("2026-02-03T00:00:00.000000Z|00000000-0000-4000-8000-000000000001|x")],
+      ["cursor: id upper-case", btoa("2026-02-03T00:00:00.000000Z|00000000-0000-4000-8000-00000000000A")],
+      ["cursor: other owner's row id", "OWN"],
+    ])("GET /scans %s", async (name, c) => {
+      const cursor = c === "OWN" ? btoa(`2999-01-01T00:00:00.000000Z|${scanId}`).replace("2999", "2099") : c;
+      const res = await call(`/scans?cursor=${encodeURIComponent(cursor)}`, { token: g2.token });
+      const body = await res.clone().text();
+      record("GET /scans cursor", "(crafted)", name, res.status, await codeOf(res));
+      expect(res.status, body).toBeLessThan(500);
+      // A cursor never widens what the caller may list (another family's rows stay hidden).
+      if (res.status === 200) expect(body).not.toContain(scanId);
+    });
+  });
+}
+
+if (GROUP === "auth") {
+  const R: [string, string, () => string, unknown?][] = [
+    ["GET", "/devices/me", () => "/devices/me"], ["PATCH", "/devices/me", () => "/devices/me", { name: "X" }], ["DELETE", "/devices/me", () => "/devices/me"],
+    ["POST", "/devices/me/protected", () => "/devices/me/protected", { code: "000000" }],
+    ["POST", "/family/code", () => "/family/code"], ["POST", "/family/join", () => "/family/join", { code: "000000" }],
+    ["GET", "/family/members", () => "/family/members"], ["DELETE", "/family/members/{id}", () => `/family/members/${p.deviceId}`],
+    ["PATCH", "/family/members/{id}", () => `/family/members/${p.deviceId}`, { notify: false }], ["POST", "/family/members/{id}/remind", () => `/family/members/${p.deviceId}/remind`],
+    ["DELETE", "/family/guardian", () => "/family/guardian"],
+    ["POST", "/scans", () => "/scans", scan()], ["GET", "/scans", () => "/scans?owner=family"], ["GET", "/scans?owner={id}", () => `/scans?owner=${p.deviceId}`], ["GET", "/scans/{id}", () => `/scans/${scanId}`],
+    ["POST", "/verdicts", () => "/verdicts", { scanId: "SCAN", value: "not_safe" }], ["GET", "/verdicts", () => `/verdicts?domain=toko.example&url=${encodeURIComponent("https://toko.example/a")}`],
+    ["GET", "/blocklist", () => "/blocklist"], ["GET", "/config/public", () => "/config/public"], ["POST", "/live", () => "/live", { domain: "toko.example", score: 1, status: "normal", analyzing: false, open: false }],
+    ["GET", "/ops/status", () => "/ops/status"],
+  ];
+  const run = async (m: string, path: string, token: string | undefined, json: unknown, rawAuth?: string) => {
+    await clean();
+    const body = json && typeof json === "object" && "scanId" in (json as object) ? { ...(json as object), scanId } : json;
+    return call(path, { method: m, token, ...(rawAuth !== undefined ? { headers: { authorization: rawAuth } } : {}), ...(body !== undefined ? { json: body } : {}) });
+  };
+  describe("matrix auth", () => {
+    beforeAll(fixtures);
+    afterAll(() => { throw new Error(`H1M ${JSON.stringify({ group: GROUP, cells, fivexx, results })}`); });
+    for (const [m, name, path, json] of R) {
+      it.each([
+        ["no token", undefined, undefined], ["malformed: Basic", undefined, "Basic abc"], ["malformed: Bearer short", undefined, "Bearer shoo_x"],
+        ["malformed: lower-case bearer", undefined, "bearer shoo_" + "a".repeat(43)], ["malformed: token + space", undefined, "Bearer shoo_" + "a".repeat(43) + " "],
+        ["unknown well-formed", undefined, "Bearer shoo_" + "a".repeat(43)], ["very long", undefined, "Bearer shoo_" + "a".repeat(5000)],
+      ])(`${m} ${name}: %s`, async (dim, _t, raw) => {
+        const res = await run(m, path(), undefined, json, raw);
+        record(`${m} ${name}`, "auth", dim, res.status, await codeOf(res));
+        if (name === "/ops/status") expect(res.status).toBe(404); else expect(res.status).toBe(401);
+      });
+      it(`${m} ${name}: guardian of another family`, async () => {
+        const res = await run(m, path(), name === "/devices/me" || name === "/devices/me/protected" ? undefined : g2.token, json);
+        record(`${m} ${name}`, "auth", "guardian of another family", res.status, await codeOf(res));
+        expect(res.status).toBeLessThan(500);
+        if (name.includes("{id}") || name === "/verdicts" && m === "POST") expect([403, 404]).toContain(res.status);
+        // Nothing of family 1 leaks into an answer for family 2.
+        const text = await res.text();
+        expect(text).not.toContain(p.deviceId);
+        expect(text).not.toContain("Ibu");
+      });
+      it(`${m} ${name}: protected of another family`, async () => {
+        if (name === "/devices/me") return;
+        const res = await run(m, path(), p2.token, json);
+        record(`${m} ${name}`, "auth", "protected of another family", res.status, await codeOf(res));
+        expect(res.status).toBeLessThan(500);
+        const text = await res.text();
+        expect(text).not.toContain(p.deviceId);
+        expect(text).not.toContain("Ibu");
+      });
+    }
+    it("deleted device: its token is 401 on every route at once", async () => {
+      const gone = await createDevice("Hapus", "guardian");
+      expect((await call("/devices/me", { method: "DELETE", token: gone.token })).status).toBe(200);
+      for (const [m, name, path, json] of R) {
+        if (name === "/ops/status") continue;
+        const res = await run(m, path(), gone.token, json);
+        record(`${m} ${name}`, "auth", "deleted device", res.status, await codeOf(res));
+        expect(res.status, `${m} ${name}`).toBe(401);
+      }
+    });
+    it("just-disconnected guardian: member data is gone from every read at once", async () => {
+      const before = await call(`/scans/${scanId}`, { token: g.token });
+      expect(before.status).toBe(200);
+      const detail = (await before.json()) as { pageReplicaUrl: string | null; faviconUrl: string | null };
+      expect((await call("/family/guardian", { method: "DELETE", token: p.token })).status).toBe(200);
+      const cellsNow: [string, string, string, number[]][] = [
+        ["GET", "/scans/{id}", `/scans/${scanId}`, [404]], ["GET", "/scans?owner={id}", `/scans?owner=${p.deviceId}`, [404]],
+        ["POST", "/verdicts", "/verdicts", [403]], ["DELETE", "/family/members/{id}", `/family/members/${p.deviceId}`, [404]],
+        ["PATCH", "/family/members/{id}", `/family/members/${p.deviceId}`, [404]], ["POST", "/family/members/{id}/remind", `/family/members/${p.deviceId}/remind`, [404]],
+      ];
+      for (const [m, name, path, want] of cellsNow) {
+        const res = await run(m, path, g.token, m === "POST" && name === "/verdicts" ? { scanId, value: "safe" } : m === "PATCH" ? { notify: true } : undefined);
+        record(`${m} ${name}`, "auth", "just-disconnected", res.status, await codeOf(res));
+        expect(want, `${m} ${name}`).toContain(res.status);
+      }
+      const fam = await (await call("/scans?owner=family", { token: g.token })).text();
+      const members = await (await call("/family/members", { token: g.token })).text();
+      record("GET /scans", "auth", "just-disconnected (no member rows)", fam.includes(scanId) ? 500 : 200, "");
+      expect(fam).not.toContain(scanId);
+      expect(members).not.toContain(p.deviceId);
+      expect(((await (await call("/devices/me", { token: p.token })).json()) as { guardian: unknown }).guardian).toBeNull();
+      console.log("H1 detail urls", JSON.stringify({ replica: detail.pageReplicaUrl !== null, favicon: detail.faviconUrl !== null }));
+    });
+  });
+}

@@ -1,0 +1,98 @@
+import json,glob,os,re,sys,collections
+S='shots'
+TAGS=collections.OrderedDict([
+ ('A','iPhone 17 · ID · default size · light'),
+ ('F','iPhone SE (3rd gen) · ID · AX5 · light'),
+ ('D','iPhone 17 · ID · AX5 · dark'),
+ ('E','iPhone SE (3rd gen) · EN · default size · light'),
+ ('B','iPhone 17 Pro Max · EN · default size · dark · Bold + Increase Contrast')])
+AX={'F','D'}
+SCREENS=[('Onboarding (ON-01..ON-05)',r'^(on-|consent-|guardian-intro)'),('Session expired',r'^session-'),
+ ('Guardian Home (GD-01)',r'^home-g-'),('Pribadi Home',r'^home-pb-'),('Protected Home (PR-01)',r'^home-p-'),
+ ('Activity (GD-05)',r'^act-'),('Detail (DT-01, GD-07)',r'^dt-'),('Profile + pages (PF-01)',r'^pf-'),
+ ('Member detail (GD-03)',r'^member-'),('Sheets',r'^sheet-'),('Pairing: Connect + deep link (GD-04, PR-03)',r'^(connect-|invite-)'),
+ ('Interaction',r'^ix-')]
+INVALID={'on-connected':'debug flag "connected" is not handled by the flow; splash shown',
+ 'act-g-picker':'picker did not open','act-g-edge-picker':'picker did not open',
+ 'home-g-verdict-safe-tapped':'tap opened the safe-reason sheet, state verdict_not_allowed not reached',
+ 'pf-page-connection':'Connection page is not a Guardian route (debug-only)',
+ 'sheet-invite':'scenario figma has 3 members, so the sheet shows "family full"; needs scenario oneMember',
+ 'sheet-invite-fail':'same: family-full wins before createFamilyCode fails; needs scenario oneMember',
+ 'sheet-invite-loading':'same scenario; skeleton seen but not the result',
+ 'invite-notice-pribadi':'mock notification-denied alert stacked on the notice; needs scenario with notifications granted'}
+def load(t):
+    out={}
+    for f in sorted(glob.glob(f'{S}/{t}/*.json')):
+        out[os.path.basename(f)[:-5]]=json.load(open(f))
+    return out
+def sw(t): return 375 if t in('F','E') else (440 if t=='B' else 402)
+def detect(t,c,d):
+    n=d['nodes']; W=sw(t); r=[]
+    ids={x.get('id'):x for x in n if x.get('id')}
+    if c=='home-g-loading' and 'home.family.protected' in ids: r.append('U-01')
+    if c=='home-g-verdict-failed':
+        tab=[x for x in n if x.get('l') in('Perisai','Shield') and x['t']==9]
+        a=ids.get('state.notice.action')
+        if a and tab and a['y']+a['h']>min(x['y'] for x in tab): r.append('U-02')
+    if re.match(r'home-',c):
+        for k in('familyModeToggle','profileButton'):
+            x=ids.get(k)
+            if x and (x['x']<-1 or x['x']+x['w']>W+1): r.append('U-03'); break
+    if re.match(r'(home-|act-|pf-|member-)',c) and t in AX:
+        if any(x['t']==48 and 0<x['w']<70 and x['h']>120 and len(x.get('l',''))>6 and 0<=x['y']<900 for x in n): r.append('U-04')
+    if c in('act-g-edge','act-p-edge','member-edge-long','member-edge-long-end'): r.append('U-05')
+    if t in AX and re.match(r'(on-ext|on-safariDefault|on-extensionOn|on-name$)',c): r.append('U-06')
+    if t in AX and (re.match(r'dt-(g|pb)-',c) or c in('dt-fail','dt-gone','dt-verdict-failed','dt-after-notsafe','dt-screenshot-zoom','member-fail','member-gone')): r.append('U-07')
+    if t in AX and c=='consent-question': r.append('U-08')
+    if c=='connect-scan-tab':
+        a=ids.get('connect.copyNote'); b=ids.get('connect.skip')
+        if a and b and a['y']+a['h']>b['y']+1: r.append('U-09')
+    if c=='sheet-safeReason-kb':
+        kb=[x for x in n if x['t']==20 or x.get('l') in('q','Q','1')]
+        s=ids.get('safeReason.submit')
+        if s and s['y']>500 and t=='A': r.append('U-11')
+    if t not in AX and c.startswith('dt-') and not c.endswith(('-mid','-end')):
+        qs=[x for x in n if x['t']==48 and (x.get('l','').startswith(('Apakah situs ini','Is this site','Gagal menyimpan. Periksa',"Couldn't save. Check")))]
+        hit=False
+        for q in qs:
+            for x in n:
+                if x is q or x['t']!=48 or not x.get('l') or x.get('l')==q.get('l'): continue
+                ox=min(q['x']+q['w'],x['x']+x['w'])-max(q['x'],x['x']); oy=min(q['y']+q['h'],x['y']+x['h'])-max(q['y'],x['y'])
+                if ox>4 and oy>4: hit=True
+        if hit: r.append('U-17')
+    if t in AX and re.match(r'act-',c) and 'U-04' not in r: r.append('U-12')
+    return r
+res={}  # (tag,cell)->status
+for t in TAGS:
+    for c,d in load(t).items():
+        if c in INVALID or (c=='member-disconnect-confirm' and t=='F'): res[(t,c)]=('notrun',[]); continue
+        f=detect(t,c,d); res[(t,c)]=('fail',f) if f else ('pass',[])
+json.dump({f'{t}|{c}':v for (t,c),v in res.items()},open('matrix.json','w'))
+allcells=sorted({c for (_,c) in res})
+def scr(c):
+    for name,rx in SCREENS:
+        if re.match(rx,c): return name
+    return 'Other'
+tot=collections.defaultdict(lambda: collections.Counter())
+for (t,c),(s,f) in res.items():
+    tot[scr(c)][s]+=1; tot[scr(c)]['total']+=1
+    for u in f: tot['_U'][u]+=1
+print('| Screen | Cells in plan (5 configs) | Run | Pass | Fail | Not run: invalid cell / needs scenario | Not run: not in reduced set |')
+print('|---|---|---|---|---|---|---|')
+G=collections.Counter()
+for name,_ in SCREENS:
+    cs=[c for c in allcells if scr(c)==name]; plan=len(cs)*5
+    k=tot[name]; run=k['pass']+k['fail']; nr=k['notrun']; skipped=plan-k['total']
+    print(f"| {name} | {plan} | {run} | {k['pass']} | {k['fail']} | {nr} | {skipped} |")
+    for a,b in(('plan',plan),('run',run),('pass',k['pass']),('fail',k['fail']),('nr',nr),('sk',skipped)): G[a]+=b
+print(f"| **Total app** | {G['plan']} | {G['run']} | {G['pass']} | {G['fail']} | {G['nr']} | {G['sk']} |")
+print(dict(tot['_U']))
+if len(sys.argv)>1:
+  for name,_ in SCREENS:
+    print(f'\n### {name}\n\n| Cell | A | F | D | E | B |\n|---|---|---|---|---|---|')
+    for c in [c for c in allcells if scr(c)==name]:
+        row=[]
+        for t in TAGS:
+            v=res.get((t,c))
+            row.append('–' if not v else ('pass' if v[0]=='pass' else ('not run' if v[0]=='notrun' else 'FAIL '+','.join(v[1]))))
+        print(f'| `{c}` | '+' | '.join(row)+' |')
