@@ -159,10 +159,13 @@
     }
 
     const ours = (node) => node.nodeType === 1 && node.localName.startsWith("shoo-");
+    // Attributes too: many scam pages ship every step in the HTML and only un-hide the next one (style/class/hidden),
+    // so a form that appears without new nodes still gets checked (feat/l3-impersonation-model, step forms with OTP).
+    const ownRecord = (r) => (r.type === "attributes" ? ours(r.target) : ours(r.target) || [...r.addedNodes, ...r.removedNodes].every(ours));
     new MutationObserver((records) => {
-        if (records.every((r) => ours(r.target) || [...r.addedNodes, ...r.removedNodes].every(ours))) return;
+        if (records.every(ownRecord)) return;
         scheduleRecheck();
-    }).observe(dom.root(document), { childList: true, subtree: true, characterData: true });
+    }).observe(dom.root(document), { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["style", "class", "hidden", "open"] });
 
     // A fragment-only change is the same page (anchors), except hash routers ("#/login", "#!/login").
     function isNewPage(from, to) {
