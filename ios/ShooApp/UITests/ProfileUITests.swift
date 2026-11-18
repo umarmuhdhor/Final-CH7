@@ -123,6 +123,28 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Language"].firstMatch.waitForExistence(timeout: 5))
     }
 
+    /// A language save the server missed says so on the Language page, not only under it on Profile.
+    @MainActor
+    func testFailedLanguageSaveSaysSoOnTheLanguagePage() {
+        let app = openProfile(mode: "guardian", extra: ["-mock.fail", "updateMe"])
+        // Profile's own load may resend the language and fail first: close that alert.
+        if app.alerts.firstMatch.waitForExistence(timeout: UITestTimeout.optional) {
+            app.alerts.firstMatch.buttons.firstMatch.tap()
+        }
+        let language = app.buttons["profile.language"]
+        reveal(language, in: app)
+        language.tap()
+        let indonesian = app.buttons["language.id"]
+        XCTAssertTrue(indonesian.waitForExistence(timeout: 5), app.debugDescription)
+        indonesian.tap()
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), app.debugDescription)
+        alert.buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["language.en"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["language.en"].tap()
+        if alert.waitForExistence(timeout: 5) { alert.buttons.firstMatch.tap() }
+    }
+
     @MainActor
     func testNameEditFollowsTheOnboardingRule() {
         let app = openProfile(mode: "guardian")
