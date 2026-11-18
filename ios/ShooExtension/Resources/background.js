@@ -163,6 +163,34 @@ async function lookupVerdict(domain, fresh, url) {
     return reply;
 }
 
+/**
+ * A page blocked from memory is a sibling of the page that was reported (another path or subdomain of the site):
+ * that page has no scan, so the Guardian can only decide on the reported one. Once they mark it safe, the memory
+ * entry goes and the sibling is scanned again on its own (a scam there is blocked and reported as a new scan).
+ * The safe itself still covers its own link only (#241). Old entries without `link` keep waiting.
+ * @returns {Promise<boolean>} true when the entry was released
+ */
+async function releaseIfReportedSafe(url, memory) {
+    if (!memory?.link || memory.link === shareableUrl(url)) return false; // same link: its own lookup decides
+    const reply = await verdicts.lookup(memory.domain, { fresh: true, link: memory.link });
+    if (reply?.verdict?.value !== "safe") return false;
+    await blockMemory.forget(url);
+    return true;
+}
+
+async function recallBlock(url) {
+    const memory = await blockMemory.recall(url);
+    return memory && (await releaseIfReportedSafe(url, memory)) ? null : memory;
+}
+
+/** Block screen poll: no verdict for this link, but the reported page was marked safe → `reopen` (rescan). */
+async function pollVerdict(domain, url) {
+    const reply = await lookupVerdict(domain, true, url);
+    if (reply?.verdict || !url) return reply;
+    const memory = await blockMemory.recall(url);
+    return memory && (await releaseIfReportedSafe(url, memory)) ? { ...reply, reopen: true } : reply;
+}
+
 /** Remembers a blocked page now; the backend's scan id is added once POST /scans answers. */
 function rememberBlock(message) {
     const domain = domainOfUrl(message.url, message.domain);
@@ -318,13 +346,15 @@ browser.runtime.onMessage.addListener((message) => {
             // From the URL, as report and rememberBlock do: a content script whose background didn't answer in time
             // sends the full host (`login.scam.co.id`), and the lookup then asked about the wrong domain.
             const url = typeof message.url === "string" ? message.url : null;
-            return lookupVerdict(url ? domainOfUrl(url, message.domain) : message.domain, Boolean(message.fresh), url);
+            const domain = url ? domainOfUrl(url, message.domain) : message.domain;
+            // Fresh asks (block screen, open warning) may release a remembered sibling page; cached ones never do.
+            return message.fresh ? pollVerdict(domain, url) : lookupVerdict(domain, false, url);
         }
         case "pageChecked":
             // A count for the app, no address (PF-01). Nothing depends on it, so a failure stays here.
             return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "pageChecked" }).catch(() => ({ ok: false }));
         case "recallBlock":
-            return sessionSettled().then(() => blockMemory.recall(message.url)).then((memory) => ({ ok: true, memory }));
+            return sessionSettled().then(() => recallBlock(message.url)).then((memory) => ({ ok: true, memory }));
         case "rememberBlock":
             return rememberBlock(message);
         default:

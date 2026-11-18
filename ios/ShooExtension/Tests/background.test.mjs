@@ -37,6 +37,10 @@ function world() {
                 const notified = state.notified === undefined ? {} : { notified: state.notified };
                 return new Response(JSON.stringify({ id: `scan_${posts.length}`, ...notified }), { status: 201 });
             }
+            if (url.includes("/verdicts?")) {
+                const link = new URL(url).searchParams.get("url");
+                return new Response(JSON.stringify({ verdict: state.verdicts?.[link] ?? null }), { status: 200 });
+            }
             return new Response(JSON.stringify({ domains: [], nextSince: null, verdict: null }), { status: 200 });
         };
         await import(`../Resources/background.js?boot=${++generation}`);
@@ -184,4 +188,48 @@ test("#377: the record carries who the backend pushed — a name, null, or nothi
     const restarted = await w.boot(); // from the stored log, after Safari restarted the background page
     assert.equal((await restarted({ type: "recordId", key: "named" })).notified, "Adhella");
     assert.equal((await restarted({ type: "recordId", key: "none" })).notified, null);
+});
+
+const SAFE = { value: "safe", byDeviceId: "dev_g", byName: "Rina", decidedAt: "2026-11-18T00:00:00.000Z", url: "https://scam.site/login" };
+
+test("Guardian marked the reported page safe: another page of that site is no longer blocked from memory", async () => {
+    const w = world();
+    const send = await w.boot();
+    await send({ type: "rememberBlock", url: "https://scam.site/login?next=1", domain: "scam.site", score: 90, signals: [] });
+    assert.ok((await send({ type: "recallBlock", url: "https://scam.site/" })).memory, "no verdict yet: still blocked");
+    w.state.verdicts = { "https://scam.site/login": SAFE };
+    assert.equal((await send({ type: "recallBlock", url: "https://www.scam.site/" })).memory, null);
+    assert.equal((await send({ type: "recallBlock", url: "https://scam.site/login" })).memory, null, "memory entry dropped");
+});
+
+test("the reported page itself marked safe: recall still answers, the pipeline's own lookup opens it", async () => {
+    const w = world();
+    const send = await w.boot();
+    await send({ type: "rememberBlock", url: "https://scam.site/login", domain: "scam.site", score: 90, signals: [] });
+    w.state.verdicts = { "https://scam.site/login": SAFE };
+    assert.ok((await send({ type: "recallBlock", url: "https://scam.site/login" })).memory);
+});
+
+test("block screen on another page of the site reopens once the Guardian marks the reported page safe", async () => {
+    const w = world();
+    const send = await w.boot();
+    await send({ type: "rememberBlock", url: "https://scam.site/login", domain: "scam.site", score: 90, signals: [] });
+    const poll = { type: "verdict", domain: "scam.site", url: "https://scam.site/", fresh: true };
+    const before = await send(poll);
+    assert.equal(before.verdict, null);
+    assert.ok(!before.reopen);
+    w.state.verdicts = { "https://scam.site/login": SAFE };
+    const after = await send(poll);
+    assert.equal(after.verdict, null, "the safe stays on its own link (#241)");
+    assert.equal(after.reopen, true);
+    assert.equal((await send({ type: "recallBlock", url: "https://scam.site/" })).memory, null);
+});
+
+test("a not_safe on the reported page never reopens another page", async () => {
+    const w = world();
+    const send = await w.boot();
+    await send({ type: "rememberBlock", url: "https://scam.site/login", domain: "scam.site", score: 90, signals: [] });
+    w.state.verdicts = { "https://scam.site/login": { ...SAFE, value: "not_safe" } };
+    assert.ok((await send({ type: "recallBlock", url: "https://scam.site/" })).memory);
+    assert.ok(!(await send({ type: "verdict", domain: "scam.site", url: "https://scam.site/", fresh: true })).reopen);
 });
