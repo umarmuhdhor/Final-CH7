@@ -2,8 +2,9 @@ import AVFoundation
 import SwiftUI
 
 /// ON-04 inside onboarding: the online check question as a checkbox (Figma "Persetujuan · Checkbox", 1328:13421).
-/// Turn on stays off until it is ticked; `prepare` saves the answer and registers the device. Without the
-/// checkbox (answered before, e.g. on the invite path's consent step) the buttons are on (fase 27d K6).
+/// Turn on works either way (Guideline 5.1.1(iv)); `prepare` saves the box as the answer (unticked = no online
+/// check; Profile › Online check changes it later) and registers the device. The Figma layout is unchanged.
+/// Without the checkbox (answered before, e.g. on the invite path's consent step) nothing changes (fase 27d K6).
 struct OnboardingExtensionConsent {
     @Binding var isChecked: Bool
     var showsCheckbox = true
@@ -42,7 +43,6 @@ struct TurnOnExtensionView: View {
     private static let recheck = (times: 10, every: Duration.seconds(2))
     private let steps = ExtensionSetup.steps(for: ProcessInfo.processInfo.operatingSystemVersion)
 
-    private var isChecked: Bool { consent.map { !$0.showsCheckbox || $0.isChecked } ?? true }
     private var isWorking: Bool { consent?.isWorking ?? false }
 
     var body: some View {
@@ -95,7 +95,6 @@ struct TurnOnExtensionView: View {
                 // In onboarding the switch is enough; Safari Default then sends the user to Safari.
                 Button(action: onSkipCheck) { workingLabel("Next") }
                     .buttonStyle(OnboardingCapsuleButtonStyle())
-                    .disabled(!isChecked)
                     .accessibilityIdentifier("extension.continue")
             } else {
                 // One main button that fits the reason (#135); the other half of the fix stays one tap away.
@@ -106,21 +105,18 @@ struct TurnOnExtensionView: View {
                     workingLabel(step.opensSafariFirst ? "Open Safari" : "Turn on the extension")
                 }
                 .buttonStyle(OnboardingCapsuleButtonStyle())
-                .disabled(!isChecked)
                 .accessibilityIdentifier(step.opensSafariFirst ? "extension.openSafari" : "extension.turnOn")
                 if showsStatusNote, step.hasSecondAction {
                     Button(step.opensSafariFirst ? "Open Safari settings" : "Open Safari") {
                         Task { await open(safariFirst: !step.opensSafariFirst) }
                     }
                     .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .semibold))
-                    .disabled(!isChecked)
                     .transition(.opacity)
                     .accessibilityIdentifier(step.opensSafariFirst ? "extension.settings" : "extension.openSafariLink")
                 }
                 if let onSkipCheck, showsStatusNote, status?.isActive == true {
                     Button("Continue without checking", action: onSkipCheck)
                         .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.secondaryInk, weight: .regular))
-                        .disabled(!isChecked)
                         .transition(.opacity)
                         .accessibilityIdentifier("extension.skipCheck")
                 }

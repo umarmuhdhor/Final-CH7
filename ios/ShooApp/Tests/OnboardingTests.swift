@@ -152,16 +152,33 @@ struct OnboardingModelTests {
         #expect(settings.mode == nil)
     }
 
-    @Test func turnOnNeedsTheConsentBox() async {
+    /// Guideline 5.1.1(iv): Turn on works with the box unticked. The tap saves a no (on-device checks only),
+    /// registers, and the box stays to change the answer later.
+    @Test func turnOnWithoutTheBoxDeclinesTheOnlineCheck() async {
         settings.dataConsent = nil
         let model = model()
         model.skipSplash()
         model.name = "Rina"
         model.submitName()
         #expect(!model.consentChecked)
-        #expect(!(await model.activateExtension()))
-        #expect(settings.mode == nil)
-        #expect(settings.dataConsent == nil)
+        #expect(await model.activateExtension())
+        #expect(settings.mode == .guardian)
+        #expect(settings.dataConsent == .declined)
+        #expect(model.showsConsentCheckbox)
+        model.consentChecked = true
+        #expect(settings.dataConsent == .granted)
+    }
+
+    /// An answer given before (the invite path's consent step) is never overwritten by the unticked box.
+    @Test func turnOnKeepsAnEarlierAnswer() async {
+        settings.dataConsent = .granted
+        let model = model()
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        model.consentChecked = false
+        #expect(await model.activateExtension())
+        #expect(settings.dataConsent == .granted)
     }
 
     @Test func firstTapSavesConsentAndRegistersPersonal() async {
