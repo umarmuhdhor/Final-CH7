@@ -10,6 +10,8 @@ struct OnboardingExtensionConsent {
     var showsCheckbox = true
     var isWorking = false
     var failed = false
+    /// `failed` was the sign-up limit (429), not the connection.
+    var limited = false
     /// `true` once Settings may open.
     let prepare: () async -> Bool
 }
@@ -75,7 +77,11 @@ struct TurnOnExtensionView: View {
                             .accessibilityIdentifier("extension.step.\(index + 1)")
                     }
                 }
-                if let consent, consent.failed {
+                if let consent, consent.failed, consent.limited {
+                    OnboardingErrorLabel(text: Text("Too many sign-ups from this network. Try again in 1 hour."), systemImage: "clock")
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("extension.error")
+                } else if let consent, consent.failed {
                     OnboardingErrorLabel(text: Text("Couldn't save. Check your connection and try again."), systemImage: "wifi.exclamationmark")
                         .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("extension.error")

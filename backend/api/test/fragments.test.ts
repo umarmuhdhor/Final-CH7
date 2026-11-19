@@ -146,4 +146,26 @@ describe("DELETE /devices/me and the archive (ADM-07 K11, K12)", () => {
     expect(await env.REPLICA_ARCHIVE.head(fragmentsKey(scam))).not.toBeNull();
     expect((await sql`select 1 from storage_tombstones where path = ${fragmentsKey(plain)}`).length).toBe(0);
   });
+
+  it("removes the tombstoned fragments right after the delete, without waiting for the cron (EGM audit B11)", async () => {
+    const d = await createDevice("Sendiri");
+    const plain = await postScan(d, { evidenceFragmentsBase64: await gzipBase64(FRAGMENTS_HTML) });
+    await until(async () => (await archived(plain))?.fragments_key != null);
+    expect(await env.REPLICA_ARCHIVE.head(fragmentsKey(plain))).not.toBeNull();
+
+    expect((await call("/devices/me", { method: "DELETE", token: d.token })).status).toBe(200);
+    await until(async () => (await env.REPLICA_ARCHIVE.head(fragmentsKey(plain))) === null);
+    // The young tombstone stays for the cron's later pass, in case an upload was still landing.
+    expect((await sql`select 1 from storage_tombstones where path = ${fragmentsKey(plain)}`).length).toBe(1);
+  });
+
+  it("the cron removes archive tombstones on their own budget, even with no R2 budget left (EGM audit B11)", async () => {
+    const d = await createDevice("Sendiri");
+    const plain = await postScan(d, { evidenceFragmentsBase64: await gzipBase64(FRAGMENTS_HTML) });
+    await until(async () => (await archived(plain))?.fragments_key != null);
+    // Tombstone it as the delete trigger does, but keep the object (as if the remove after the delete failed).
+    await admin`insert into storage_tombstones (path, created_at) values (${fragmentsKey(plain)}, now() - interval '11 minutes')`;
+    await runRetention(sql, env as unknown as Env, { r2MaxBatches: 0 });
+    expect(await env.REPLICA_ARCHIVE.head(fragmentsKey(plain))).toBeNull();
+  });
 });

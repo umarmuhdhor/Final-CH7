@@ -465,31 +465,6 @@ struct HomeSectionTitle: View {
 
 // MARK: - Risk gauge
 
-/// The Detail "Scam Score Gauge" (370 × 237) fitted to the width it gets.
-struct FittedScoreGauge: View {
-    let scan: ScanResult
-    var maxWidth: CGFloat = ScoreGauge.size.width
-    /// Figma's Home cards keep the full 237 pt gauge frame whatever the status.
-    var reservesBlockedHeight = false
-    @Environment(\.locale) private var locale
-
-    var body: some View {
-        let height: CGFloat = scan.status == .blocked || reservesBlockedHeight ? 237 : 219
-        Color.clear
-            .aspectRatio(ScoreGauge.size.width / height, contentMode: .fit)
-            .frame(maxWidth: maxWidth)
-            .overlay(alignment: .topLeading) {
-                GeometryReader { proxy in
-                    ScoreGauge(score: scan.score, status: scan.status)
-                        .scaleEffect(proxy.size.width / ScoreGauge.size.width, anchor: .topLeading)
-                }
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text("Risk score"))
-            .accessibilityValue(Text(verbatim: Formatters.percent(scan.score, language: AppLanguage(locale: locale))))
-    }
-}
-
 /// Figma "Frame 1618872237": the white 70 % risk panel (338 × 211) with the alert shield, "Situs Mencurigakan!" /
 /// "Situs Berbahaya!" and the bar with the score. Guardian/Home draws a second panel inset in it (328 × 205);
 /// protected/Home 1115:17294 one.

@@ -15,8 +15,8 @@ import { pushSender, type PushMessage } from "../services/push/sender";
 import type { Context } from "hono";
 
 const joinBody = z.object({ code: z.string().regex(/^\d{6}$/, "must be 6 digits") });
-const codeBody = z.object({ refresh: z.boolean().optional() }).strict();
-const memberBody = z.object({ notify: z.boolean() }).strict();
+const codeBody = z.strictObject({ refresh: z.boolean().optional() });
+const memberBody = z.strictObject({ notify: z.boolean() });
 
 export const family = new Hono<AppEnv>();
 

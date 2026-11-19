@@ -32,10 +32,28 @@ enum SafeReasonNotes {
     /// The Guardian's own text (Figma counter "90/200"). With every reason picked the whole stays under 280.
     static let maxNoteLength = 200
 
+    /// The server counts code points (`verdicts.ts` `MAX_NOTES`), not characters: an emoji such as ❤️ or 👍🏽 is
+    /// one character but two or more code points. Counting characters let a note of emoji go over 280 (422).
+    static func length(_ note: String) -> Int { note.unicodeScalars.count }
+
+    /// `note` cut to `maxNoteLength` code points, at a whole character so no emoji is split.
+    static func clamp(_ note: String) -> String {
+        guard length(note) > maxNoteLength else { return note }
+        var kept = ""
+        var count = 0
+        for character in note {
+            let size = character.unicodeScalars.count
+            if count + size > maxNoteLength { break }
+            kept.append(character)
+            count += size
+        }
+        return kept
+    }
+
     static func compose(reasons: Set<SafeReason>, note: String) -> String {
         let ids = SafeReason.allCases.filter(reasons.contains).map(\.rawValue)
         let line = "reasons: " + ids.joined(separator: ", ")
-        let text = String(note.trimmingCharacters(in: .whitespacesAndNewlines).prefix(maxNoteLength))
+        let text = clamp(note.trimmingCharacters(in: .whitespacesAndNewlines))
         return text.isEmpty ? line : line + "\n" + text
     }
 }
@@ -131,9 +149,9 @@ struct SafeReasonSheet: View {
                 HStack(alignment: .top) {
                     Text("Don't write a PIN, OTP or account number.")
                     Spacer(minLength: 12)
-                    Text(verbatim: "\(note.count)/\(SafeReasonNotes.maxNoteLength)")
+                    Text(verbatim: "\(SafeReasonNotes.length(note))/\(SafeReasonNotes.maxNoteLength)")
                         .monospacedDigit()
-                        .accessibilityLabel(Text("\(note.count) of \(SafeReasonNotes.maxNoteLength) characters"))
+                        .accessibilityLabel(Text("\(SafeReasonNotes.length(note)) of \(SafeReasonNotes.maxNoteLength) characters"))
                 }
                 .activityFont(13, rounded: true)
                 .foregroundStyle(DetailStyle.secondary)
@@ -220,9 +238,8 @@ struct SafeReasonSheet: View {
         .lineLimit(3, reservesSpace: true)
         .focused($noteFocused)
         .onChange(of: note) { _, new in
-            if new.count > SafeReasonNotes.maxNoteLength {
-                note = String(new.prefix(SafeReasonNotes.maxNoteLength))
-            }
+            let clamped = SafeReasonNotes.clamp(new)
+            if clamped != new { note = clamped }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

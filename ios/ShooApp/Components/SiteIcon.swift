@@ -103,7 +103,7 @@ final class CachedFaviconLoader: FaviconLoading, @unchecked Sendable {
         loader: any FaviconLoading,
         countLimit: Int = maxEntries,
         notificationCenter: NotificationCenter = .default,
-        now: @escaping @Sendable () -> Date = Date.init
+        now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.loader = loader
         self.now = now

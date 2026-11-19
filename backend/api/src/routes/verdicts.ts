@@ -67,7 +67,7 @@ const lookupQuery = z.union([
         const host = url.hostname.replace(/\.$/, "");
         return host === domain || host.endsWith(`.${domain}`);
       },
-      { message: "url host must be the domain or a subdomain of it", path: ["url"] },
+      { error: "url host must be the domain or a subdomain of it", path: ["url"] },
     )
     .transform(({ url, domain }) => ({ link: url.origin + url.pathname, domain })),
   // Deprecated: builds from before #241 send the domain only.

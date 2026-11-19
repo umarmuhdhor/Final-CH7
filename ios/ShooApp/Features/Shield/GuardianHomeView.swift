@@ -719,7 +719,6 @@ private struct DecisionButton: View {
             .contentShape(Capsule().inset(by: -2.6))
         }
         .buttonStyle(DecisionPressStyle())
-        .accessibilityHint(Text("Applies right away. You can change it later."))
     }
 }
 

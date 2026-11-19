@@ -219,7 +219,28 @@ struct OnboardingModelTests {
         #expect(!(await model.activateExtension()))
         #expect(model.step == .turnOnExtension)
         #expect(model.registrationFailed)
+        #expect(!model.registrationLimited)
         #expect(settings.mode == nil)
+    }
+
+    /// EGM audit B9: the sign-up limit (429) says to wait, not to check the connection.
+    @Test func signUpLimitIsToldApart() async throws {
+        let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
+        let settings = AppSettings(defaults: defaults)
+        let env = AppEnvironment(
+            repository: FailingRepository(error: .api(.rateLimited, message: "HTTP 429")), settings: settings,
+            notifications: notifications, extensionStatus: { .off(lastSeen: nil) }
+        )
+        let model = OnboardingModel(environment: env)
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        model.consentChecked = true
+        #expect(!(await model.activateExtension()))
+        #expect(model.registrationFailed)
+        #expect(model.registrationLimited)
+        model.goBack()
+        #expect(!model.registrationLimited)
     }
 
     @Test func personalRelaunchGoesHome() async {

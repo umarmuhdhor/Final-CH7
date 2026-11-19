@@ -91,7 +91,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
           points(
             "What you type into a page is never sent.",
             "A summary of a suspicious page may go to DeepSeek, an AI provider in China.",
-            "You can turn it off in Profile › Online check. You're less protected then.",
+            "You can turn it off in Profile › About Shoo › Online check. You're less protected then.",
           )),
         qa("How do I delete my data?",
           "Open Profile › Delete account. Your device, flagged pages, page copies, screenshots, site icons, decisions and family links are deleted from the server right away.",
@@ -194,7 +194,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
           points(
             "Isian yang kamu ketik di halaman tidak pernah dikirim.",
             "Ringkasan halaman yang mencurigakan bisa dikirim ke DeepSeek, penyedia AI dari Tiongkok.",
-            "Bisa dimatikan di Profil › Cek online, tapi perlindunganmu jadi lebih lemah.",
+            "Bisa dimatikan di Profil › Tentang Shoo › Cek online, tapi perlindunganmu jadi lebih lemah.",
           )),
         qa("Bagaimana cara menghapus data saya?",
           "Buka Profil › Hapus akun. Device, halaman yang ditandai, salinan halaman, screenshot, ikon situs, keputusan, dan hubungan keluarga langsung dihapus dari server.",
