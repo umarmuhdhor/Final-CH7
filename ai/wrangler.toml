@@ -17,6 +17,11 @@ invocation_logs = false
 # Zone-level HTTP logs / Logpush on a custom domain are NOT covered by the setting above; check them in the dashboard (A4).
 # Cost bound (A3/A9): the Free plan already caps CPU at 10 ms; on Paid add  [limits] cpu_ms = 50  once real timings are known.
 
+# Layer 3 impersonation model (src/layer3/model/impersonation.js, PR #605). Remove the line to go back to rules only.
+# Measured on Cloudflare 19 Nov 2026: cold isolate 91–189 ms CPU (rules only 10–37 ms), warm 1–5 ms (rules only 0–1 ms).
+[vars]
+SHOO_L3_MODEL = "impersonation"
+
 # Per-IP rate limit shared by all isolates (Workers Rate Limiting binding; works on workers.dev, unlike WAF zone rules).
 # The in-memory limiter in src/app.js stays as a second layer and is the only one in tests and the dev server.
 # period may only be 10 or 60 s. namespace_id: any number unique within the Cloudflare account.
