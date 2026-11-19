@@ -1,5 +1,6 @@
-// Raw feed entries -> the published list: registrable domains, allowlist applied, one entry per domain.
-import { toRegistrable } from "./domains.js";
+// Raw feed entries -> the published list: registrable domains (full hostnames under institution suffixes, #290),
+// allowlist applied, one entry per name.
+import { toListed } from "./domains.js";
 import { OFFICIAL, POPULAR, SHARED_HOSTS } from "./allowlist.js";
 
 /** True when `domain` (a registrable domain) is official, popular or a shared platform apex. */
@@ -33,7 +34,7 @@ export function buildList(raw, { maxDomains, now = Date.now() }) {
     const byDomain = new Map(); // domain -> { addedAt, removedAt|null }
     for (const e of Array.isArray(raw) ? raw : []) {
         if (!e || typeof e !== "object") continue;
-        const domain = toRegistrable(e.host);
+        const domain = toListed(e.host);
         const addedAt = iso(e.addedAt);
         if (!domain || !addedAt || isAllowlisted(domain)) continue;
         const removedAt = e.removedAt == null ? null : iso(e.removedAt);

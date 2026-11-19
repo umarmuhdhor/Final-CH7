@@ -36,3 +36,20 @@ export function toRegistrable(raw) {
     const reg = pslRegistrable(host, RULES);
     return reg && reg.includes(".") && isPublicHostname(reg) && !isPublicSuffix(reg) ? reg : null;
 }
+
+/**
+ * Institution suffixes (#290, lead decision 8 Nov 2026): feeds list one hacked page of a campus, school, government, army
+ * or village site, so publishing its registrable domain blocked the whole institution (`itb.ac.id`). Under these the feed's
+ * full hostname is published instead; the extension matches a host and its parents, so only the hacked host is blocked.
+ */
+export const HOSTNAME_SUFFIXES = Object.freeze(["ac.id", "sch.id", "go.id", "mil.id", "desa.id"]);
+
+/**
+ * The name a feed entry is published as: the full hostname under HOSTNAME_SUFFIXES, else the registrable domain.
+ * @returns {string | null} e.g. "biotek.fsm.kampus.ac.id" -> itself, "login.bca-x.co.id" -> "bca-x.co.id"; null for junk
+ */
+export function toListed(raw) {
+    const reg = toRegistrable(raw);
+    if (!reg) return null;
+    return HOSTNAME_SUFFIXES.some((s) => reg.endsWith(`.${s}`)) ? hostOf(raw) : reg;
+}
