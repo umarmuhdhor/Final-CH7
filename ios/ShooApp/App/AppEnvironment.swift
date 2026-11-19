@@ -51,6 +51,9 @@ final class AppEnvironment {
     @ObservationIgnored private(set) var reducesMotionForUITests = false
     /// Builds the real backend when the demo ends. `nil` in previews and tests that don't leave a demo.
     @ObservationIgnored fileprivate var makeLiveBackend: (() -> (repository: any ShooRepository, session: SessionStore))?
+    /// The registered account's backend while the review demo runs over it (this launch only; after a relaunch
+    /// `makeLiveBackend` builds it again).
+    @ObservationIgnored private var backendBeforeDemo: (repository: any ShooRepository, session: SessionStore?)?
     /// ON-01: the brand splash over the first screen (`LaunchSplash`). It lives as long as the process, so a
     /// cold launch shows it and a return from the background does not.
     var launchSplash: LaunchSplashPhase = .showing
@@ -437,22 +440,32 @@ final class AppEnvironment {
         DeliveredPushes.clear()
     }
 
-    /// "Try the demo" (App Review, Guideline 2.1): a family of fixtures on this phone. Nothing is registered and
-    /// nothing leaves the phone. Offered only before this device has a mode, so no real session is replaced.
+    /// The review demo (App Review, Guideline 2.1(a), issue #616): a family of fixtures on this phone, opened by
+    /// typing the invite code 000000 (`ConnectModel.demoCode`). No banner. Nothing is registered and nothing
+    /// leaves the phone. A registered device keeps its account underneath: its token stays in the Keychain and the
+    /// App Group (the extension keeps protecting it). Profile › Delete account leaves the demo and brings that
+    /// account back (`leaveDemo`); nothing real is deleted.
     @MainActor
     func startDemo() {
-        guard settings.mode == nil else { return }
+        guard !settings.demoMode else { return }
+        if settings.mode != nil { backendBeforeDemo = (repository, session) }
         repository = MockRepository(mode: .guardian)
         session = nil
         settings.enterDemo()
     }
 
-    /// Back to a fresh install on the real backend.
+    /// Back to the account the demo started over, or to a fresh install on the real backend.
     @MainActor
     func leaveDemo() {
         guard settings.demoMode else { return }
         router.reset()
-        settings.reset()
+        if !settings.leaveDemoToAccount() { settings.reset() }
+        defer { backendBeforeDemo = nil }
+        if let saved = backendBeforeDemo {
+            repository = saved.repository
+            session = saved.session
+            return
+        }
         // The demo's fixtures have no favicon links today; emptied anyway so nothing from it stays (P13).
         CachedFaviconLoader.shared.clear()
         if let backend = makeLiveBackend?() {

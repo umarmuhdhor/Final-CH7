@@ -89,7 +89,7 @@ struct ConnectModelTests {
     }
 
     @Test(arguments: [
-        ("000000", ConnectModel.Problem.invalid),
+        ("111111", ConnectModel.Problem.invalid),
         ("999999", .expired),
         ("888888", .full),
         ("666666", .alreadyConnected),
@@ -140,9 +140,36 @@ struct ConnectModelTests {
         #expect(model.canJoin)
     }
 
+    /// Issue #616: typing 000000 opens the review demo at once, without Connect, and never reaches the server.
+    @Test func typingTheDemoCodeOpensTheDemoWithoutJoining() async {
+        var opened = 0
+        var joins = 0
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), openDemo: { opened += 1 }) { _ in
+            joins += 1
+            throw RepositoryError.network
+        }
+        model.code = "00000"
+        #expect(opened == 0)
+        model.code = ConnectModel.demoCode
+        #expect(opened == 1)
+        #expect(joins == 0)
+        #expect(model.state == .entering)
+        #expect(model.problem == nil)
+        #expect(model.code.isEmpty)
+    }
+
+    /// A link or QR carrying 000000 only fills the field (T11): it never opens the demo by itself.
+    @Test func aLinkWithTheDemoCodeDoesNotOpenTheDemo() {
+        var opened = 0
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: ConnectModel.demoCode,
+                                 openDemo: { opened += 1 })
+        #expect(opened == 0)
+        #expect(model.code == ConnectModel.demoCode)
+    }
+
     /// Figma "Kode salah" (1681:4712): "Ketik ulang kode" empties the boxes and the line.
     @Test func retypeClearsAWrongCode() async {
-        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "000000")
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "111111")
         await model.join()
         #expect(model.problem == .invalid)
         model.retype()

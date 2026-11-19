@@ -410,7 +410,11 @@ struct JoinAnotherFamilySheet: View {
             guard model == nil else { return }
             let code = env.router.takePendingJoinCode()
             cameFromLink = code != nil
-            model = ConnectModel(repository: env.repository, code: code) { [env, name] code in
+            model = ConnectModel(repository: env.repository, code: code, openDemo: { [env, dismiss] in
+                dismiss()
+                env.router.reset()
+                env.startDemo()
+            }) { [env, name] code in
                 let name = name.isEmpty ? try await env.repository.me().name : name
                 return try await env.becomeProtected(code: code, name: name)
             }

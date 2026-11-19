@@ -30,9 +30,6 @@ struct MainTabView: View {
             .tabItem { Label("Activity", systemImage: "list.bullet.circle.fill") }
             .tag(AppTab.activity)
         }
-        .overlay(alignment: .top) {
-            if env.settings.demoMode, router.shieldPath.isEmpty, router.activityPath.isEmpty { DemoBanner() }
-        }
         // PR-03: an invite link opened after onboarding. Waits for the launch splash, like Connect below.
         .overlay(alignment: .top) {
             if let notice = router.inviteNotice, env.launchSplash == .done {
@@ -200,7 +197,11 @@ private struct ConnectSheet: View {
         .interactiveDismissDisabled(model?.state == .joining)
         .onAppear {
             guard model == nil else { return }
-            model = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode())
+            model = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode(), openDemo: { [env, dismiss] in
+                dismiss()
+                env.router.reset()
+                env.startDemo()
+            })
         }
         .onChange(of: env.router.pendingJoinCode) { _, code in
             guard code != nil, let pending = env.router.takePendingJoinCode() else { return }
@@ -209,26 +210,3 @@ private struct ConnectSheet: View {
     }
 }
 
-/// Sample data must never pass for a real family: on both tabs, between the top bar's two buttons.
-/// Pushed screens keep their own top bar free.
-private struct DemoBanner: View {
-    @Environment(AppEnvironment.self) private var env
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text("Demo: sample data")
-            Button("Exit demo") { env.leaveDemo() }
-                .fontWeight(.semibold)
-                .accessibilityIdentifier("demo.exit")
-        }
-        .font(.footnote)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(.regularMaterial, in: Capsule())
-        .padding(.top, 8)
-        // Stays clear of the title and the buttons on every iPhone width.
-        .padding(.horizontal, 120)
-    }
-}

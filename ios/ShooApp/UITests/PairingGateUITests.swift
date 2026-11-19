@@ -58,7 +58,7 @@ final class PairingGateUITests: XCTestCase {
                 XCTAssertTrue(app.tabBars.buttons.firstMatch.waitForExistence(timeout: 10), app.debugDescription)
                 let notNow = app.alerts.buttons.firstMatch
                 if notNow.waitForExistence(timeout: 2) { notNow.tap() }
-                app.open(URL(string: "shoo://join?code=000000")!)
+                app.open(URL(string: "shoo://join?code=111111")!)
                 let openPrompt = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Open"]
                 if openPrompt.waitForExistence(timeout: 3) { openPrompt.tap() }
                 let view = app.buttons["invite.notice.view"]

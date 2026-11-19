@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import fixture from "../../../contracts/fixtures/family-members.json";
 import { claimCode } from "../src/db/repo/codes";
 import { ApiError } from "../src/http/errors";
-import { issueCode, randomCode } from "../src/services/family";
+import { issueCode, randomCode, RESERVED_CODES } from "../src/services/family";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice, type Created } from "./helpers/seed";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
@@ -143,6 +143,14 @@ describe("claimCode", () => {
     expect(await sql.begin((tx) => claimCode(tx, g2.deviceId, "222222"))).toBeUndefined();
     const rows = await sql`select code, guardian_id from family_codes order by code`;
     expect(rows.map((r) => [r.code, r.guardian_id])).toEqual([["111111", g2.deviceId], ["222222", g1.deviceId]]);
+  });
+
+  it("never issues a reserved code (000000 opens the app's demo, #616)", async () => {
+    const g = await createDevice("G", "guardian");
+    const draws = ["000000", "654321"];
+    const code = await issueCode(sql, g.deviceId, false, () => draws.shift()!);
+    expect(code.code).toBe("654321");
+    expect(RESERVED_CODES.has("000000")).toBe(true);
   });
 
   it("randomCode is always 6 digits", () => {

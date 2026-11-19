@@ -386,6 +386,12 @@ final class ProfileModel {
     /// SECURITY §3 P3: gone on the server first, then a fresh install here (onboarding from the start).
     func deleteMyData() async -> Bool {
         guard !isWorking else { return false }
+        // In the demo nothing real is on screen: Delete account only leaves it. The account the demo started
+        // over (code 000000) is not touched (issue #616).
+        if settings.demoMode {
+            onSessionEnd()
+            return true
+        }
         isWorking = true
         defer { isWorking = false }
         do {

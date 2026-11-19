@@ -34,6 +34,8 @@ final class AppSettings {
         static let haptics = "settings.haptics"
         static let readAloud = "settings.readAloud"
         static let demoMode = "settings.demoMode"
+        /// The registered account's own settings while the review demo runs over it (issue #616).
+        static let demoReturn = "settings.demoReturn"
 
         static let dismissedHomeScanIds = "settings.dismissedHomeScanIds"
         static let guardianCardDismissed = "settings.guardianCardDismissed"
@@ -44,7 +46,7 @@ final class AppSettings {
             language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, dataConsent,
             inviteRegistrationPending, largeText,
             theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
-            dismissedHomeScanIds, guardianCardDismissed, supervisedCardDismissed, guardianIntroSeen, demoMode,
+            dismissedHomeScanIds, guardianCardDismissed, supervisedCardDismissed, guardianIntroSeen, demoMode, demoReturn,
         ]
     }
 
@@ -185,14 +187,51 @@ final class AppSettings {
         dismissedHomeScanIds = Array((dismissedHomeScanIds + [scanId]).suffix(50))
     }
 
+    /// What the demo changes, kept for a registered device so leaving the demo gives its own account back.
+    private struct DemoReturn: Codable {
+        var mode: UserMode
+        var onboardingCompleted: Bool
+        var familyModeOn: Bool
+        var onboardingConnectPassed: Bool
+        var dataConsent: String?
+        var guardianIntroSeen: Bool
+    }
+
+    /// A registered device entered the demo (code 000000, issue #616): its account waits underneath.
+    var demoHasAccountUnderneath: Bool { demoMode && defaults.data(forKey: Keys.demoReturn) != nil }
+
     /// A Guardian with a family, straight to the tabs. Fixtures only, so the data question has nothing to ask.
+    /// A registered device keeps its own settings aside first (`leaveDemoToAccount`).
     func enterDemo() {
+        if !demoMode, let mode, let data = try? JSONEncoder().encode(DemoReturn(
+            mode: mode, onboardingCompleted: onboardingCompleted, familyModeOn: familyModeOn,
+            onboardingConnectPassed: onboardingConnectPassed, dataConsent: dataConsent?.rawValue, guardianIntroSeen: guardianIntroSeen
+        )) {
+            defaults.set(data, forKey: Keys.demoReturn)
+        }
         demoMode = true
         mode = .guardian
         familyModeOn = true
         guardianIntroSeen = true
         dataConsent = .granted
         onboardingCompleted = true
+    }
+
+    /// Leaving the demo (Profile › Delete account) on a registered device: its own settings come back as they were. `false` (nothing changed)
+    /// when the demo started on a fresh install.
+    func leaveDemoToAccount() -> Bool {
+        guard demoMode, let data = defaults.data(forKey: Keys.demoReturn),
+              let saved = try? JSONDecoder().decode(DemoReturn.self, from: data)
+        else { return false }
+        mode = saved.mode
+        onboardingCompleted = saved.onboardingCompleted
+        familyModeOn = saved.familyModeOn
+        onboardingConnectPassed = saved.onboardingConnectPassed
+        dataConsent = saved.dataConsent.flatMap(DataConsent.init(rawValue:))
+        guardianIntroSeen = saved.guardianIntroSeen
+        demoMode = false
+        defaults.removeObject(forKey: Keys.demoReturn)
+        return true
     }
 
     /// Saves the ON-03 choice. Returns `false` and changes nothing when a mode is already saved.

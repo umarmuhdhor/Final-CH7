@@ -36,12 +36,39 @@ struct AppEnvironmentSessionTests {
         #expect(server.session.defaults.string(forKey: AppGroup.Key.deviceId) == nil)
     }
 
-    @Test func demoIsNotOfferedToARegisteredDevice() {
+    /// Issue #616: code 000000 opens the demo over a registered device. Its token and App Group keys stay (the
+    /// extension keeps protecting it), and leaving the demo gives the same account back, settings and backend.
+    @Test func demoOverARegisteredDeviceGivesTheAccountBack() {
         let server = StubServer(token: "shoo_token")
         let env = environment(server: server, mode: .guardian)
+        env.settings.onboardingCompleted = true
+        env.setDataConsent(.declined)
+        let realRepository = env.repository
         env.startDemo()
-        #expect(!(env.repository is MockRepository))
+        #expect(env.repository is MockRepository)
+        #expect(env.settings.demoMode)
+        #expect(env.settings.familyModeOn)
+        #expect(env.settings.demoHasAccountUnderneath)
+        #expect(server.session.token == "shoo_token")
+        env.leaveDemo()
         #expect(!env.settings.demoMode)
+        #expect(env.repository as AnyObject === realRepository as AnyObject)
+        #expect(env.settings.mode == .guardian)
+        #expect(!env.settings.familyModeOn)
+        #expect(env.settings.onboardingCompleted)
+        #expect(env.settings.dataConsent == .declined)
+        #expect(server.session.token == "shoo_token")
+    }
+
+    /// A demo opened on a fresh install still ends in a fresh install.
+    @Test func demoOnAFreshInstallEndsInAFreshInstall() {
+        let server = StubServer(token: nil)
+        let env = environment(server: server)
+        env.startDemo()
+        #expect(!env.settings.demoHasAccountUnderneath)
+        env.leaveDemo()
+        #expect(!env.settings.demoMode)
+        #expect(env.settings.mode == nil)
     }
 
     @Test func registrationSavesTheSessionBeforeTheMode() async throws {
