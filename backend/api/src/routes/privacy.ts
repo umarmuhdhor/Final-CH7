@@ -178,8 +178,9 @@ const TEXT: Record<"en" | "id", LegalText> = {
 
 const CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const STYLE = `body{font:17px/1.5 -apple-system,system-ui,sans-serif;margin:0;padding:32px 20px;color:#111;background:#fff}
-main{max-width:640px;margin:0 auto}h2{font-size:20px;margin-top:28px}li{margin:6px 0}.muted{color:#666}
-@media (prefers-color-scheme:dark){body{color:#f2f2f2;background:#000}.muted{color:#aaa}}`;
+main{max-width:640px;margin:0 auto}h2{font-size:20px;margin-top:28px}li{margin:6px 0}.muted{color:#666}a{color:#186fb9}
+ol,li>ul{padding-left:22px;margin:6px 0}li>span{display:block;margin-top:4px}
+@media (prefers-color-scheme:dark){body{color:#f2f2f2;background:#000}.muted{color:#aaa}a{color:#5eaaf0}}`;
 
 export type LegalText = { title: string; updated: string; lead: string; sections: Section[] };
 
