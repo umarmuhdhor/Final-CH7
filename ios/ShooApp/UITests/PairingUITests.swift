@@ -1,7 +1,7 @@
 import XCTest
 
 /// Fase 14: Connect (PR-01/02/03) and Family code (GD-04) against the mock.
-/// Mock codes: `000000` code_invalid · `999999` code_expired · `888888` family_full; any other 6 digits join "Adhella".
+/// Mock codes: `111111` code_invalid · `999999` code_expired · `888888` family_full; any other 6 digits join "Adhella".
 final class PairingUITests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false
@@ -85,7 +85,7 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(copyNote.label.contains("14 days"), copyNote.label)
 
         let join = app.buttons["connect.join"]
-        enter("000000", in: app)
+        enter("111111", in: app)
         tapWhenSettled(join)
         let error = app.staticTexts["connect.error"]
         XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)

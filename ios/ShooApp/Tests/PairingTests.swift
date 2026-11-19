@@ -89,7 +89,7 @@ struct ConnectModelTests {
     }
 
     @Test(arguments: [
-        ("000000", ConnectModel.Problem.invalid),
+        ("111111", ConnectModel.Problem.invalid),
         ("999999", .expired),
         ("888888", .full),
         ("666666", .alreadyConnected),
@@ -169,7 +169,7 @@ struct ConnectModelTests {
 
     /// Figma "Kode salah" (1681:4712): "Ketik ulang kode" empties the boxes and the line.
     @Test func retypeClearsAWrongCode() async {
-        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "000000")
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "111111")
         await model.join()
         #expect(model.problem == .invalid)
         model.retype()

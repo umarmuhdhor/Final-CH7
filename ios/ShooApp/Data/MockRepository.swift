@@ -4,7 +4,8 @@ import Foundation
 /// tests and the whole of Fase A; `ApiRepository` replaces it in Fase C.
 ///
 /// Magic join codes trigger the contract errors so screens can show them:
-/// `0000` code_invalid · `9999` code_expired · `8888` family_full · `7777` too_many_attempts · `6666` already_connected.
+/// `111111` code_invalid · `999999` code_expired · `888888` family_full · `777777` too_many_attempts · `666666` already_connected.
+/// Never `000000`: typed in the app it opens the App Review demo (ConnectModel.demoCode, #616).
 actor MockRepository: ShooRepository {
     enum Scenario: String, Sendable {
         /// Fixture data as in contracts/fixtures.
@@ -232,7 +233,7 @@ actor MockRepository: ShooRepository {
         try failIfAsked("joinFamily")
         try require(.protected)
         switch code {
-        case "000000": throw RepositoryError.api(.codeInvalid, message: "No family uses this code")
+        case "111111": throw RepositoryError.api(.codeInvalid, message: "No family uses this code")
         case "999999": throw RepositoryError.api(.codeExpired, message: "Code expired")
         case "888888": throw RepositoryError.api(.familyFull, message: "Guardian already has 3 members")
         // The backend sends `Retry-After` with both 429s (contracts/api.md): the Connect countdown.
@@ -264,7 +265,7 @@ actor MockRepository: ShooRepository {
             throw RepositoryError.api(.hasMembers, message: "Disconnect the people you protect first")
         }
         switch code {
-        case "000000": throw RepositoryError.api(.codeInvalid, message: "No family uses this code")
+        case "111111": throw RepositoryError.api(.codeInvalid, message: "No family uses this code")
         case "999999": throw RepositoryError.api(.codeExpired, message: "Code expired")
         case "888888": throw RepositoryError.api(.familyFull, message: "Guardian already has 3 members")
         default: break

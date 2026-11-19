@@ -118,7 +118,7 @@ struct MockRepositoryTests {
     }
 
     @Test(arguments: [
-        ("000000", APIErrorCode.codeInvalid),
+        ("111111", APIErrorCode.codeInvalid),
         ("999999", .codeExpired),
         ("888888", .familyFull),
         ("777777", .tooManyAttempts),
