@@ -36,7 +36,9 @@ struct RootView: View {
             case .dataConsent:
                 DataConsentView(onBack: nil) { env.setDataConsent($0) }.transition(.opacity)
             case .main:
-                MainTabView().transition(.opacity)
+                // A new view tree when the review demo starts or ends over a registered device (issue #616), so
+                // every screen loads from the repository now in use instead of keeping the one it started with.
+                MainTabView().id(env.settings.demoMode).transition(.opacity)
             case .onboarding:
                 OnboardingFlow().transition(.opacity)
             }

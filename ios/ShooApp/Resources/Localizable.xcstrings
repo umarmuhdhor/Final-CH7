@@ -613,26 +613,6 @@
         }
       }
     },
-    "Demo: sample data" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Demo: data contoh"
-          }
-        }
-      }
-    },
-    "Exit demo" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keluar"
-          }
-        }
-      }
-    },
     "Online check" : {
       "localizations" : {
         "id" : {

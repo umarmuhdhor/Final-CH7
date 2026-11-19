@@ -7,6 +7,11 @@ import { randomBytes } from "../http/crypto";
 
 const CODE_TRIES = 20;
 const CODE_SPACE = 1_000_000;
+/**
+ * Never issued (issue #616): the app opens its sample-family demo for "000000" without asking the server, so
+ * App Review can see the Guardian side on one iPhone. A real family must never get this code.
+ */
+export const RESERVED_CODES: ReadonlySet<string> = new Set(["000000"]);
 /** A code with less time left than this is replaced, so a shared link isn't dead before it is opened (issue #128). */
 export const REUSE_MIN_SECONDS = 5 * 60;
 
@@ -39,7 +44,9 @@ export async function issueCode(
     }
     await deleteGuardianCodes(tx, guardianId);
     for (let i = 0; i < CODE_TRIES; i++) {
-      const claimed = await claimCode(tx, guardianId, nextCode());
+      const candidate = nextCode();
+      if (RESERVED_CODES.has(candidate)) continue;
+      const claimed = await claimCode(tx, guardianId, candidate);
       if (claimed) return claimed;
     }
     return null;

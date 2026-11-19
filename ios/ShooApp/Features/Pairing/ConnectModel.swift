@@ -62,6 +62,9 @@ final class ConnectModel {
     }
 
     static let codeLength = DeepLink.codeLength
+    /// The review demo's code (issue #616), written in the App Review notes. Never sent to the server, which
+    /// never issues it (backend `RESERVED_CODES`).
+    static let demoCode = "000000"
 
     private(set) var state: State = .entering
     private(set) var problem: Problem?
@@ -69,21 +72,34 @@ final class ConnectModel {
     private(set) var retryAt: Date?
     /// Onboarding is undoing a failed invite registration (fase 27d): no join may start meanwhile.
     private(set) var isHeld = false
-    /// Digits only, at most 6; editing clears the last problem.
+    /// Digits only, at most 6; editing clears the last problem. Typing `demoCode` opens the review demo at once.
     var code = "" {
         didSet {
             let digits = String(code.unicodeScalars.filter { ("0"..."9").contains($0) }.map(Character.init).prefix(Self.codeLength))
             if digits != code { code = digits }
+            // Only typed: a link or QR with 000000 (`prefill`) never opens it.
+            if digits == Self.demoCode, !isPrefilling, state == .entering, let openDemo {
+                code = ""
+                openDemo()
+                return
+            }
             // A wait stays on screen while the code is edited: the server still refuses until it ends.
             if code != oldValue, retryAt == nil { problem = nil }
         }
     }
 
     @ObservationIgnored private let joinWithCode: (String) async throws -> GuardianInfo
+    /// Opens the review demo for `demoCode`. `nil`: the code goes to the server like any other.
+    @ObservationIgnored private let openDemo: (() -> Void)?
+    @ObservationIgnored private var isPrefilling = false
 
     /// `join` replaces `POST /family/join`, e.g. a guardian joining as protected (PF-01).
-    init(repository: any ShooRepository, code: String? = nil, join: ((String) async throws -> GuardianInfo)? = nil) {
+    init(
+        repository: any ShooRepository, code: String? = nil, openDemo: (() -> Void)? = nil,
+        join: ((String) async throws -> GuardianInfo)? = nil
+    ) {
         joinWithCode = join ?? { try await repository.joinFamily(code: $0) }
+        self.openDemo = openDemo
         if let code { prefill(code) }
     }
 
@@ -129,6 +145,8 @@ final class ConnectModel {
     /// From `shoo://join?code=` or a QR: fills the field, never joins (T11).
     func prefill(_ code: String) {
         guard state == .entering, DeepLink.isCode(code) else { return }
+        isPrefilling = true
+        defer { isPrefilling = false }
         self.code = code
     }
 
