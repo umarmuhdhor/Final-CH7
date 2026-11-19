@@ -1007,9 +1007,12 @@ stored, who can see it, the 14-day deletion, and how "Delete my data" works.
 
 ### `GET /support?lang=en|id`
 
-**For:** the Support URL in App Store Connect (fase 24c-1, E6): how to reach the team, how to leave a
-family, how "Delete account" removes everything, links to `/privacy` and `/terms`. The contact line is
-the same constant as on `/privacy` (a placeholder until the team mailbox exists).
+**For:** the Support URL in App Store Connect (fase 24c-1, E6), shown at `https://shoo.ai.id/support`
+(the landing Worker passes `/privacy`, `/support` and `/terms` through to this Worker). Since App Store 1.1
+a full help page in questions and answers: getting started, modes and family, warnings and blocks,
+privacy, common problems, contact. It still says how to leave a family and how "Delete account" removes
+everything, and links to `/privacy` and `/terms` with relative links. The contact line is the same
+constant as on `/privacy` (a placeholder until the team mailbox exists).
 
 - **Auth:** none. No database. Language as for `/privacy`.
 
