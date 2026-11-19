@@ -38,9 +38,9 @@ enum AppConfig {
     static let shareURL = publicBaseURL.appending(path: "get")
     /// Must equal `CONTACT` in backend/api/src/routes/privacy.ts (checked by app-config-sync.test.ts).
     static let supportEmail = "Apple.a.day.bali@gmail.com"
-    /// App Store id for "Beri nilai di App Store". `nil` until the app is listed: the system review
-    /// prompt is asked for instead.
-    static let appStoreId: String? = nil
+    /// App Store id (Apple ID in App Store Connect) for "Beri nilai di App Store", which opens the
+    /// app's review page. `nil` falls back to the system review prompt, which iOS may not show (#616).
+    static let appStoreId: String? = "6826557107"
 
     /// The policy or terms page in the app's language, served by the Worker.
     static func legalPage(_ path: String, language: AppLanguage) -> URL {
