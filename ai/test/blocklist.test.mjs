@@ -90,6 +90,18 @@ test("entries are reduced to the registrable domain and de-duplicated", async ()
     assert.deepEqual(names, ["shoo-fixture-a.xyz", "shoo-fixture-b.co.id", "shoo-fixture-c.xyz"]);
 });
 
+test("#290: under ac.id, sch.id, go.id, mil.id and desa.id the feed's full hostname is published, never the institution", async () => {
+    const app = appWith([
+        entry("biotek.fsm.shoo-fixture-kampus.ac.id", T("01T10")),
+        entry("https://judi.shoo-fixture-sekolah.sch.id/slot", T("01T10")),
+        entry("x.shoo-fixture-kodim.mil.id", T("01T10")),
+        entry("shoo-fixture-desa.desa.id", T("01T10")),
+        entry("login.shoo-fixture-c.co.id", T("01T10")),
+    ]);
+    const names = (await (await get(app)).json()).domains.map((d) => d.domain).sort();
+    assert.deepEqual(names, ["biotek.fsm.shoo-fixture-kampus.ac.id", "judi.shoo-fixture-sekolah.sch.id", "shoo-fixture-c.co.id", "shoo-fixture-desa.desa.id", "x.shoo-fixture-kodim.mil.id"]);
+});
+
 test("a duplicate keeps the earliest addedAt", async () => {
     const app = appWith([entry("a.shoo-fixture-a.xyz", T("05T10")), entry("b.shoo-fixture-a.xyz", T("01T10"))]);
     const body = await (await get(app)).json();
@@ -276,6 +288,16 @@ test("phishing-database: first sight sets addedAt = build time; later builds kee
         { host: "shoo-fixture-a.xyz", addedAt: B("00") },
         { host: "shoo-fixture-b.top", addedAt: B("00") },
         { host: "shoo-fixture-c.site", addedAt: B("06") },
+    ]);
+});
+
+test("#290: a published institution apex is removed once the feed names only its hacked host", () => {
+    const state = [{ host: "shoo-fixture-kampus.ac.id", addedAt: B("00") }, { host: "shoo-fixture-a.xyz", addedAt: B("00") }];
+    const next = trackFirstSeen(state, ["biotek.fsm.shoo-fixture-kampus.ac.id", "login.shoo-fixture-a.xyz"], B("06"));
+    assert.deepEqual(next, [
+        { host: "biotek.fsm.shoo-fixture-kampus.ac.id", addedAt: B("06") },
+        { host: "shoo-fixture-a.xyz", addedAt: B("00") },
+        { host: "shoo-fixture-kampus.ac.id", addedAt: B("00"), removedAt: B("06") },
     ]);
 });
 

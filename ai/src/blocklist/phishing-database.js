@@ -2,7 +2,7 @@
 // The feed is a bare list of hostnames with no dates, so the date a domain was added is the build in which we first
 // saw it (fase-05 MED-6). That needs the previous build's entries, which the build script keeps in Workers KV.
 // Runs in the GitHub Action (ai/scripts/build-blocklist.mjs), never in the Worker: parsing ~440k lines costs ~1 s CPU.
-import { toRegistrable } from "./domains.js";
+import { toListed } from "./domains.js";
 import { PREBUILT } from "./prebuilt.js";
 
 export const PHISHING_DATABASE = Object.freeze({
@@ -28,13 +28,13 @@ export function parseHostList(text) {
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const isIso = (v) => typeof v === "string" && ISO.test(v) && !Number.isNaN(Date.parse(v));
 
-/** Previous entries by registrable domain; anything malformed is ignored (treated as never seen). */
+/** Previous entries by published name (registrable domain, or full hostname under institution suffixes); anything malformed is ignored (treated as never seen). */
 function indexPrevious(previous) {
     const byDomain = new Map();
     for (const e of Array.isArray(previous) ? previous : []) {
         if (!e || typeof e !== "object" || !isIso(e.addedAt)) continue;
         if (e.removedAt !== undefined && !isIso(e.removedAt)) continue;
-        if (toRegistrable(e.host) !== e.host) continue;
+        if (toListed(e.host) !== e.host) continue;
         byDomain.set(e.host, e);
     }
     return byDomain;
@@ -53,7 +53,7 @@ export function trackFirstSeen(previous, hosts, builtAt) {
     const seen = new Set();
     const out = [];
     for (const raw of hosts) {
-        const domain = toRegistrable(raw);
+        const domain = toListed(raw);
         if (!domain || seen.has(domain)) continue;
         seen.add(domain);
         const p = prev.get(domain);
