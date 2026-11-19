@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// GD-04 in onboarding (Figma "Kirim Undangan"): QR, the 6-digit code, "Refresh code", and a row to
-/// copy or send the invite. Same code rules as `FamilyCodeView` (valid 30 min, copy expires with it).
+/// copy or send the invite. Code rules (valid 30 min, copy expires with it) live in `FamilyCodeModel`.
 struct InviteSheet: View {
     /// The check mark: the Guardian is done inviting.
     let onDone: () -> Void
@@ -16,6 +16,8 @@ struct InviteSheet: View {
     /// Bumped by each copy: "Link undangan tersalin" shows for a moment in place of "Refresh code".
     @State private var copies = 0
     @State private var showsCopiedNote = false
+    /// "Refresh code" asks first: a new code also stops every invite link already sent (EGM audit B8).
+    @State private var confirmsRefresh = false
 
     init(repository: any ShooRepository, onDone: @escaping () -> Void) {
         _model = State(initialValue: FamilyCodeModel(repository: repository))
@@ -188,8 +190,8 @@ struct InviteSheet: View {
         if case .ready = model.codeState {
             VStack(spacing: 2) {
                 Button {
-                    // A new code: the old one stops working, also in links already sent.
-                    Task { await model.refreshCode(replace: true) }
+                    // A new code: the old one stops working, also in links already sent. So it asks first.
+                    confirmsRefresh = true
                 } label: {
                     if model.canReplace {
                         Label("Refresh code", systemImage: "arrow.clockwise")
@@ -203,6 +205,15 @@ struct InviteSheet: View {
                 .buttonStyle(OnboardingLinkButtonStyle(color: model.canReplace ? Self.refreshBlue : OnboardingTheme.secondaryInk, weight: .semibold, family: .display, tracking: 0))
                 .disabled(!model.canReplace)
                 .accessibilityIdentifier("invite.refresh")
+                .confirmationDialog("Make a new code?", isPresented: $confirmsRefresh, titleVisibility: .visible) {
+                    Button("Make new code", role: .destructive) {
+                        Task { await model.refreshCode(replace: true) }
+                    }
+                    .accessibilityIdentifier("invite.refresh.confirm")
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("The current code and the invite links you already sent will stop working.")
+                }
                 Text("Valid for \(model.timeLeft)")
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)
                     .monospacedDigit()

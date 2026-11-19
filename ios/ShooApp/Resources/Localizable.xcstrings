@@ -1076,16 +1076,6 @@
         }
       }
     },
-    "Applies right away. You can change it later." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Langsung berlaku. Kamu bisa mengubahnya nanti."
-          }
-        }
-      }
-    },
     "Ask %@ to turn Shoo on" : {
       "localizations" : {
         "id" : {
@@ -6870,16 +6860,6 @@
         }
       }
     },
-    "Showing the last data. " : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Menampilkan data terakhir. "
-          }
-        }
-      }
-    },
     "Data can't be viewed yet" : {
       "localizations" : {
         "id" : {
@@ -7622,6 +7602,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "selfie dengan KTP"
+          }
+        }
+      }
+    },
+    "Make a new code?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buat kode baru?"
+          }
+        }
+      }
+    },
+    "Make new code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buat kode baru"
+          }
+        }
+      }
+    },
+    "Showing the last data. %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan data terakhir. %@"
+          }
+        }
+      }
+    },
+    "The current code and the invite links you already sent will stop working." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode sekarang dan link undangan yang sudah kamu kirim tidak akan bisa dipakai lagi."
           }
         }
       }

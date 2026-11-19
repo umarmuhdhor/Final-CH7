@@ -1,6 +1,6 @@
 import type { Sql, TransactionSql } from "postgres";
 import type { DeviceMode, Language } from "../../env";
-import { addTombstones } from "./tombstones";
+import { addTombstones, archiveTombstonesOfThisTransaction } from "./tombstones";
 import { dropVerdicts } from "./verdicts";
 
 export interface DeviceAuthRow {
@@ -260,5 +260,8 @@ export async function deleteDeviceInTx(tx: TransactionSql, id: string): Promise<
   // Tombstoned with the delete: if removing the objects fails later, the cron retries (D-alief-B12).
   const paths = [...new Set(shots.flatMap((s) => [s.path, s.favicon, s.replica].filter((p): p is string => p !== null)))];
   await addTombstones(tx, paths);
+  // The device delete's trigger tombstoned its evidence fragments (archive bucket): removed after
+  // commit with the rest, not left to the cron's budget (EGM audit B11).
+  paths.push(...(await archiveTombstonesOfThisTransaction(tx)));
   return { deleted: gone.length > 0, paths };
 }

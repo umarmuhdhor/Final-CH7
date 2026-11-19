@@ -856,7 +856,7 @@ struct RefreshFailedNotice: View {
                     nudge += 1
                 }
             } label: {
-                (Text("Showing the last data. ") + Text("Try again").foregroundColor(Color(hex: 0x136CB7)).fontWeight(.semibold))
+                Text("Showing the last data. \(Text("Try again").foregroundStyle(Color(hex: 0x136CB7)).fontWeight(.semibold))")
                     .activityFont(13, tracking: -0.08)
                     .foregroundStyle(Color(hex: 0x6A717E))
                     .frame(minHeight: 30)

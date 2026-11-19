@@ -69,72 +69,6 @@ private struct OnboardingStepView: View {
     }
 }
 
-/// Bottom call-to-action shared by every onboarding screen: full width, at least 44 pt, grows with text.
-struct OnboardingPrimaryButton: View {
-    let title: LocalizedStringKey
-    var isWorking = false
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Text(title).opacity(isWorking ? 0 : 1)
-                if isWorking { ProgressView() }
-            }
-            .font(.headline)
-            .frame(maxWidth: .infinity, minHeight: 50)
-        }
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.roundedRectangle(radius: 14))
-    }
-}
-
-/// Large symbol + title + one short sentence (persona: parents 45–65, PRD §3). Re-skin when illustrations arrive.
-struct OnboardingHeader: View {
-    let systemImage: String
-    let title: LocalizedStringKey
-    let message: LocalizedStringKey
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: systemImage)
-                .font(.system(size: 72))
-                .foregroundStyle(.tint)
-                .accessibilityHidden(true)
-            Text(title)
-                .font(.title.bold())
-                .multilineTextAlignment(.center)
-                .accessibilityAddTraits(.isHeader)
-            Text(message)
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
-/// Scrollable content with the button pinned at the bottom, so nothing clips at large text sizes.
-struct OnboardingPage<Content: View, Footer: View>: View {
-    @ViewBuilder let content: Content
-    @ViewBuilder let footer: Footer
-
-    var body: some View {
-        ScrollView {
-            content
-                .padding(24)
-                .frame(maxWidth: .infinity)
-        }
-        .scrollBounceBehavior(.basedOnSize)
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 12) { footer }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
-                .background(.bar)
-        }
-    }
-}
-
 #Preview {
     let env = AppEnvironment.preview()
     env.settings.reset()
@@ -156,6 +90,7 @@ private struct OnboardingExtensionStep: View {
                 showsCheckbox: model.showsConsentCheckbox,
                 isWorking: model.isWorking,
                 failed: model.registrationFailed,
+                limited: model.registrationLimited,
                 prepare: model.activateExtension
             )
         )

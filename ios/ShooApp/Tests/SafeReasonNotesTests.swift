@@ -17,4 +17,17 @@ struct SafeReasonNotesTests {
         #expect(notes.count <= 280)
         #expect(notes.hasSuffix(String(repeating: "a", count: SafeReasonNotes.maxNoteLength)))
     }
+
+    /// The server counts code points: 200 "❤️" are 200 characters but 400 code points, which used to give a 422.
+    @Test func emojiAreCountedAsTheServerCountsThem() {
+        #expect(SafeReasonNotes.length("❤️") == 2)
+        let notes = SafeReasonNotes.compose(reasons: Set(SafeReason.allCases), note: String(repeating: "❤️", count: 200))
+        #expect(notes.unicodeScalars.count <= 280)
+        #expect(notes.hasSuffix(String(repeating: "❤️", count: SafeReasonNotes.maxNoteLength / 2)))
+    }
+
+    @Test func clampNeverSplitsAnEmoji() {
+        let clamped = SafeReasonNotes.clamp(String(repeating: "a", count: 199) + "👍🏽")
+        #expect(clamped == String(repeating: "a", count: 199))
+    }
 }

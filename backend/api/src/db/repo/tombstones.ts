@@ -40,6 +40,19 @@ const R2_PATH = String.raw`(t.path like '%-replica.html.gz' or t.path ~ '-icon\.
 const ARCHIVE_PATH = String.raw`(t.path like '%.fragments.html.gz' and t.path not like '%/%')`;
 
 /**
+ * The evidence fragments the admin.on_device_delete trigger tombstoned in this transaction (it runs on
+ * `delete from devices`): their tombstones carry the transaction's `now()`. DELETE /devices/me removes
+ * them right after commit instead of waiting for the cron (EGM audit B11). Any archive tombstone is a
+ * deleted account's fragment, so one from another transaction that started in the same microsecond is
+ * still right to remove.
+ */
+export async function archiveTombstonesOfThisTransaction(tx: TransactionSql): Promise<string[]> {
+  const rows = await tx<{ path: string }[]>`
+    select t.path from storage_tombstones t where t.created_at = now() and ${tx.unsafe(ARCHIVE_PATH)}`;
+  return rows.map((r) => r.path);
+}
+
+/**
  * What the cron may remove from one store: no scan points at the path (a live scan or a reuse keeps
  * its object; no new scan can start pointing at it, the reuse helpers pick originals of live scans
  * only) and older than 10 minutes. A replica tombstone is written at reservation, so without the

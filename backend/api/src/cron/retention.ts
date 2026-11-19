@@ -25,6 +25,12 @@ const MAX_BATCHES = 10;
  */
 const R2_MAX_BATCHES = 40;
 /**
+ * Evidence fragments of deleted accounts (archive bucket) get their own R2 budget: sharing the one
+ * above let a busy replica day starve them every run, and that bucket has no lifecycle rule (EGM
+ * audit B11). DELETE /devices/me removes them at once; this is the retry. 5 × 100 per run.
+ */
+const ARCHIVE_MAX_BATCHES = 5;
+/**
  * Scans with a screenshot are deleted in the same large chunks as plain scans: dedupe reuses
  * (no quota, up to 120/h per device) must not queue behind a Storage-bound loop and push other
  * users' rows past day 14 (security review fase 12, HIGH).
@@ -88,6 +94,8 @@ export interface RetentionOptions {
   maxBatches?: number;
   /** R2 deletes for the whole run. */
   r2MaxBatches?: number;
+  /** Overrides ARCHIVE_MAX_BATCHES (archive-bucket deletes per run); tests only. */
+  archiveMaxBatches?: number;
   /** Overrides screenshotStore(env) (Supabase); tests only. */
   store?: ScreenshotStore;
   /** Overrides r2Store(env); tests only. */
@@ -137,7 +145,11 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
   // The R2 store needs only the binding: the REPLICAS_ENABLED kill-switch never stops deletes (K21).
   const stores: Stores = { supabase: opts.store ?? screenshotStore(env), r2: opts.r2Store ?? r2Store(env) };
   // Calls left per store. Supabase: the scans step only (the tombstone step has its own TOMBSTONES cap).
-  const budget: Record<StoreKind, number> = { supabase: opts.maxBatches ?? MAX_BATCHES, r2: opts.r2MaxBatches ?? R2_MAX_BATCHES };
+  const budget: Record<StoreKind, number> = {
+    supabase: opts.maxBatches ?? MAX_BATCHES,
+    r2: opts.r2MaxBatches ?? R2_MAX_BATCHES,
+    archive: opts.archiveMaxBatches ?? ARCHIVE_MAX_BATCHES,
+  };
   await step("plain_scans", () => deleteOldPlainScans(sql, opts, result));
   await step("scans", () => deleteOldScans(sql, stores, budget, opts, result));
   await step("tombstones", async () => {
@@ -159,12 +171,11 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
         }
       }
     }
-    // ADM-07 (07a K12): evidence fragments of deleted accounts, from what is left of the R2 budget
-    // (the archive bucket is another R2 binding of the same Worker).
-    if (budget.r2 > 0) {
+    // ADM-07 (07a K12): evidence fragments of deleted accounts, on their own budget (EGM audit B11).
+    if (budget.archive > 0) {
       const archive = opts.archiveStore ?? archiveStore(env);
-      const due = await dueTombstones(sql, budget.r2 * batch, "archive");
-      for (let p = 0; p < due.length && budget.r2 > 0; p += batch, budget.r2--) {
+      const due = await dueTombstones(sql, budget.archive * batch, "archive");
+      for (let p = 0; p < due.length && budget.archive > 0; p += batch, budget.archive--) {
         const r = await removeTombstoned(sql, archive, due.slice(p, p + batch));
         result.tombstones += r.removed;
         if (r.error) {

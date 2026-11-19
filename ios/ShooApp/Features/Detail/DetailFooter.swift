@@ -158,7 +158,6 @@ struct DetailFooter: View {
             .accessibilityAddTraits(verdict?.value == .notSafe ? .isSelected : [])
             .accessibilityIdentifier("detail.verdict.notSafe")
         }
-        .accessibilityHint(Text("Applies right away. You can change it later."))
     }
 }
 

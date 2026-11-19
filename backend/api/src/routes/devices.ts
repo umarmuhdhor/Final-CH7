@@ -37,7 +37,7 @@ const clock = z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/, "must be HH:MM
 
 // PF-01 "Pengaturan/Notifikasi" (proposed): every key optional, only sent keys change.
 const notificationsBody = z
-  .object({
+  .strictObject({
     warning: z.boolean(),
     blocked: z.boolean(),
     family: z.boolean(),
@@ -47,10 +47,9 @@ const notificationsBody = z
     quietStart: clock,
     quietEnd: clock,
   })
-  .partial()
-  .strict();
+  .partial();
 
-// Not .strict(), on purpose: unknown keys are stripped. Older app builds still send the Dynamic Island
+// Not z.strictObject, on purpose: unknown keys are stripped. Older app builds still send the Dynamic Island
 // tokens `liveActivityStartToken` / `liveActivityUpdateToken` (EX-03 removed, #555); they get a 200 and
 // nothing is stored, so the rest of their PATCH still lands.
 const patchBody = z.object({
@@ -149,7 +148,7 @@ devices.get("/devices/me", requireDevice, async (c) => {
   });
 });
 
-const becomeProtectedBody = z.object({ code: z.string().regex(/^\d{6}$/, "must be 6 digits") }).strict();
+const becomeProtectedBody = z.strictObject({ code: z.string().regex(/^\d{6}$/, "must be 6 digits") });
 
 /**
  * PF-01 "Punya kode undangan?" (proposed): a guardian without members joins a family as protected.

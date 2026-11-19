@@ -83,6 +83,9 @@ final class OnboardingModel {
     private(set) var avatarId: String?
     private(set) var isWorking = false
     private(set) var registrationFailed = false
+    /// The failure was the server's sign-up limit (429 `rate_limited`, 30 per network an hour): retrying
+    /// at once can't help, so the screen says to wait instead of "check your connection" (EGM audit B9).
+    private(set) var registrationLimited = false
 
     @ObservationIgnored private let environment: AppEnvironment
 
@@ -122,6 +125,7 @@ final class OnboardingModel {
         guard step == .name, canSubmitName, !isWorking else { return }
         movedBack = false
         registrationFailed = false
+        registrationLimited = false
         step = .turnOnExtension
     }
 
@@ -136,6 +140,7 @@ final class OnboardingModel {
         }
         movedBack = true
         registrationFailed = false
+        registrationLimited = false
     }
 
     /// ON-04 shows Back until the device is registered (its name can no longer change here).
@@ -168,6 +173,7 @@ final class OnboardingModel {
         guard mode == nil else { return true }
         isWorking = true
         registrationFailed = false
+        registrationLimited = false
         defer { isWorking = false }
         do {
             try await ensureRegistered()
@@ -175,6 +181,7 @@ final class OnboardingModel {
         } catch {
             Log.app.error("Registration failed", error)
             registrationFailed = true
+            registrationLimited = (error as? RepositoryError)?.apiCode == .rateLimited
             return false
         }
     }

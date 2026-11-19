@@ -106,7 +106,7 @@ const scanBody = z
   // The fence every allowed threshold pair respects (blockAt 50–95, warnAt >= 30 via score min).
   // The exact rule for the active version is checked in the handler; it needs the DB.
   .refine((b) => b.status !== "blocked" || b.score >= 50, {
-    message: "must not be blocked below score 50",
+    error: "must not be blocked below score 50",
     path: ["status"],
   })
   .refine(
@@ -115,7 +115,7 @@ const scanBody = z
       const host = httpUrl(b.url)?.hostname.replace(/\.$/, "");
       return host === b.domain || (host?.endsWith(`.${b.domain}`) ?? false);
     },
-    { message: "url host must be the domain or a subdomain of it", path: ["domain"] },
+    { error: "url host must be the domain or a subdomain of it", path: ["domain"] },
   );
 
 /** Free text from web pages: trimmed, at most 300 code points; empty → null. */

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { routePath } from "hono/route";
 import type { AppEnv } from "./env";
 import { createSql } from "./db/client";
 import { ApiError, errorResponse, errors } from "./http/errors";
@@ -92,6 +93,6 @@ app.onError((err, c) => {
   if (err instanceof ApiError) return errorResponse(c, err);
   // Never log request bodies or headers: they carry tokens and names (SECURITY §3 P6, T3).
   // The route pattern, not the path: paths carry scan and device ids (D-alief-40).
-  console.error(JSON.stringify({ requestId: c.get("requestId"), route: c.req.routePath, error: errorInfo(err) }));
+  console.error(JSON.stringify({ requestId: c.get("requestId"), route: routePath(c), error: errorInfo(err) }));
   return errorResponse(c, errors.internal());
 });
