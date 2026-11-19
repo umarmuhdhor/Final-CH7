@@ -456,6 +456,15 @@ test("Worker env bindings configure layer 4 per request (c.env), still through t
     assert.equal(f.calls[0].init.headers.authorization, "Bearer k");
 });
 
+test("SHOO_L4=off turns layer 4 off even with LLM_* set: no LLM call, the rules' answer stands", async () => {
+    const f = fake(() => reply(verdict()));
+    const app = createApp({ llmFetch: f.fetch });
+    const env = { LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://llm.example.com/v1", SHOO_L4: "off" };
+    const res = await app.request("/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ snapshot: PIN(), localSignals: [] }) }, env);
+    assert.deepEqual(ids((await res.json()).signals), ["asks_pin"]);
+    assert.equal(f.calls.length, 0);
+});
+
 test("privacy: nothing logged, key and page data absent from the response", async () => {
     const seen = [];
     const orig = { log: console.log, info: console.info, warn: console.warn, error: console.error };

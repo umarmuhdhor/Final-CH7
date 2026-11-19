@@ -19,8 +19,11 @@ invocation_logs = false
 
 # Layer 3 impersonation model (src/layer3/model/impersonation.js, PR #605). Remove the line to go back to rules only.
 # Measured on Cloudflare 19 Nov 2026: cold isolate 91–189 ms CPU (rules only 10–37 ms), warm 1–5 ms (rules only 0–1 ms).
+# Layer 4 (LLM) off: team decision 19 Nov 2026, the rules + model decide and a warning is enough. The LLM_* secrets
+# stay for layer 5 (/review). Remove the line to turn layer 4 back on.
 [vars]
 SHOO_L3_MODEL = "impersonation"
+SHOO_L4 = "off"
 
 # Per-IP rate limit shared by all isolates (Workers Rate Limiting binding; works on workers.dev, unlike WAF zone rules).
 # The in-memory limiter in src/app.js stays as a second layer and is the only one in tests and the dev server.
