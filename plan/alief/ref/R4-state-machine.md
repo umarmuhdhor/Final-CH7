@@ -4,7 +4,7 @@
 > Path backend relatif ke `backend/api/src/`, path app relatif ke `ios/ShooApp/`. Setiap baris tabel = satu transisi: pemicu → guard → `file:baris`.
 > Bukti fase 27 (`log/fase-27-repro/`) **tidak** dihapus di sini; PR terpisah setelah Q1 + Q4 ditutup.
 
-Isi: §1 Device · §2 Kode keluarga · §3 Link keluarga (join, become-protected, putus) · §4 Pairing di app · §5 Scan · §6 Push + token push · §7 Verdict · §8 Blocklist · §9 Replica · §10 Favicon · §11 Live Activity · §12 Cron, retensi, `ops_jobs` · §13 Onboarding · §14 Sesi app · §15 Diterima / masih terbuka.
+Isi: §1 Device · §2 Kode keluarga · §3 Link keluarga (join, become-protected, putus) · §4 Pairing di app · §5 Scan · §6 Push + token push · §7 Verdict · §8 Blocklist · §9 Replica · §10 Favicon · §11 Live Activity (dihapus) · §12 Cron, retensi, `ops_jobs` · §13 Onboarding · §14 Sesi app · §15 Diterima / masih terbuka.
 
 ## 1. Device (`devices`)
 
@@ -256,30 +256,9 @@ Sama dengan replica, tanpa kuota keluarga: reuse pemilik + domain 24 jam (hanya 
 | Dilayani / dipakai ulang hanya kalau ready | `db/repo/scans.ts:259-265,537,606-611` |
 | Alur | `services/favicons.ts:27-82` (+ salinan per domain ke arsip `shoo-replica-archive`, `:81`) |
 
-## 11. Live Activity (EX-03, #49)
+## 11. Live Activity (dihapus)
 
-```mermaid
-stateDiagram-v2
-  [*] --> TanpaToken
-  TanpaToken --> SiapMulai: PATCH liveActivityStartToken
-  SiapMulai --> Memulai: POST /live open, klaim live_started_at
-  Memulai --> Berjalan: app kirim liveActivityUpdateToken
-  Memulai --> SiapMulai: start gagal (klaim dilepas) / > 30 s tanpa token update
-  Berjalan --> Berjalan: POST /live open (update, prio 5 kalau normal)
-  Berjalan --> SiapMulai: POST /live open:false (end) / 410 / app kirim null
-```
-
-| Transisi | Guard | Kode |
-|---|---|---|
-| Token dari app | push-to-start + update token aktivitas terakhir | `App/LiveActivityTokens.swift:31-126`, `routes/devices.ts:56-67`, `db/repo/devices.ts:96-98` |
-| End | butuh token update; token dikosongkan setelah kirim | `services/push/live.ts:85-97` |
-| Update | 410 → kosongkan token update | `services/push/live.ts:100-114` |
-| Start | klaim atomik: token start sama, tanpa token update, `live_started_at` kosong atau > 30 s | `services/push/live.ts:116-123` |
-| Setelah start | 410 → hapus token start; gagal lain → lepas klaim | `services/push/live.ts:141-151` |
-| Batas | `open: true` 10/10 s per device; end tidak dibatasi | `routes/live.ts:33-35` |
-| Device baru di app | `deviceChanged()` di `register` dan `becomeProtected` | `App/LiveActivityTokens.swift:49`, `App/AppEnvironment.swift:278,552` |
-
-Domain dan skor hanya di payload APNs, tidak ada baris tabel atau log (#49 keputusan 3).
+Dynamic Island / Live Activity (EX-03, #49) dihapus di #555 (17 Nov 2026): tidak ada lagi `POST /live`, `services/push/live.ts`, `App/LiveActivityTokens.swift`, maupun kolom token Live Activity (migrasi `20261117120000_drop_live_activity_tokens.sql`). Field lama yang masih dikirim build lama ke `PATCH /devices/me` diabaikan (`routes/devices.ts:53`). Nomor bagian dipertahankan supaya tautan lama tidak bergeser.
 
 ## 12. Cron, retensi, `ops_jobs`
 

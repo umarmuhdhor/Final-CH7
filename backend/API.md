@@ -15,7 +15,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Family](#family): `POST /family/code`, `POST /family/join`, `GET /family/members`, `PATCH /family/members/{deviceId}`, `POST /family/members/{deviceId}/remind`, `DELETE /family/members/{deviceId}`, `DELETE /family/guardian`
 - [Scans](#scans): `POST /scans`, `GET /scans`, `GET /scans/{id}`
 - [Page replicas](#page-replicas): `GET /replicas/{scanId}`
-- [Screenshots](#screenshots): `GET /screenshots/{scanId}` (deprecated, removed in fase 20b)
+- [Screenshots](#screenshots): `GET /screenshots/{scanId}` (legacy: scans stored before fase 20a only; removal planned in fase 20b, not done)
 - [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts?url=&domain=`
 - [Blocklist](#blocklist): `GET /blocklist`
@@ -34,7 +34,8 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 ### Auth
 
 There are no accounts or passwords. `POST /devices` creates a device and returns a **device token**
-once. Every other call (except health, web pages, screenshot and favicon links) sends it:
+once. Every other call sends it, except health, `/ops/status` (its own token), web pages, and the signed
+replica, screenshot and favicon links:
 
 ```http
 Authorization: Bearer shoo_<43 characters>
@@ -50,7 +51,7 @@ Authorization: Bearer shoo_<43 characters>
 ### Request format
 
 - JSON bodies with `Content-Type: application/json`, UTF-8.
-- Maximum body size: 16 KB (most endpoints), 256 KB for `POST /scans`, 4 KB for `POST /verdicts`.
+- Maximum body size: 16 KB (most endpoints), 1 MiB for `POST /scans` (page replica + evidence fragments), 4 KB for `POST /verdicts`.
   A larger body returns `413 too_large`.
 - Times are ISO 8601 with an offset, e.g. `2026-10-22T03:05:00Z`, between 1970 and 2100.
 - Names are 1–20 characters after trimming, without control or bidi-override characters.
@@ -94,7 +95,7 @@ after the wait.
 
 - Every response is `Cache-Control: private, no-store`, except `GET /blocklist` (`private, max-age=300`), `GET /scams/latest` (`private, max-age=600`) and `GET /config/public` (`private, max-age=3600`).
 - Request bodies over 256 KB get `413 too_large` before anything else runs; only `POST /scans` (exactly
-  that path) takes up to 512 KB, for the page replica.
+  that path) takes up to 1 MiB, for the page replica and the evidence fragments (each ≤ 400 KB of base64).
   Deleted or disconnected data must disappear at once (Apple privacy rule, `plan/alief/SECURITY.md` §3 P13).
 - Every response also carries `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
   `X-Frame-Options: DENY`, HSTS and a strict CSP. There are no CORS headers: only the native app and
@@ -116,7 +117,7 @@ after the wait.
 Free project from pausing.
 
 - **Auth:** none
-- **Rate limit:** 1 per minute per IP
+- **Rate limit:** 1 per minute per IP, and 120 per hour in total (`healthDbAll`)
 - **Response 200:** `{ "ok": true }`
 
 ### `GET /ops/status`
@@ -509,10 +510,11 @@ pushes once. A scam site with many pages never sends a push per page.
 
 - **Auth:** Bearer, either mode. The owner is always the token's device.
 - **Rate limit:** 120 per hour per device
-- **Body limit:** 512 KB (this path only; everything else 256 KB or less)
+- **Body limit:** 1 MiB (this path only; everything else 256 KB or less)
 
 **Request body:** a `ScanResult` without `id`, `verdict`, `screenshotUrl` and `pageReplicaUrl`, plus an
-optional page replica. Older builds may still send a screenshot, which is ignored since fase 20a.
+optional page replica and optional evidence fragments. Older builds may still send a screenshot, which is
+ignored since fase 20a.
 
 | Field | Type | Required | Rules |
 |---|---|---|---|
@@ -527,6 +529,7 @@ optional page replica. Older builds may still send a screenshot, which is ignore
 | `signals` | array | yes | At most 20 items, see below |
 | `detectedAt` | ISO time | yes | Not in the future (5 min tolerance) |
 | `pageReplicaBase64` | string \| null | no | The page as static HTML, gzip, then base64 without a `data:` prefix (see Page replica rules) |
+| `evidenceFragmentsBase64` | string \| null | no | ADM-07: only the parts of the page that made Shoo flag it, gzip + base64 (contract: `contracts/api.md` "Evidence fragments"). Same size limits as the replica; dropped over a limit, when not gzip, or past its quota (100 uploads + 10 MB per device, 2000 + 100 MB in total per 24 h); the scan is stored either way. Stored after the response in R2 `shoo-replica-archive` as `<scanId>.fragments.html.gz`, kept for good for the admin dashboard, never returned to devices. Sent with or without a family; `REPLICAS_ENABLED` stops it too |
 | `screenshotBase64` | any | no | **Ignored since fase 20a (7 Nov 2026).** Accepted with any value and never stored (see Screenshot rules) |
 
 Each signal:
@@ -581,7 +584,7 @@ push was queued (no Guardian, the Guardian's own scan, "Kabari saya" or "Aktivit
 off, quiet hours for a warning, no APNs token, the push cap, a repeat visit, or a failed lookup). The
 block page shows "Link terkirim ke <name>" only from this field.
 
-> **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. Since fase 20a (7 Nov 2026) `screenshotBase64` is ignored. `GET /screenshots/{scanId}` stays only for scans already stored and is removed in fase 20b (plan/alief, D-alief-C24/C27).
+> **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. Since fase 20a (7 Nov 2026) `screenshotBase64` is ignored. `GET /screenshots/{scanId}` stays only for scans already stored; its removal (fase 20b–20d, plan/alief, D-alief-C24/C27) is not done yet.
 
 **Page replica rules (EX-07).** The replica is optional, and a bad replica never fails the scan: the
 scan is stored, the answer is 201 and the push goes out first; the replica is handled after the
@@ -719,7 +722,7 @@ yourself (JavaScript off, no network, see `contracts/api.md` "Page replica").
 
 ## Screenshots
 
-> **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. Since fase 20a (7 Nov 2026) `screenshotBase64` is ignored. `GET /screenshots/{scanId}` stays only for scans already stored and is removed in fase 20b (plan/alief, D-alief-C24/C27).
+> **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. Since fase 20a (7 Nov 2026) `screenshotBase64` is ignored. `GET /screenshots/{scanId}` stays only for scans already stored; its removal (fase 20b–20d, plan/alief, D-alief-C24/C27) is not done yet.
 
 ### `GET /screenshots/{scanId}?v=&exp=&sig=`
 
@@ -972,8 +975,12 @@ a Universal Link and this page never shows. Otherwise it shows the code, an "Ope
 (`shoo://join?code=482193`) and an "Install" link to `APP_STORE_URL`. Tapping "Install" first copies the
 invite link to the clipboard, so the app can offer "Paste invite" on first launch.
 
-- **Auth:** none. No database lookup: the page never says whether a code is valid. Anything other than
-  6 digits shows "no valid code" and is never echoed.
+- **Auth:** none. Anything other than 6 digits shows "no valid code" and is never echoed.
+- **Code check:** only for a browser navigation (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`),
+  so link-preview crawlers never touch the database. An unknown or expired code shows "no valid code" and
+  counts as a failed join attempt of the IP, under the same lock and budget as `POST /family/join`. Over
+  the IP budget, past the global cap (600 lookups per 10 min, `joinPageAll`) or when the database fails,
+  the normal invite shows unchecked.
 - Language: Bahasa Indonesia when `Accept-Language` starts with `id`, else English.
 - Strict CSP: the one inline script (copy, then go to the store) runs under a per-request `nonce`.
   No cookies, no analytics, nothing sent.

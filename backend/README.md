@@ -2,14 +2,14 @@
 
 API for devices, family, scans, verdicts, push. Spec: `contracts/api.md` (source of truth for every JSON shape).
 
-Stack: Cloudflare Worker `shoo-api` (Hono, zod, postgres.js) → Hyperdrive (`--caching-disabled`) → Supabase Postgres + private Storage bucket `screenshots`. Plan: `plan/alief/ARCHITECTURE.md`.
+Stack: Cloudflare Worker `shoo-api` (Hono, zod, postgres.js) → Hyperdrive (`--caching-disabled`) → Supabase Postgres. Private R2 buckets `shoo-replicas` (page replicas, favicons) and `shoo-replica-archive` (ADM-07 evidence, kept for good). The legacy Supabase Storage bucket `screenshots` is only read and emptied (no new screenshots since fase 20a). Two Cron Triggers: daily retention, hourly notifications. Architecture, app side and the main flows: [`plan/alief/ARCHITECTURE.md`](../plan/alief/ARCHITECTURE.md).
 
 ```text
 backend/
 ├── api/            Worker (TypeScript). src/{app,env,index}.ts, routes/, http/, db/, services/, cron/
 ├── db/supabase/    config.toml, migrations/, tests/ (pgTAP), seed.sql (local only)
 ├── db/scripts/     quota-estimate.sql (local only)
-└── ci/             draft GitHub Action (inert, see ci/README.md)
+└── ci/             scripts for the live workflows backend.yml and ops-watch.yml (see ci/README.md)
 ```
 
 ## Local setup
@@ -55,36 +55,41 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | POST | [`/scans`](API.md#post-scans) | extension | Report a warned or blocked page (+ page replica); pushes the Guardian |
 | GET | [`/scans`](API.md#get-scans) | app, Activity | My or my family's scans, newest first, paged |
 | GET | [`/scans/{id}`](API.md#get-scansid) | app, Detail | One scan with 1-hour replica (and, for older scans, screenshot) links |
+| GET | [`/scams/latest`](API.md#get-scamslatest) | app, Home | Kinds of scam several Shoo users were blocked from this week (no domain, URL or device) |
 | GET | [`/replicas/{scanId}`](API.md#get-replicasscanidvexpsig) | app, Detail | The page replica (gzip HTML) behind `pageReplicaUrl` (EX-07) |
-| GET | [`/screenshots/{scanId}`](API.md#get-screenshotsscanidvexpsig) | app, Detail | The screenshot image behind that link (deprecated, 18c) |
+| GET | [`/screenshots/{scanId}`](API.md#get-screenshotsscanidvexpsig) | app, Detail | The screenshot image behind that link (legacy: only scans stored before fase 20a) |
 | GET | [`/favicons/{scanId}`](API.md#get-faviconsscanidvexpsig) | app, Activity + Detail | The stored site icon behind a `faviconUrl` link (PR-05) |
 | POST | [`/verdicts`](API.md#post-verdicts) | Guardian app | It's safe / Not safe for a blocked domain |
 | GET | [`/verdicts?url=&domain=`](API.md#get-verdictsurldomain) | extension | Poll for the Guardian's decision on a block screen (`?domain=` alone: deprecated) |
 | GET | [`/blocklist?since=`](API.md#get-blocklistsince) | extension | Global approved scam domains for on-device checks |
 | GET | [`/config/public`](API.md#get-configpublic) | extension | Score thresholds set in the admin dashboard (warning / blocked) |
 | GET | [`/j/{code}`](API.md#get-jcode) | browser (WhatsApp / AirDrop link) | Invite page when the app is not installed: open Shoo, or copy + install |
-| GET | [`/og/invite.jpg`](API.md#get-oginvitejpg) | WhatsApp / Messages crawler | Link preview image for `/j/{code}` |
+| GET | [`/og/invite.jpg`](API.md#get-oginvitejpg), `/og/join-hero.png` | WhatsApp / Messages crawler, invite page | Link preview image and hero image for `/j/{code}` |
 | GET | [`/.well-known/apple-app-site-association`](API.md#get-well-knownapple-app-site-association) | iOS | Universal Link for `/j/*` |
 | GET | [`/privacy`](API.md#get-privacylangenid) | browser | Privacy policy, EN/ID |
 | GET | [`/support`](API.md#get-supportlangenid) | browser, App Store Connect | Support page: contact, delete data, EN/ID |
 | GET | [`/terms`](API.md#get-termslangenid) | browser, Profile | Terms of use, EN/ID |
 | GET | [`/get`](API.md#get-get) | browser ("Bagikan Shoo" link) | `302` to the App Store |
+| GET | `/favicon.ico`, `/icon-192.png`, `/apple-touch-icon.png` | browser | Site icons for the public pages |
 
 All errors are `{ "error": { "code", "message" } }`; `429` carries `Retry-After`. Every response is
-`Cache-Control: private, no-store` except `GET /blocklist`. Details: [API.md, General rules](API.md#general-rules).
+`Cache-Control: private, no-store` except data with no user data in it: `GET /blocklist` (private, 300 s),
+`GET /scams/latest` (private, 600 s), `GET /config/public` (private, 3600 s), the AASA file (public, 3600 s),
+`/og/*` (public, 1 day) and the site icons (public, 7 days). Details: [API.md, General rules](API.md#general-rules).
 
 ## Schema summary
 
-Migrations: every file in `db/supabase/migrations/` (43 as of 17 Nov 2026, oldest `20261021130000_init.sql`, newest `20261117120000_drop_live_activity_tokens.sql`), applied in name order by CI (`supabase db push`, see [Deploy](#deploy)). A new migration must sort after the last one already on the cloud database, or the push refuses it (QA-D-H01, `fd8dc4ec`). Early table details: `plan/alief/ref/R2-skema-db.md`.
+Migrations: every file in `db/supabase/migrations/` (44 as of 19 Nov 2026, oldest `20261021130000_init.sql`, newest `20261117120000_drop_live_activity_tokens.sql`), applied in name order by CI (`supabase db push`, see [Deploy](#deploy)). A new migration must sort after the last one already on the cloud database, or the push refuses it (QA-D-H01, `fd8dc4ec`). Early table details: `plan/alief/ref/R2-skema-db.md`.
 
 | Table | Purpose |
 |---|---|
 | `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt`. The removed Dynamic Island's APNs token columns were dropped by `20261117120000_drop_live_activity_tokens.sql` (EX-03, #555) |
 | `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
 | `family_codes`, `join_attempts` | 6-digit codes (30 min) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
-| `scans` | Activity items, score 30–100, status consistent with score, domain lowercase (`contracts/api.md` Scans "`domain`"; a leading `www.` only as in `www.co.id`, #487). `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path. `favicon_path` = `<ownerId>/<scanId>-favicon.<png\|ico\|jpg\|gif\|webp>` in the same bucket, downloaded by the Worker from `favicon_url` (PR-05); reused the same way; `favicon_url` is never returned |
+| `scans` | Activity items, score 30–100, status consistent with score, domain lowercase (`contracts/api.md` Scans "`domain`"; a leading `www.` only as in `www.co.id`, #487). `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path. `favicon_path` = `<ownerId>/<scanId>-icon.<ext>` in R2 `shoo-replicas` since fase 18a (older `-favicon.<ext>` paths in the Supabase bucket until retention removes them), downloaded by the Worker from `favicon_url` (PR-05); reused the same way; `favicon_url` is never returned. `replica_path` = `<ownerId>/<scanId>-replica.html.gz` in R2 `shoo-replicas` (EX-07), `replica_bytes` its size |
 | `verdicts` | one per (owner, link) since #241 (`url` = origin + path, `public.verdict_link`, an IPv6 host in brackets since #487; `domain` kept for the queue and the not_safe fallback), last decision wins; `notes` ≤ 280, cleared after 14 days; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not protected by `admin.domain_lists`) |
 | `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served. `rejected_at`/`rejected_by` = reviewer said no: out of the queue, cannot be approved until cleared, deleted like any undecided row when support ends |
+| `storage_tombstones` | intent log of every screenshot, favicon, replica and archive object to delete (D-alief-B12); the store is picked from the path (see [Retention](#retention-daily-cron)) |
 | `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
 | `ops_jobs` | one row per cron job (`retention`, `notifications`): last start, last finish, last clean finish (`ok_at`), failed steps, backlog. Read by `GET /ops/status`; `shoo_api` cannot delete rows |
 | `push_log` | one row per push: guardian, scan, result code (`sent`, `logged`, `failed:<status> <reason>`, `failed:timeout\|network\|config`; CHECK). No notification text (D-alief-B11) |
@@ -145,22 +150,23 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | `APP_STORE_URL` | var | "Install" link on the invite page: TestFlight public link now, App Store later. Only `https://testflight.apple.com` / `https://apps.apple.com`; `""` or anything else → `https://apps.apple.com/` |
 | `APPLINKS_APP_IDS` | var | Comma-separated `<Team ID>.<bundle ID>` listed in the AASA for the Universal Link (issue #129): `DWTZNGA7Y8.com.umarmuhdhor.shoo` (dev builds and TestFlight share that team and bundle ID); `""` → no app listed |
 | `SUPABASE_URL` | var | `https://nmekxihgjszgcibqytyj.supabase.co` (public project URL); tests read the local one from `supabase status` |
-| `SUPABASE_SERVICE_ROLE_KEY` | secret | Supabase secret key (`sb_secret_…`, name `shoo-worker`) for Storage only; unset → screenshots dropped |
+| `SUPABASE_SERVICE_ROLE_KEY` | secret | Supabase secret key (`sb_secret_…`, name `shoo-worker`) for Storage only: reading and deleting screenshots and favicons of older scans. New screenshots are always dropped (fase 20a); removing the key is fase 20b–20d, not done yet |
 | `REPLICAS` | R2 binding | Private bucket `shoo-replicas` (APAC hint, no `r2.dev`, no custom domain, no CORS, lifecycle `expire-17d`): page replicas and new favicons. Tests and `wrangler dev` use a local bucket |
 | `REPLICA_ARCHIVE` | R2 binding | Private bucket `shoo-replica-archive` (APAC, no `r2.dev`, no CORS, **no lifecycle rule**): the admin archive's evidence fragments (`<scan_id>.fragments.html.gz`, ADM-07) and one favicon per domain (`favicon/<domain>`). Read only by the admin dashboard. Tests and `wrangler dev` use a local bucket |
 | `REPLICAS_ENABLED` | var | `"true"`. Kill-switch: anything else stops storing and serving page replicas at once (deletes keep running), see [Kill-switch and takedown](#page-replicas-kill-switch-and-takedown) |
-| `SCREENSHOT_MAX_BYTES` | var | `153600` (same as the bucket `file_size_limit`) |
+| `SCREENSHOT_MAX_BYTES` | var | `153600`. Read only by `attachScreenshot` (`services/scans.ts`), which nothing calls since fase 20a |
+| `VERDICTS_GET_LIMITER`, `SCREENSHOTS_VIEW_LIMITER`, `FAVICONS_VIEW_LIMITER`, `REPLICAS_VIEW_LIMITER` | Rate Limiting bindings | 30 per 10 s, 120 / 60 s, 600 / 60 s, 10 / 60 s (`hitEdge`; without a binding the limit falls back to `rate_limit_hits`) |
 | `SCREENSHOT_URL_SECRET` | secret | HMAC key for screenshot, favicon and replica links (`openssl rand -base64 32`, ≥ 32 characters); unset or shorter → `screenshotUrl` null; changing it invalidates every link |
 | `APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | APNs token auth (`.p8` as one line of base64, B7). Any APNs value unset → pushes only logged (`push_log` `logged`) |
 | `RATE_KEY_SECRET` | secret | HMAC key for rate-limit keys and join attempt IPs (`openssl rand -base64 32`, ≥ 32 characters). **Required**: unset or shorter → every rate-limited request is a 500 (fail closed). Set it before deploying. Changing it resets all counters once, including the join-failure budget, so rotate it while no family code is shared and expect one deploy window where old and new isolates count apart |
-| `APNS_TOPIC` | var | bundle ID of the build that receives pushes (B6); `""` until then |
-| `APNS_ENV` | var | `sandbox` (Debug builds) → `production` (TestFlight, fase 16) |
+| `APNS_TOPIC` | var | Bundle ID of the build that receives pushes (B6): `com.umarmuhdhor.shoo` |
+| `APNS_ENV` | var | `production` (TestFlight, fase 16). `sandbox` only for a Debug build talking to a local Worker |
 | `OPS_STATUS_TOKEN` | secret | Bearer for `GET /ops/status` (`openssl rand -base64 32`, ≥ 32 characters, kept in the password manager). Unset or shorter → the route is a 404. Rotate with `wrangler secret put` + the GitHub Environment `ops` |
 | `INACTIVE_DEVICES` | var | `"dry_run"` (fase 24a-1, E7). Inactive-devices retention step: `dry_run` only counts candidates, `delete` deletes them (24a-2, after 7 clean dry runs), `off` or any other value skips the step (fail closed; the code default is `off`) |
 
 ## Retention (daily cron)
 
-`triggers.crons: ["0 19 * * *"]` (03:00 WITA) runs `src/cron/retention.ts`:
+`triggers.crons: ["0 19 * * *", "5 * * * *"]`. The first (03:00 WITA) runs `src/cron/retention.ts`; the second is the [hourly notifications](#notifications-hourly-cron-pf-01-proposed) run:
 - writes `ops_heartbeat('cron')` first (anti-pause signal, also written by `/healthz/db`);
 - scans older than 14 days without a screenshot, favicon or page replica in chunks of 2000, max 25 per run (no Storage call);
 - scans older than 14 days with a screenshot, favicon and/or page replica in the same chunks of 2000, max 25 per run, so dedupe reuses never hold other users' rows past day 14 (PR #20 review, HIGH). Each chunk tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects oldest first, grouped per store: at most 10 Supabase Storage DELETEs of 100 paths per run (50 external subrequests per Cron) and at most 40 R2 deletes of 100 keys per run (R2 binding, shared with the tombstone step; `backlog: true` in the log when rows are left). Paths over a budget, or left by a store failure, stay tombstoned; a failing store stops only its own calls; the rows are gone on day 14 either way. Verdicts stay with `scan_id` null (D-alief-14);
@@ -240,7 +246,7 @@ workflow by hand with mode `daily` (Actions → ops-watch → Run workflow). Its
 - DB 500 MB: measured on a 320k-scan seed with the admin triggers on (fase 28, H5-01): ≈ 3.3 KB per live scan (`scans` 683 MB ≈ 2.2 KB per row, plus one `admin.scan_archive` row per scan, 345 MB ≈ 1.1 KB per row). So 500 MB is reached at about 150k live scans (14 days) ≈ 10k scans/day. That is an upper bound: `push_log` (≈ 350 B per row), `admin.domain_intel` and the small tables come on top. The old figure (≈ 1.5 KB per scan, 300k scans) left out the archive and was about 2× too high.
 - `admin.scan_archive` (ADM-07, D-dash-17) keeps one row per scan for good: retention never deletes it, and `DELETE /devices/me` only strips the owner's rows (`stripped_at`). The 150k above holds while the archive has about one row per live scan (the first 14 days); after that the archive keeps growing and the database fills sooner. A size rule for the archive is an open question (Q25 in [fase-28-truth-hunt.md](../plan/alief/fase-28-truth-hunt.md)); until it is decided, nothing limits it.
 - `db_size_high` ([Monitoring and alerts](#monitoring-and-alerts)) warns at 350 MB and alerts at 450 MB. Run the size report to see which table grew.
-- Supabase Storage 1 GB: screenshots only from older builds (≤ 150 KB, ≤ 50 per device and 300 in total per day, kept 14 days) and favicons stored before fase 18a (`-favicon.`, gone within 15 days). Both are removed in 18c.
+- Supabase Storage 1 GB: screenshots only from older builds (≤ 150 KB, ≤ 50 per device and 300 in total per day, kept 14 days) and favicons stored before fase 18a (`-favicon.`, gone within 15 days). Nothing new is written there; the Storage code and key go in fase 20b–20d (not done yet).
 - Supabase egress 5 GB/month: every screenshot view streams from Storage (no cache, D-alief-B08) → ≈ 35k views/month at 150 KB.
 - R2 (`shoo-replicas`, free tier 10 GB-month, 1 M Class A, 10 M Class B, free egress, D-alief-C26): page replicas ≤ 300 KB gzip, ≤ 50 per device, ≤ 60 and 10 MB per family (Guardian + members), 3000 and 500 MB in total per 24 h (the last 600 / 100 MB only for families with fewer than 10 uploads), ≤ 300 per IP per 24 h; objects live ≤ 16 days → ≤ 8 GB worst case. New favicons ≤ 64 KB, 1000 downloads per day in total → ≈ 1 GB worst case. Views: 10 per minute and 500 per day per viewer, no global cap (egress is free). Check: R2 dashboard → `shoo-replicas` → Metrics.
 - R2 (`shoo-replica-archive`, ADM-07): evidence fragments ≤ 300 KB gzip each, ≤ 100 and 10 MB per device, 2000 and 100 MB in total per 24 h, kept for good (the admin dashboard warns at Config `archive_warn_mb`, 5120 MB). Sent for every warning and blocked scan, with or without a family; `REPLICAS_ENABLED` stops them too.
