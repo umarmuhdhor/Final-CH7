@@ -77,13 +77,13 @@ Shoo puts a check on every page, on the phone itself, and links the person at ri
 
 ## What Shoo does
 
-Every user picks one mode once: **Guardian** (checks for the family) or **Protected** (browses with Shoo on). A Guardian can have up to 3 Protected people.
+Everyone starts in **Personal** mode: Shoo protects their own browsing. Turning on **Family mode** makes them a **Guardian** who invites up to 3 **Protected** people; a person who joins with a Guardian's code becomes Protected.
 
 | Feature | How |
 |---|---|
 | **A live score on every page** | The extension scores the page as you browse. A small bubble shows the score and its colour in the corner of the page. |
 | **Warnings that match the risk** | At 30% a card says "Be careful" with the top reason. At 50% a sheet covers the page and sensitive form fields are struck through. |
-| **A block with no bypass** | At 80% the tab moves to Shoo's own block page. Websites cannot script that page, so the block cannot be removed from the page. |
+| **A block with no bypass** | At 80% (the default; the thresholds come from `GET /config/public`) the tab moves to Shoo's own block page. Websites cannot script that page, so the block cannot be removed from the page. |
 | **The Guardian decides** | A blocked page is sent to the Guardian with a push. The Guardian sees the score, the reasons and a copy of the page, then taps **Safe** or **Danger**. |
 | **Safe opens the page again** | When the Guardian marks a page Safe, the block page opens it for the Protected person by itself. |
 | **Join with a code or a link** | The Guardian shares a 6-digit code, a QR code or an invite link (WhatsApp, Messages). If the app is not installed, the link opens an install page first. |
@@ -92,7 +92,7 @@ Every user picks one mode once: **Guardian** (checks for the family) or **Protec
 
 | Score | Status | What the person sees |
 |---|---|---|
-| 0–29 | `normal` | Only the score bubble. Nothing leaves the phone. |
+| 0–29 | `normal` | Only the score bubble. Nothing is stored anywhere. |
 | 30–49 | `warning` | First card plus highlights on the risky parts |
 | 50–79 | `warning` | Second card, sensitive forms struck through |
 | ≥ 80 | `blocked` | Block page until a Guardian marks it Safe |
@@ -173,8 +173,9 @@ flowchart LR
     API["Worker shoo-api<br/>Hono · zod · postgres.js"]
     AI["Worker shoo-ai<br/>POST /analyze · /public-blocklist"]
     HD["Hyperdrive"]
-    R2[("R2<br/>page replicas")]
-    CRON["Cron<br/>14-day retention"]
+    R2[("R2<br/>page replicas · favicons")]
+    R2A[("R2 archive<br/>evidence for review")]
+    CRON["Cron<br/>daily retention · hourly notifications"]
   end
 
   PG[("Supabase Postgres")]
@@ -185,6 +186,7 @@ flowchart LR
   EXT -->|"/analyze"| AI
   API --> HD --> PG
   API --> R2
+  API --> R2A
   CRON --> API
   API --> APNS --> APP
 ```
@@ -193,7 +195,9 @@ flowchart LR
 - **The app and the extension talk through the App Group**: the app writes the session, the extension writes a heartbeat so the app can tell whether it is on.
 - **Every JSON shape is fixed in [`contracts/`](contracts/README.md).** Teams use [`contracts/fixtures/`](contracts/fixtures/) as mock data instead of waiting on each other.
 
-More detail: [`plan/alief/ARCHITECTURE.md`](plan/alief/ARCHITECTURE.md) (app + backend, Bahasa Indonesia) and [`backend/API.md`](backend/API.md).
+- **Two cron jobs:** retention every day (scans, replicas and favicons go after 14 days) and notifications every hour (protection off, weekly summary).
+
+More detail: [`plan/alief/ARCHITECTURE.md`](plan/alief/ARCHITECTURE.md) (backend, app layers and every main flow, Bahasa Indonesia), [`backend/README.md`](backend/README.md) and [`backend/API.md`](backend/API.md).
 
 ## Quick start
 
@@ -280,13 +284,13 @@ CI runs the matching checks on every pull request ([`.github/workflows/`](.githu
 
 ## Privacy and safety
 
-- **Low-score browsing stays on the phone.** Nothing is sent below a score of 30.
+- **Low-score browsing is never stored.** Below a score of 30 nothing reaches the Shoo backend. With online checking on (asked during setup), each public page's text and form layout (never what was typed) goes to `POST /analyze` for layers 3–4 and is not stored. With it off, only layers 1–2 run, on the phone.
 - **Page content sent for analysis is never stored.** `POST /analyze` reads it and forgets it.
 - **What you type never leaves the page.** The page copy kept as evidence is the page's own HTML, never the values in its fields.
 - **The full URL never leaves the browser.** Only a shareable form of it is sent.
 - **No account, no email, no phone number.** A device token identifies the phone.
-- **Delete is immediate.** Delete my data removes the device and its scans at once. Everything else is deleted after 14 days.
-- **Secrets stay out of git.** Keys live in `.env` / `.dev.vars` (gitignored) and in GitHub environments; every pull request runs gitleaks.
+- **Delete is immediate.** Delete my data removes the device and its scans at once. Scans, page copies and site icons are deleted after 14 days. The parts of a flagged page that set off the warning (never what was typed) are kept for detection review. Delete my data unlinks them from the device and deletes them, unless the site is a proven scam.
+- **Secrets stay out of git.** Keys live in `.env` / `.dev.vars` (gitignored) and in GitHub environments; the backend, AI and extension workflows run gitleaks on every pull request that touches them.
 
 Threat model and secret rules: [`plan/alief/SECURITY.md`](plan/alief/SECURITY.md).
 

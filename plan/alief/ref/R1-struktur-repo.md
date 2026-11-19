@@ -2,7 +2,7 @@
 
 Folder lain di repo milik Umar/Imelda dan tidak diubah. Folder baru di `ios/ShooApp/` butuh `cd ios && xcodegen` ulang (target Shoo memakai `sources: path: ShooApp`, jadi semua subfolder ikut otomatis).
 
-> Diperbarui 15 Nov 2026 terhadap `main` `c14abbcf`. Daftar endpoint lengkap: `backend/README.md` + `backend/API.md`.
+> Diperbarui 19 Nov 2026 terhadap `main` `b68957b8` (Dynamic Island dihapus di #555). Gambaran lapisan dan alur: [`../ARCHITECTURE.md`](../ARCHITECTURE.md). Daftar endpoint lengkap: `backend/README.md` + `backend/API.md`.
 
 ## 1. `backend/`
 
@@ -31,14 +31,14 @@ backend/
 │   │   ├── db/
 │   │   │   ├── client.ts         postgres(env.DB.connectionString, { max: 5, fetch_types: false }) — prepare default (JANGAN prepare:false, docs Hyperdrive)
 │   │   │   ├── locks.ts          kelas advisory lock, satu kelas per tujuan (fase 27k F-B12)
-│   │   │   └── repo/             blocklist, codes, config, devices, domainLists, families, fragments, joinAttempts, ops, push, scans, tombstones, verdictLock, verdicts
+│   │   │   └── repo/             blocklist, codes, config, devices, domainLists, families, fragments, joinAttempts, latestScams, ops, push, scans, tombstones, verdictLock, verdicts
 │   │   ├── http/
 │   │   │   ├── auth.ts           Bearer → sha256 → device (principal), requireMode
 │   │   │   ├── errors.ts         ApiError(code, status) → { error: { code, message } }
 │   │   │   ├── rateLimit.ts      `limits`; hit (Postgres), hitLight, hitEdge (binding Rate Limiting, cadangan Postgres) (R3 §5)
 │   │   │   ├── bodyLimit.ts, crypto.ts, keyHash.ts (HMAC RATE_KEY_SECRET), logError.ts
 │   │   │   └── validate.ts       helper zod
-│   │   ├── routes/               app-site-association, blocklist, config, devices, family, favicons, health, join-page, live, ops, privacy, replicas, scans, screenshots, support, terms, verdicts
+│   │   ├── routes/               app-site-association, blocklist, config, devices, family, favicons, health, join-page, latest-scams, ops, privacy, replicas, scans, screenshots, site-icons, support, terms, verdicts
 │   │   │                         (debug-apns.ts sementara fase 07 sudah dihapus)
 │   │   └── services/
 │   │       ├── family.ts         kode 6 digit, validateJoinInTx, joinFamily, batas 3
@@ -51,14 +51,14 @@ backend/
 │   │       ├── screenshotLinks.ts  link HMAC screenshot/favicon/replica (3600 s)
 │   │       ├── images.ts, opsStatus.ts
 │   │       └── push/
-│   │           ├── sender.ts     PushSender + LiveSender, LogSender, pemilihan pushSender(env)
+│   │           ├── sender.ts     PushSender, LogSender, pemilihan pushSender(env)
 │   │           ├── apns.ts       ApnsSender langsung dari Worker (JALUR UTAMA, D-alief-B01; cache JWT per isolate)
 │   │           ├── jwt.ts        JWT ES256 APNs (test di vitest)
 │   │           ├── deliver.ts    send → kosongkan token (410) → push_log, di waitUntil
-│   │           ├── notify.ts     guardianPush + ownPush, quiet hours, batas 10 / 10 menit
-│   │           ├── live.ts       relay Live Activity (EX-03, #49)
+│   │           ├── notify.ts     guardianPush + ownPush (hanya Guardian, PF-01), quiet hours, batas 10 / 10 menit
 │   │           ├── quiet.ts      jam tenang per zona waktu
-│   │           └── messages.ts   teks push EN/ID
+│   │           └── messages.ts   teks push EN/ID (scan, keluarga: remind/disconnected/memberLeft, protection off, ringkasan)
+│   │       (live.ts + routes/live.ts Dynamic Island dihapus di #555; kolom token dibuang migrasi 20261117120000)
 │   │       (RelaySender + Edge Function push tidak pernah dibuat: jalur langsung lulus D7, D-alief-B11)
 │   └── test/                     *.test.ts (vitest-plugin), helpers/{resetDb,seed,schema}.ts. resetDb MENGOSONGKAN DB di SHOO_TEST_DB_URL
 ├── db/
@@ -83,17 +83,16 @@ Allowlist statis `src/data/allowlist.ts` (rencana awal) tidak ada lagi. Sekarang
 ios/ShooApp/
 ├── CLAUDE.md                     (sudah ada)
 ├── ShooApp.swift                 @main, RootView + AppDelegate adaptor (push, environment)
-├── Info.plist, Shoo.entitlements DI-GENERATE XcodeGen dari ios/project.yml: JANGAN diedit (perubahan hilang); key baru = permintaan ke Umar (TODO C3). Entitlement `applinks:shoo-api.afindo-mi01.workers.dev` (Universal Link #129)
+├── Info.plist, Shoo.entitlements DI-GENERATE XcodeGen dari ios/project.yml: JANGAN diedit (perubahan hilang); key baru = permintaan ke Umar (TODO C3). Entitlement `applinks:join.shoo.ai.id` + `applinks:shoo-api.afindo-mi01.workers.dev` (Universal Link #129, PR-03)
 ├── PrivacyInfo.xcprivacy
 ├── App/
 │   ├── AppDelegate.swift         token APNs, tap push → AppEnvironment.openPush
 │   ├── AppEnvironment.swift      repository + settings + router + siklus sesi (DI)
 │   ├── AppSettings.swift         bahasa, mode, Family mode, onboarding selesai, consent
-│   ├── AppConfig.swift           base URL API (`#if DEBUG` localhost / Release cloud), publicBaseURL, shareURL `/get`, flag `cameraEnabled`
+│   ├── AppConfig.swift           base URL API (`#if DEBUG` localhost / Release cloud), publicBaseURL `https://join.shoo.ai.id`, shareURL `/get`, flag `cameraEnabled`
 │   ├── DeepLink.swift            shoo://join?code=, https://<api host>/j/<code> (Universal Link), shoo://scan/<id>, shoo://activity, lainnya → Shield
 │   ├── Router.swift              navigasi + kode undangan tertunda (`pendingJoinCode`, hilang setelah 30 menit)
-│   ├── RootView.swift            sessionExpired → dataConsent → main → onboarding, di bawah LaunchSplash
-│   └── LiveActivityTokens.swift  token push-to-start + update Live Activity → PATCH /devices/me (EX-03, #49)
+│   └── RootView.swift            sessionExpired → dataConsent → main → onboarding, di bawah LaunchSplash
 ├── Data/
 │   ├── ShooRepository.swift      protocol (semua operasi contracts/api.md yang dipakai app)
 │   ├── ApiRepository.swift, APIClient.swift   URLSession, Bearer, decode error kontrak
@@ -105,7 +104,7 @@ ios/ShooApp/
 ├── Features/
 │   ├── Onboarding/               ON-01..05 (Splash, Name, TurnOnExtension + checkbox consent, SafariDefault, DataConsentView untuk device lama)
 │   ├── Main/                     MainTabView, SessionExpiredView
-│   ├── Shield/                   PR-04, GD-01, GD-03 (GuardianHomeModel, ProtectedShieldView)
+│   ├── Shield/                   PR-04, GD-01, GD-03 (GuardianHomeModel, ProtectedShieldView, LatestScamsCard `GET /scams/latest`, HomeChrome)
 │   ├── Activity/                 PR-05, GD-05
 │   ├── Detail/                   DT-01..06, GD-07 (replica, VerdictLock, SafeReasonSheet)
 │   ├── Profile/                  PF-01 (MemberDetail, pengaturan, "Punya kode undangan?")

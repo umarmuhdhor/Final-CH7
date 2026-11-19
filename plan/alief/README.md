@@ -77,7 +77,7 @@ Track **app** dan **be** jalan paralel di worktree terpisah. Track **c** (sambun
 | 14 | Pairing | c | `feat/GD-04-PR-01-03-pairing` | Family code, Connect, Protected by, deep link | GD-04, PR-01, 02, 03 | Opus 5.5 |
 | 15 | Push + validasi live | c | `feat/GD-06-07-push-validation` | tap push → Detail, It's safe / Not safe live | GD-06, GD-07 | Opus 5.5 |
 | 16 | QA-E2E | c | `fix/QA-*` per bug | `qa/QA-E2E-<tanggal>.md`, retest | semua P0 | Sonnet 5.5 (Opus untuk fix keamanan) |
-| 17 | Live Activity push | c | `feat/EX-03-live-activity-push`, `fix/EX-03-live-activity-tokens`, `fix/EX-03-live-status` | `POST /live`, token Live Activity di `PATCH /devices/me`, app mengirim token push-to-start + update (path C, issue #49; awalnya ditahan sampai spike S3 Umar) | EX-03 | Opus 5.5 |
+| 17 | Live Activity push (**dihapus di #555, 17 Nov 2026**) | c | `feat/EX-03-live-activity-push`, `fix/EX-03-live-activity-tokens`, `fix/EX-03-live-status` | `POST /live`, token Live Activity di `PATCH /devices/me`, app mengirim token push-to-start + update (path C, issue #49; awalnya ditahan sampai spike S3 Umar) | EX-03 | Opus 5.5 |
 | 18 | Page replica | c | `feat/EX-07-replica-backend` (dari `main`, sekarang) → `fix/EX-07-app-fixtures` (ke #177, setelah #175) → `feat/DT-04-page-replica` (D-alief-C24) | `pageReplicaBase64` di `POST /scans`, R2 `shoo-replicas`, `GET /replicas/{id}`, Detail merender salinan halaman (issue #176) | EX-07, DT-04 | Opus 5.5 |
 | 19 | Kuota salinan halaman per keluarga + log alert | be | `feat/EX-07-replica-family-quota` | kuota 24 jam per keluarga (Guardian + Protected), cadangan global, gauge `replica_quota_usage` | TODO E8, SECURITY P13 | Opus 5.5 |
 | 20 | Sunset screenshot (18c) + cabut service_role | c | `fix/EX-07-ignore-screenshot-upload` → `feat/EX-07-screenshot-sunset` → `feat/EX-07-drop-screenshot-columns` + `feat/DT-04-screenshot-sunset` | backend berhenti menerima/menyimpan screenshot, kolom + bucket dihapus, kunci `SUPABASE_SERVICE_ROLE_KEY` dicabut | TODO E1, D-alief-C23/C27 | Opus 5.5 |
@@ -123,7 +123,7 @@ flowchart LR
   F06Q --> F13[13 ApiRepository]
   F12 --> F13
   F13 --> F14[14 Pairing] --> F15[15 Push + validasi] --> F16[16 QA-E2E]
-  F16 -.-> F17[17 Ditahan: Live Activity push]
+  F16 -.-> F17[17 Live Activity push, dihapus #555]
 ```
 
 Garis putus-putus = endpoint yang dipakai tim lain sebelum app kita tersambung.

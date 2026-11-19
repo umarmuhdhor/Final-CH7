@@ -2,7 +2,7 @@
 
 > **Kontrak = `contracts/api.md`.** File ini hanya menjelaskan detail yang tidak ditulis kontrak (error code tambahan, rate limit, cursor, otorisasi). Kalau ada selisih, kontrak menang dan file ini diperbaiki. Referensi lengkap per endpoint: `backend/API.md`.
 > Base URL: `https://shoo-api.afindo-mi01.workers.dev` (cloud), `http://localhost:8787` (lokal). Semua body JSON, waktu ISO 8601 UTC.
-> Diperbarui 15 Nov 2026 terhadap `main` `c14abbcf`.
+> Diperbarui 19 Nov 2026 terhadap `main` `b68957b8`. `POST /live` (Dynamic Island, EX-03) dihapus di #555.
 
 ## 1. Bentuk error
 
@@ -45,11 +45,11 @@ Kode umum kontrak: `invalid_body`, `bad_json`, `too_large`, `rate_limited` (429 
 | Endpoint | Mode | Aturan |
 |---|---|---|
 | `GET /devices/me` | semua | profil sendiri; `guardian` hanya untuk Protected |
-| `PATCH /devices/me` | semua | hanya baris sendiri; `name` 1–20, `language` en/id, `apnsToken`, `liveActivityStartToken`, `liveActivityUpdateToken` (EX-03, #49), `notifications`, `timeZone`, `deviceModel`, `osVersion`, `avatarId`, `extensionLastSeenAt` |
+| `PATCH /devices/me` | semua | hanya baris sendiri; `name` 1–20, `language` en/id, `apnsToken`, `notifications`, `timeZone`, `deviceModel`, `osVersion`, `avatarId`, `extensionLastSeenAt` |
 | `POST /devices/me/protected` | guardian | tanpa anggota (409 `has_members`); kode 6 digit Guardian lain; satu transaksi (fase 27a, `services/becomeProtected.ts:47`) |
 | `DELETE /devices/me` | semua | hapus device + semua datanya; keluarga diberi push |
 | `GET /config/public` | semua | ambang skor dari dashboard, `Cache-Control: private, max-age=3600` |
-| `POST /live` | semua | relay skor ke Dynamic Island (EX-03, #49); tidak ada baris tabel |
+| `GET /scams/latest` | semua | jenis scam yang memblokir ≥ 3 device minggu ini; tanpa domain/URL/device, `Cache-Control: private, max-age=600` |
 | `POST /family/code` | guardian | 403 untuk protected |
 | `POST /family/join` | protected | 403 untuk guardian; 409 kalau sudah terhubung |
 | `GET /family/members` | guardian | hanya `family_links.guardian_id = me` |
@@ -83,7 +83,6 @@ Kode umum kontrak: `invalid_body`, `bad_json`, `too_large`, `rate_limited` (429 
 - **`GET /verdicts?url=&domain=`**: `{ verdict: Verdict | null }`. Urutan: verdict link persis → `not_safe` pemilik di domain itu (bukan host bersama) → null. `safe` tidak pernah berlaku di luar link-nya (`db/repo/verdicts.ts:167-180`). `?domain=` saja (usang): `not_safe` mana pun di domain, kalau tidak ada `safe` terbaru (`:186-195`). Rate limit 30 req / 10 s per device (D-alief-B10); 429 membawa `Retry-After`. Layar blokir polling adaptif: 2 s selama 2 menit, 5 s sampai 10 menit, lalu 15 s (`ios/ShooExtension/Resources/blocked-page.js:8-12`, PR #414); 429 → tunggu `Retry-After`, bukan "tanpa verdict" (C8).
 - **`GET /blocklist?since=`**: R2 §5 (hanya entri `blocklist_entries` yang sudah disetujui). `since` kosong = dari awal. Header `Cache-Control: private, max-age=300` (`routes/blocklist.ts:22`).
 - **`GET /config/public`**: `{ warnAt, blockAt, version, updatedAt }` dari `admin.public_config` (dashboard) (fase 05 dashboard).
-- **`POST /live`**: `{ domain, score, status, analyzing, open }`; start (token push-to-start, diklaim atomik, tunggu 30 s), update (token update), end (`open: false`, tidak dibatasi). Domain dan skor hanya di payload APNs, tidak ditulis ke DB/log (`services/push/live.ts:72-152`). Respons 202.
 - **`GET /terms`, `/privacy`, `/support`**: halaman statis EN/ID. **`GET /get`**: 302 ke `APP_STORE_URL` ("Bagikan Shoo").
 - **`GET /healthz`**: `{ ok: true }` tanpa DB. **`GET /healthz/db`**: upsert `ops_heartbeat` (MENULIS, supaya dihitung aktivitas DB), 1/menit per IP + 120/jam semua. **`GET /ops/status`**: angka agregat (umur run cron, `ops_jobs`, backlog, antrean blocklist, tombstone macet, ukuran DB, kuota replica) untuk workflow ops-watch (fase 21a); 30/jam.
 
@@ -103,7 +102,6 @@ Daftar: `backend/api/src/http/rateLimit.ts:12-68`. `hit` = tabel Postgres `rate_
 | `POST /scans` per device | 120 / jam (+ 2000 / jam semua, `hitLight`) | 429 `rate_limited` |
 | `GET /verdicts` per device | 30 / 10 s (`hitEdge` `VERDICTS_GET_LIMITER`, D-alief-B10) | 429 `rate_limited` + `Retry-After` |
 | `POST /verdicts` per Guardian | 60 / menit | 429 `rate_limited` |
-| `POST /live` per device (`open: true`) | 10 / 10 s (`hitEdge` `LIVE_PUSH_LIMITER`) | 429 `rate_limited` |
 | `GET /screenshots/{id}` per viewer | 120 / menit (`hitEdge`, D-alief-B08) | 429 `rate_limited` |
 | `GET /favicons/{id}` per viewer | 600 / menit (`hitEdge`) | 429 `rate_limited` |
 | Unduh favicon per pemilik | 30 / hari (+ 1000 / hari semua) | favicon dibuang, scan tetap 201 |
@@ -126,7 +124,7 @@ Push dikirim **langsung dari Worker ke APNs** (`services/push/apns.ts`, D-alief-
 
 Push keluarga tanpa `scanId`: putus ("… stopped protecting you"), hapus akun ("… deleted their Shoo account"), "Ingatkan". Push cron per jam (`cron/notifications.ts`, `5 * * * *`): "Perlindungan mati" (extension anggota diam > 24 jam) dan ringkasan mingguan (Senin 08:00 lokal, Guardian saja). Maks 40 push per run.
 
-Payload: kontrak + `sound` (aditif, C9): `{ "aps": { "alert": { "body": … }, "sound": "default" }, "scanId": "…" }`. Header APNs: `apns-push-type: alert`, `apns-topic: <APNS_TOPIC>`, `apns-priority: 10`, `apns-expiration` = sekarang + 1 jam. Live Activity memakai `apns-push-type: liveactivity`, topic `<APNS_TOPIC>.push-type.liveactivity`, dan token sendiri (`services/push/apns.ts:109-110`) (`services/push/live.ts`). Hanya status 410 (`Unregistered`/`ExpiredToken`) yang mengosongkan token (compare-and-clear: token baru tetap, `db/repo/push.ts:30-32`). Quiet hours menahan push **waspada** saja; push blokir tetap terkirim (`notify.ts:34-36`). Maks 10 push / 10 menit per penerima (`notify.ts:8`). Tanpa retry; `push_log.result` = `sent` / `logged` / `failed:<status>[ <reason>]` / `failed:timeout|network|config`. `400 BadDeviceToken` (juga kalau environment salah) → catat di `push_log`, token TIDAK dihapus. Build TestFlight = APNs production (`APNS_ENV=production`, sekarang di `wrangler.jsonc`).
+Payload: kontrak + `sound` (aditif, C9): `{ "aps": { "alert": { "body": … }, "sound": "default" }, "scanId": "…" }`. Header APNs: `apns-push-type: alert`, `apns-topic: <APNS_TOPIC>`, `apns-priority: 10`, `apns-expiration` = sekarang + 1 jam. Hanya status 410 (`Unregistered`/`ExpiredToken`) yang mengosongkan token (compare-and-clear: token baru tetap, `db/repo/push.ts:30-32`). Quiet hours menahan push **waspada** saja; push blokir tetap terkirim (`notify.ts:34-36`). Maks 10 push / 10 menit per penerima (`notify.ts:8`). Tanpa retry; `push_log.result` = `sent` / `logged` / `failed:<status>[ <reason>]` / `failed:timeout|network|config`. `400 BadDeviceToken` (juga kalau environment salah) → catat di `push_log`, token TIDAK dihapus. Build TestFlight = APNs production (`APNS_ENV=production`, sekarang di `wrangler.jsonc`).
 
 ## 7. Env Worker
 
