@@ -64,12 +64,13 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
-    func testTurnOnWaitsForTheConsentBoxAndShowsWhatIsSent() {
+    func testTurnOnWorksWithoutTheConsentBoxAndShowsWhatIsSent() {
         let app = launch(extensionActive: false, askConsent: true)
         app.onboardName("Rina")
         let turnOn = app.buttons["extension.turnOn"]
         XCTAssertTrue(turnOn.waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertFalse(turnOn.isEnabled)
+        // Guideline 5.1.1(iv): the online check is optional, so Turn on is not locked by the box.
+        XCTAssertTrue(turnOn.isEnabled)
         // No status note before the user has been to Settings (Figma has none).
         XCTAssertFalse(app.descendants(matching: .any)["extension.offHint"].exists)
         app.buttons["extension.dataSent"].tap()

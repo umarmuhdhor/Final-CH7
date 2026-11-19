@@ -65,7 +65,8 @@ final class OnboardingModel {
     var name = ""
     /// ON-02 avatar picker. Sent as `avatarId` in `POST /devices` (#120); the response is the source of truth.
     var selectedAvatarId = OnboardingAvatar.ids[0]
-    /// ON-04 "Saya setuju halaman dicek secara online." Its Turn on stays off until it is ticked (Figma).
+    /// ON-04 "Saya setuju halaman dicek secara online." The first tap on Turn on saves it as the answer: ticked is
+    /// a yes, unticked a no (Guideline 5.1.1(iv): Shoo works without the online check, so it can't be required).
     var consentChecked = false {
         // Once this screen saved the yes (`keepsConsentCheckbox`), the box is the saved answer: unticking it
         // takes the consent back (online checks off), ticking it again gives it again.
@@ -154,16 +155,14 @@ final class OnboardingModel {
     /// here it stays on screen.
     var showsConsentCheckbox: Bool { environment.settings.dataConsent == nil || keepsConsentCheckbox }
 
-    /// ON-04's buttons: on once the question is answered, here or before.
-    var canTurnOn: Bool { !showsConsentCheckbox || consentChecked }
-
-    /// ON-04 Turn on / Next: saves the ticked consent, then registers. A failure shows on the screen and the
-    /// tap can be repeated. `true` once Settings may open.
+    /// ON-04 Turn on / Next: saves the checkbox as the answer, then registers. A failure shows on the screen and
+    /// the tap can be repeated. `true` once Settings may open.
     func activateExtension() async -> Bool {
-        guard step == .turnOnExtension, canTurnOn, !isWorking else { return false }
-        // Only an unanswered question gets the checkbox's yes: a "no" given earlier is never overwritten.
+        guard step == .turnOnExtension, !isWorking else { return false }
+        // Only an unanswered question takes the checkbox's answer: an earlier answer is never overwritten. The
+        // box stays on screen and keeps changing the saved answer (`consentChecked`).
         if environment.settings.dataConsent == nil {
-            environment.setDataConsent(.granted)
+            environment.setDataConsent(consentChecked ? .granted : .declined)
             keepsConsentCheckbox = true
         }
         guard mode == nil else { return true }
@@ -189,7 +188,7 @@ final class OnboardingModel {
         guard step == .turnOnExtension else { return nil }
         let status = await environment.extensionStatus()
         // The step may have moved on (Back) while Safari answered.
-        guard step == .turnOnExtension, status.nextStep == nil, !movedBack, mode != nil, canTurnOn else { return status }
+        guard step == .turnOnExtension, status.nextStep == nil, !movedBack, mode != nil else { return status }
         step = .safariDefault
         return status
     }
