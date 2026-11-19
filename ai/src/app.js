@@ -89,6 +89,7 @@ export const BLOCKLIST_RATE = Object.freeze({ limit: 30, windowMs: 10 * 60 * 100
  *     When the Worker has a BLOCKLIST_KV binding, the pre-built list in KV is served instead (blocklist/kv.js, D-imelda-38).
  *   rateLimit: per-IP limit for /public-blocklist.
  *   llm: a layer 4 checker ({ check }) for tests. Otherwise layer 4 is configured from the request's env bindings (LLM_*), using llmFetch (the Worker entry passes the real fetch).
+ *     SHOO_L4 = "off" (a Worker var) turns layer 4 off even with LLM_* set; layer 5 (/review) keeps using them.
  *   llmClientCallsPerHour: per-IP limit on layer 4 calls (default CLIENT_CALLS_PER_HOUR; Infinity = off, local eval only).
  *   devStats: serve GET /_dev/layer4 (layer 4 outcome counters, no page data). Local dev server only, never the Worker.
  *   cases: a fixed layer 4 case set (layer4/cases.js parseCases) for the dev server (CASES_FILE) and tests. Otherwise the
@@ -114,7 +115,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
     const blocklistLimiter = createRateLimiter({ ...rateLimit, now });
     const analyzeLimiter = createRateLimiter({ ...analyzeRateLimit, now });
     function llmFor(env) {
-        if (!llmFetch) return null;
+        if (!llmFetch || env?.SHOO_L4 === "off") return null;
         const config = readConfig(env);
         if (!config) return null;
         const key = JSON.stringify(config);

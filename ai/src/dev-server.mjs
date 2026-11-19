@@ -19,7 +19,8 @@ try {
     if (error?.code !== "ENOENT") throw error; // a broken .env must be loud, a missing one means layer 4 off
 }
 // POST /review (layer 5) reads AI_REVIEW_SECRET and REVIEW_DAILY_CAP from the same env object as the LLM settings.
-const llmEnv = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("LLM_") || k === "AI_REVIEW_SECRET" || k === "REVIEW_DAILY_CAP"));
+// SHOO_L4=off turns layer 4 off here too, like the Worker var.
+const llmEnv = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("LLM_") || k === "AI_REVIEW_SECRET" || k === "REVIEW_DAILY_CAP" || k === "SHOO_L4"));
 // REVIEW_MOCK=1: POST /review is answered by a fake model (no provider, no key, no cost) so ai/eval/dataset/review-loop.mjs
 // can be run end to end. Rules like the dashboard would expect: >= 2 not_safe families and avg score >= 50 -> scam, >= 2 safe and
 // none not_safe -> legit, otherwise unsure. Layer 4 calls get a 500 here, so /analyze behaves as if layer 4 were off.
