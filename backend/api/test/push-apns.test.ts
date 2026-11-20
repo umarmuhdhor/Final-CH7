@@ -25,7 +25,7 @@ async function setup(overrides: Partial<ApnsConfig> = {}) {
 }
 
 const TOKEN = "ab".repeat(32);
-const message: PushMessage = { toDeviceId: "dev_g", apnsToken: TOKEN, body: "Mom hit a blocked site · 92%", scanId: "scan-1" };
+const message: PushMessage = { toDeviceId: "dev_g", apnsToken: TOKEN, body: "Blocked: Shoo closed a dangerous site Mom opened. Mom is safe. Tap to check it and decide if it's safe.", scanId: "scan-1" };
 
 type Call = { url: string; init: RequestInit };
 function fakeFetch(...responses: (Response | Error | (() => Promise<Response>))[]) {
@@ -64,7 +64,7 @@ describe("ApnsSender request (R3 §6, contracts/api.md Push payloads)", () => {
     expect(exp).toBeGreaterThan(Date.now() / 1000 + 3500);
     expect(exp).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 3600);
     expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
-      aps: { alert: { body: "Mom hit a blocked site · 92%" }, sound: "default" }, scanId: "scan-1",
+      aps: { alert: { body: "Blocked: Shoo closed a dangerous site Mom opened. Mom is safe. Tap to check it and decide if it's safe." }, sound: "default" }, scanId: "scan-1",
     });
 
     const jwt = h.get("authorization")!.replace(/^bearer /, "");

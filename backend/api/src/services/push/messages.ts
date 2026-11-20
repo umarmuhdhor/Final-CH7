@@ -1,14 +1,30 @@
 import type { Language } from "../../env";
 
-// Push text in the guardian's language (contracts/api.md "Push payloads", R3 §6).
-const TEXT: Record<Language, Record<"blocked" | "warning", (name: string, score: number) => string>> = {
+/**
+ * The push level, the same words as the in-page popup (contracts/README.md thresholds): Waspada below
+ * 50, Risiko tinggi from 50, Diblokir for a blocked scan. Usability test 20 Nov 2026: no percentage,
+ * it meant nothing to the tester (plan/alief/proposal/push-copy.md, option A).
+ */
+export type PushLevel = "warning1" | "warning2" | "blocked";
+
+/** Second popup tier (contracts/README.md): the backend only knows warnAt/blockAt, so it uses the default 50. */
+export const SECOND_WARNING = 50;
+
+export const pushLevel = (status: "blocked" | "warning", score: number): PushLevel =>
+  status === "blocked" ? "blocked" : score >= SECOND_WARNING ? "warning2" : "warning1";
+
+// Push text in the guardian's language (contracts/api.md "Push payloads", R3 §6): level word first,
+// what happened, one action. Never the URL or domain (SECURITY T9/P10).
+const TEXT: Record<Language, Record<PushLevel, (name: string) => string>> = {
   en: {
-    blocked: (n, s) => `${n} hit a blocked site · ${s}%`,
-    warning: (n, s) => `${n} opened a suspicious site · ${s}%`,
+    warning1: (n) => `Be careful: ${n} opened a suspicious site. Remind ${n} not to enter personal details. Tap to see why.`,
+    warning2: (n) => `High risk: ${n} opened a site that may be a scam. Call ${n} and ask them not to enter a PIN or OTP. Tap for details.`,
+    blocked: (n) => `Blocked: Shoo closed a dangerous site ${n} opened. ${n} is safe. Tap to check it and decide if it's safe.`,
   },
   id: {
-    blocked: (n, s) => `${n} membuka situs yang diblokir · ${s}%`,
-    warning: (n, s) => `${n} membuka situs mencurigakan · ${s}%`,
+    warning1: (n) => `Waspada: ${n} membuka situs mencurigakan. Ingatkan ${n} jangan isi data pribadi. Ketuk untuk lihat alasannya.`,
+    warning2: (n) => `Risiko tinggi: ${n} membuka situs yang mungkin penipuan. Telepon ${n}, minta jangan isi PIN atau OTP. Ketuk untuk detail.`,
+    blocked: (n) => `Diblokir: Shoo menutup situs berbahaya yang dibuka ${n}. ${n} aman. Ketuk untuk cek dan putuskan apakah situs ini aman.`,
   },
 };
 
@@ -32,23 +48,7 @@ const FAMILY: Record<Language, Record<FamilyKind, (name: string) => string>> = {
 export const familyPushText = (language: Language, kind: FamilyKind, name: string) => FAMILY[language][kind](name);
 
 export const pushText = (language: Language, status: "blocked" | "warning", ownerName: string, score: number) =>
-  TEXT[language][status](ownerName, score);
-
-// PF-01 settings pushes (proposed contract addition), in the receiving device's language.
-// Own scans carry no domain: the lock screen may be seen by others.
-const OWN: Record<Language, Record<"blocked" | "warning", (score: number) => string>> = {
-  en: {
-    blocked: (s) => `Shoo blocked a dangerous site · ${s}%`,
-    warning: (s) => `Shoo warned you about a risky site · ${s}%`,
-  },
-  id: {
-    blocked: (s) => `Shoo memblokir situs berbahaya · ${s}%`,
-    warning: (s) => `Shoo memperingatkanmu soal situs berisiko · ${s}%`,
-  },
-};
-
-export const ownPushText = (language: Language, status: "blocked" | "warning", score: number) =>
-  OWN[language][status](score);
+  TEXT[language][pushLevel(status, score)](ownerName);
 
 const PROTECTION_OFF: Record<Language, (member: string) => string> = {
   en: (m) => `${m}'s protection is off: Shoo has not run in Safari for a day`,

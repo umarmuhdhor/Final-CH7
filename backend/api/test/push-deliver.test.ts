@@ -17,7 +17,7 @@ async function world() {
   await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at)
     values ('scan-1', 'dev_p', 'https://x.example/', 'x.example', 92, 'blocked', now())`;
 }
-const message: PushMessage = { toDeviceId: "dev_g", apnsToken: OLD, body: "Mom hit a blocked site · 92%", scanId: "scan-1" };
+const message: PushMessage = { toDeviceId: "dev_g", apnsToken: OLD, body: "Blocked: Shoo closed a dangerous site Mom opened. Mom is safe. Tap to check it and decide if it's safe.", scanId: "scan-1" };
 const sender = (fn: () => Promise<SendResult>): PushSender => ({ send: fn });
 const token = async () => (await sql<{ t: string | null }[]>`select apns_token as t from devices where id = 'dev_g'`)[0]!.t;
 const rows = () => sql<{ to_device_id: string; scan_id: string; result: string }[]>`select to_device_id, scan_id, result from push_log`;
