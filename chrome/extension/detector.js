@@ -302,60 +302,62 @@
     // ---------- signal texts (English + Bahasa Indonesia) ----------
     const T = {
         lookalike: (b) => ({
-            label: { en: `Domain spelled like ${b}`, id: `Nama domain meniru ${b}` },
+            label: { en: `The address is made to look like ${b}'s`, id: `Alamatnya dibuat mirip alamat ${b}` },
             labelSimple: { en: `This address looks like ${b}'s, but it is not the real one`, id: `Alamat ini mirip alamat ${b}, tapi bukan yang asli` },
         }),
         nameOnly: (b) => ({
-            label: { en: `Uses the name ${b} but is not an official ${b} domain`, id: `Memakai nama ${b} tapi bukan domain resmi ${b}` },
+            label: { en: `Uses the name ${b}, but is not ${b}'s official address`, id: `Memakai nama ${b}, tapi bukan alamat resmi ${b}` },
             labelSimple: { en: `This site uses the name ${b}. It may not be the real one`, id: `Situs ini memakai nama ${b}. Bisa jadi bukan yang asli` },
         }),
         brandKeyword: (b, kw) => ({
-            label: { en: `Brand name plus extra word (${b} + ${kw})`, id: `Nama brand ditambah kata lain (${b} + ${kw})` },
-            labelSimple: { en: `This address mixes ${b} with the word "${kw}"`, id: `Alamat ini menggabungkan ${b} dengan kata "${kw}"` },
+            label: { en: `${b}'s name joined with "${kw}", not ${b}'s official address`, id: `Nama ${b} disambung kata "${kw}", bukan alamat resmi ${b}` },
+            labelSimple: { en: `This address adds "${kw}" to ${b}'s name. It is not ${b}'s official address`, id: `Alamat ini menempelkan kata "${kw}" ke nama ${b}. Ini bukan alamat resmi ${b}` },
         }),
         cheapTld: (tld) => ({
-            label: { en: `Cheap domain ending .${tld}`, id: `Akhiran domain murah .${tld}` },
+            label: { en: `The ending .${tld} is cheap and often used by scammers`, id: `Akhiran .${tld} murah dan sering dipakai penipu` },
             labelSimple: { en: "This site uses a cheap address ending that scammers often use", id: "Situs ini memakai akhiran alamat murah yang sering dipakai penipu" },
         }),
         suspiciousLink: (reasons) => ({
-            label: { en: `The link looks suspicious (${reasons.map((r) => REASON_TEXT[r].en).join(", ")})`, id: `Tautan terlihat mencurigakan (${reasons.map((r) => REASON_TEXT[r].id).join(", ")})` },
+            label: { en: `This address looks like a scam link: ${reasons.map((r) => REASON_TEXT[r].en).join(", ")}.`, id: `Alamat ini mirip alamat penipu: ${reasons.map((r) => REASON_TEXT[r].id).join(", ")}.` },
             labelSimple: { en: "The address of this page looks like the ones scammers use", id: "Alamat halaman ini mirip alamat yang biasa dipakai penipu" },
         }),
         dbMatch: (source) => ({
             label: {
-                en: source === "shoo" ? "Reported and confirmed as a scam by Shoo" : "Found on a public list of phishing sites",
-                id: source === "shoo" ? "Dilaporkan dan dipastikan sebagai penipuan oleh Shoo" : "Ada di daftar publik situs phishing",
+                en: source === "shoo" ? "Reported and confirmed as a scam by Shoo" : "Found on a public list of scam sites",
+                id: source === "shoo" ? "Dilaporkan dan dipastikan sebagai penipuan oleh Shoo" : "Ada di daftar umum situs penipuan",
             },
             labelSimple: { en: "This site is known to cheat people. Do not enter anything here", id: "Situs ini sudah dikenal menipu orang. Jangan isi apa pun di sini" },
         }),
     };
 
-    // Reason codes -> short phrases for the label. Only OUR words appear in a label, never text taken from the URL.
+    // Reason codes -> short phrases for the label, in plain words: what the reader would notice, not what the code
+    // measured (usability test 20 Nov 2026, plan/alief/proposal/warning-copy.md). Only OUR words appear in a label,
+    // never text taken from the URL: the examples ("klaim", 2025) come from data/link-rules.json, marked "seperti".
     const REASON_TEXT = {
-        userinfo: { en: "hidden host before @", id: "host disembunyikan sebelum @" },
-        ip_host: { en: "raw IP address", id: "alamat IP mentah" },
-        punycode: { en: "disguised letters", id: "huruf menyamar" },
-        many_labels: { en: "too many dots", id: "terlalu banyak titik" },
-        many_hyphens: { en: "too many hyphens", id: "terlalu banyak tanda hubung" },
-        word_digit_subdomain: { en: "app-style name with a number", id: "nama bergaya aplikasi dengan angka" },
-        hyphen_registrable: { en: "hyphen in the site name", id: "tanda hubung di nama situs" },
-        digit_label: { en: "name made of digits", id: "nama penuh angka" },
-        rare_tld: { en: "rare ending", id: "akhiran jarang" },
-        odd_port: { en: "unusual port", id: "port tak lazim" },
-        random_name: { en: "random file name", id: "nama file acak" },
-        file_ext: { en: "page file ending", id: "akhiran file halaman" },
-        slash_after_file: { en: "slash after file name", id: "garis miring setelah nama file" },
-        path_bait: { en: "bait word in path", id: "kata umpan di path" },
-        redirect_param: { en: "redirects elsewhere", id: "mengalihkan ke tempat lain" },
-        email_param: { en: "email in link", id: "email di tautan" },
-        long_query: { en: "very long link", id: "tautan sangat panjang" },
-        url_in_fragment: { en: "link inside link", id: "tautan di dalam tautan" },
-        long_url: { en: "very long link", id: "tautan sangat panjang" },
-        http_no_tls: { en: "not encrypted", id: "tidak terenkripsi" },
-        free_host: { en: "free hosting page", id: "halaman hosting gratis" },
-        free_name_bait: { en: "bait word in the name", id: "kata umpan di nama" },
-        free_name_number: { en: "year or amount in the name", id: "tahun atau jumlah di nama" },
-        free_file_bait: { en: "bait word in the file name", id: "kata umpan di nama file" },
+        userinfo: { en: "a decoy name before the @ sign", id: "ada nama samaran sebelum tanda @" },
+        ip_host: { en: "the address is just numbers", id: "alamatnya hanya deretan angka" },
+        punycode: { en: "foreign letters that look like normal ones", id: "ada huruf asing yang mirip huruf biasa" },
+        many_labels: { en: "the real name is hidden among many dots", id: "nama aslinya tersembunyi di antara banyak titik" },
+        many_hyphens: { en: "the name is strung together with many dashes", id: "namanya disambung banyak tanda strip (-)" },
+        word_digit_subdomain: { en: "a made-up word-and-number front part", id: "bagian depan alamat berupa kata + angka buatan" },
+        hyphen_registrable: { en: "a dash in the site name", id: "nama situs memakai tanda strip (-)" },
+        digit_label: { en: "random letters and numbers in the name", id: "nama situs berisi huruf dan angka acak" },
+        rare_tld: { en: "an ending real sites rarely use", id: "akhiran alamat yang jarang dipakai situs resmi" },
+        odd_port: { en: "an odd number after the site name (like :8080)", id: "ada angka aneh setelah nama situs (seperti :8080)" },
+        random_name: { en: "the page name is a random code", id: "nama halamannya kode acak" },
+        file_ext: { en: "the address ends in .html or .php", id: "alamatnya berakhiran .html atau .php" },
+        slash_after_file: { en: "an odd slash after .html or .php", id: "ada garis miring aneh setelah .html atau .php" },
+        path_bait: { en: `a lure word in the address (like "claim" or "code")`, id: `ada kata pancingan di alamat (seperti "klaim" atau "kode")` },
+        redirect_param: { en: "the link sends you on to another site", id: "tautan ini melempar kamu ke situs lain" },
+        email_param: { en: "an email address inside the link", id: "ada alamat email di dalam tautan" },
+        long_query: { en: "a link so long it hides what it does", id: "tautannya sangat panjang sampai isinya tersembunyi" },
+        url_in_fragment: { en: "another site's address tucked inside", id: "ada alamat situs lain yang diselipkan" },
+        long_url: { en: "a very long link", id: "tautannya sangat panjang" },
+        http_no_tls: { en: "the connection is not secure (no https)", id: "sambungannya tidak aman (tanpa https)" },
+        free_host: { en: "made on a free website service", id: "dibuat di layanan situs gratis" },
+        free_name_bait: { en: `a free site named with lure words (like "aid" or a courier name)`, id: `situs gratisan dengan nama pancingan (seperti "bansos" atau nama kurir)` },
+        free_name_number: { en: "a year or promo amount in the name (like 2025 or 50GB)", id: "ada tahun atau nominal promo di nama (seperti 2025 atau 50gb)" },
+        free_file_bait: { en: "the page name uses lure words", id: "nama halamannya memakai kata pancingan" },
     };
 
     function signal(id, weight, texts, evidence, layer = 2, host = null) {
@@ -531,11 +533,11 @@
         { id: "asks_pin", weight: 20, words: ["pin", "mpin", "passcode", "kode sandi", "kode akses"], not: ["postal", "zip", "kodepos", "kode pos", "lokasi", "location", "map"] },
     ];
     const FORM_TEXT = {
-        asks_pin: { label: { en: "Form asks for a PIN or passcode", id: "Form meminta PIN atau kode sandi" }, labelSimple: { en: "Asks for your secret PIN", id: "Meminta PIN rahasia kamu" } },
-        asks_otp: { label: { en: "Form asks for a one-time code (OTP)", id: "Form meminta kode sekali pakai (OTP)" }, labelSimple: { en: "Asks for the code sent to your phone", id: "Meminta kode yang dikirim ke HP kamu" } },
-        asks_card: { label: { en: "Form asks for a card number", id: "Form meminta nomor kartu" }, labelSimple: { en: "Asks for your bank card number", id: "Meminta nomor kartu bank kamu" } },
-        asks_cvv: { label: { en: "Form asks for the card security code (CVV)", id: "Form meminta kode keamanan kartu (CVV)" }, labelSimple: { en: "Asks for the 3 digits on the back of your card", id: "Meminta 3 angka di belakang kartu kamu" } },
-        asks_ktp: { label: { en: "Form asks for a KTP number", id: "Form meminta nomor KTP" }, labelSimple: { en: "Asks for your ID card number", id: "Meminta nomor KTP kamu" } },
+        asks_pin: { label: { en: "Form asks for a PIN or passcode", id: "Formulir meminta PIN atau kode sandi" }, labelSimple: { en: "Asks for your secret PIN", id: "Meminta PIN rahasia kamu" } },
+        asks_otp: { label: { en: "Form asks for a one-time code (OTP)", id: "Formulir meminta kode sekali pakai (OTP)" }, labelSimple: { en: "Asks for the code sent to your phone", id: "Meminta kode yang dikirim ke HP kamu" } },
+        asks_card: { label: { en: "Form asks for a card number", id: "Formulir meminta nomor kartu" }, labelSimple: { en: "Asks for your bank card number", id: "Meminta nomor kartu bank kamu" } },
+        asks_cvv: { label: { en: "Form asks for the card security code (CVV)", id: "Formulir meminta kode keamanan kartu (CVV)" }, labelSimple: { en: "Asks for the 3 digits on the back of your card", id: "Meminta 3 angka di belakang kartu kamu" } },
+        asks_ktp: { label: { en: "Form asks for a KTP number", id: "Formulir meminta nomor KTP" }, labelSimple: { en: "Asks for your ID card number", id: "Meminta nomor KTP kamu" } },
     };
 
     /** Whole words / word pairs of a field's name, id, label, placeholder and autocomplete. */

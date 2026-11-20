@@ -14,8 +14,8 @@
           "layer": 2,
           "weight": 24,
           "label": {
-            "en": "The link looks suspicious (bait word in path, bait word in the file name)",
-            "id": "Tautan terlihat mencurigakan (kata umpan di path, kata umpan di nama file)"
+            "en": "This address looks like a scam link: a lure word in the address (like \"claim\" or \"code\"), the page name uses lure words.",
+            "id": "Alamat ini mirip alamat penipu: ada kata pancingan di alamat (seperti \"klaim\" atau \"kode\"), nama halamannya memakai kata pancingan."
           },
           "labelSimple": {
             "en": "The address of this page looks like the ones scammers use",
@@ -59,8 +59,8 @@
           "layer": 2,
           "weight": 19,
           "label": {
-            "en": "The link looks suspicious (bait word in path, bait word in the file name)",
-            "id": "Tautan terlihat mencurigakan (kata umpan di path, kata umpan di nama file)"
+            "en": "This address looks like a scam link: a lure word in the address (like \"claim\" or \"code\"), the page name uses lure words.",
+            "id": "Alamat ini mirip alamat penipu: ada kata pancingan di alamat (seperti \"klaim\" atau \"kode\"), nama halamannya memakai kata pancingan."
           },
           "labelSimple": {
             "en": "The address of this page looks like the ones scammers use",
@@ -74,7 +74,7 @@
           "weight": 15,
           "label": {
             "en": "Form asks for a password on an unofficial site",
-            "id": "Form meminta kata sandi di situs tidak resmi"
+            "id": "Formulir meminta kata sandi di situs tidak resmi"
           },
           "labelSimple": {
             "en": "Asks for your password on a site that is not official",
@@ -104,8 +104,8 @@
           "layer": 2,
           "weight": 10,
           "label": {
-            "en": "The link looks suspicious (hyphen in the site name, bait word in path)",
-            "id": "Tautan terlihat mencurigakan (tanda hubung di nama situs, kata umpan di path)"
+            "en": "This address looks like a scam link: a dash in the site name, a lure word in the address (like \"claim\" or \"code\").",
+            "id": "Alamat ini mirip alamat penipu: nama situs memakai tanda strip (-), ada kata pancingan di alamat (seperti \"klaim\" atau \"kode\")."
           },
           "labelSimple": {
             "en": "The address of this page looks like the ones scammers use",
@@ -118,8 +118,8 @@
           "layer": 3,
           "weight": 35,
           "label": {
-            "en": "Form asks for a selfie with KTP",
-            "id": "Form meminta selfie dengan KTP"
+            "en": "Form asks for a photo of you holding your ID card",
+            "id": "Formulir meminta foto selfie sambil memegang KTP"
           },
           "labelSimple": {
             "en": "Asks for a photo of you holding your ID card",
@@ -133,7 +133,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -147,7 +147,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -177,8 +177,8 @@
           "layer": 2,
           "weight": 10,
           "label": {
-            "en": "The link looks suspicious (hyphen in the site name, bait word in path)",
-            "id": "Tautan terlihat mencurigakan (tanda hubung di nama situs, kata umpan di path)"
+            "en": "This address looks like a scam link: a dash in the site name, a lure word in the address (like \"claim\" or \"code\").",
+            "id": "Alamat ini mirip alamat penipu: nama situs memakai tanda strip (-), ada kata pancingan di alamat (seperti \"klaim\" atau \"kode\")."
           },
           "labelSimple": {
             "en": "The address of this page looks like the ones scammers use",
@@ -192,7 +192,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -236,8 +236,8 @@
           "layer": 3,
           "weight": 20,
           "label": {
-            "en": "Domain age 26 days",
-            "id": "Umur domain 26 hari"
+            "en": "This site was made 26 days ago",
+            "id": "Situs ini baru dibuat 26 hari lalu"
           },
           "labelSimple": {
             "en": "This site was made 26 days ago",
@@ -250,7 +250,7 @@
           "weight": 15,
           "label": {
             "en": "Form asks for a password on an unofficial site",
-            "id": "Form meminta kata sandi di situs tidak resmi"
+            "id": "Formulir meminta kata sandi di situs tidak resmi"
           },
           "labelSimple": {
             "en": "Asks for your password on a site that is not official",
@@ -280,8 +280,8 @@
           "layer": 2,
           "weight": 25,
           "label": {
-            "en": "Domain spelled like Apple",
-            "id": "Nama domain meniru Apple"
+            "en": "The address is made to look like Apple's",
+            "id": "Alamatnya dibuat mirip alamat Apple"
           },
           "labelSimple": {
             "en": "This address looks like Apple's, but it is not the real one",
@@ -294,12 +294,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (Apple + login)",
-            "id": "Nama brand ditambah kata lain (Apple + login)"
+            "en": "Apple's name joined with \"login\", not Apple's official address",
+            "id": "Nama Apple disambung kata \"login\", bukan alamat resmi Apple"
           },
           "labelSimple": {
-            "en": "This address mixes Apple with the word \"login\"",
-            "id": "Alamat ini menggabungkan Apple dengan kata \"login\""
+            "en": "This address adds \"login\" to Apple's name. It is not Apple's official address",
+            "id": "Alamat ini menempelkan kata \"login\" ke nama Apple. Ini bukan alamat resmi Apple"
           },
           "evidence": "apple · level 2 · login"
         }
@@ -325,12 +325,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (BRI + verifikasi)",
-            "id": "Nama brand ditambah kata lain (BRI + verifikasi)"
+            "en": "BRI's name joined with \"verifikasi\", not BRI's official address",
+            "id": "Nama BRI disambung kata \"verifikasi\", bukan alamat resmi BRI"
           },
           "labelSimple": {
-            "en": "This address mixes BRI with the word \"verifikasi\"",
-            "id": "Alamat ini menggabungkan BRI dengan kata \"verifikasi\""
+            "en": "This address adds \"verifikasi\" to BRI's name. It is not BRI's official address",
+            "id": "Alamat ini menempelkan kata \"verifikasi\" ke nama BRI. Ini bukan alamat resmi BRI"
           },
           "evidence": "bri · level 2 · verifikasi"
         },
@@ -339,8 +339,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .top",
-            "id": "Akhiran domain murah .top"
+            "en": "The ending .top is cheap and often used by scammers",
+            "id": "Akhiran .top murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -354,7 +354,7 @@
           "weight": 35,
           "label": {
             "en": "Form asks for a PIN or passcode",
-            "id": "Form meminta PIN atau kode sandi"
+            "id": "Formulir meminta PIN atau kode sandi"
           },
           "labelSimple": {
             "en": "Asks for your secret PIN",
@@ -368,7 +368,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -412,12 +412,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (Bank Mandiri + update)",
-            "id": "Nama brand ditambah kata lain (Bank Mandiri + update)"
+            "en": "Bank Mandiri's name joined with \"update\", not Bank Mandiri's official address",
+            "id": "Nama Bank Mandiri disambung kata \"update\", bukan alamat resmi Bank Mandiri"
           },
           "labelSimple": {
-            "en": "This address mixes Bank Mandiri with the word \"update\"",
-            "id": "Alamat ini menggabungkan Bank Mandiri dengan kata \"update\""
+            "en": "This address adds \"update\" to Bank Mandiri's name. It is not Bank Mandiri's official address",
+            "id": "Alamat ini menempelkan kata \"update\" ke nama Bank Mandiri. Ini bukan alamat resmi Bank Mandiri"
           },
           "evidence": "mandiri · level 2 · update"
         },
@@ -426,8 +426,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .site",
-            "id": "Akhiran domain murah .site"
+            "en": "The ending .site is cheap and often used by scammers",
+            "id": "Akhiran .site murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -440,8 +440,8 @@
           "layer": 4,
           "weight": 30,
           "label": {
-            "en": "The data requested does not fit this kind of page",
-            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+            "en": "A page like this does not normally ask for that",
+            "id": "Halaman seperti ini biasanya tidak meminta data itu"
           },
           "labelSimple": {
             "en": "A real page of this kind would not ask for this",
@@ -468,7 +468,7 @@
           "weight": 15,
           "label": {
             "en": "Form asks for a password on an unofficial site",
-            "id": "Form meminta kata sandi di situs tidak resmi"
+            "id": "Formulir meminta kata sandi di situs tidak resmi"
           },
           "labelSimple": {
             "en": "Asks for your password on a site that is not official",
@@ -481,8 +481,8 @@
           "layer": 3,
           "weight": 15,
           "label": {
-            "en": "Urgent language: \"dalam 24 jam\"",
-            "id": "Kalimat mendesak: \"dalam 24 jam\""
+            "en": "Words that rush you: \"dalam 24 jam\"",
+            "id": "Kalimat yang membuat buru-buru: \"dalam 24 jam\""
           },
           "labelSimple": {
             "en": "Rushes you to act fast",
@@ -512,8 +512,8 @@
           "layer": 2,
           "weight": 10,
           "label": {
-            "en": "Uses the name BNI but is not an official BNI domain",
-            "id": "Memakai nama BNI tapi bukan domain resmi BNI"
+            "en": "Uses the name BNI, but is not BNI's official address",
+            "id": "Memakai nama BNI, tapi bukan alamat resmi BNI"
           },
           "labelSimple": {
             "en": "This site uses the name BNI. It may not be the real one",
@@ -526,8 +526,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .click",
-            "id": "Akhiran domain murah .click"
+            "en": "The ending .click is cheap and often used by scammers",
+            "id": "Akhiran .click murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -540,8 +540,8 @@
           "layer": 4,
           "weight": 30,
           "label": {
-            "en": "The data requested does not fit this kind of page",
-            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+            "en": "A page like this does not normally ask for that",
+            "id": "Halaman seperti ini biasanya tidak meminta data itu"
           },
           "labelSimple": {
             "en": "A real page of this kind would not ask for this",
@@ -569,7 +569,7 @@
           "weight": 20,
           "label": {
             "en": "Form asks for a card number",
-            "id": "Form meminta nomor kartu"
+            "id": "Formulir meminta nomor kartu"
           },
           "labelSimple": {
             "en": "Asks for your bank card number",
@@ -583,7 +583,7 @@
           "weight": 15,
           "label": {
             "en": "Form asks for a password on an unofficial site",
-            "id": "Form meminta kata sandi di situs tidak resmi"
+            "id": "Formulir meminta kata sandi di situs tidak resmi"
           },
           "labelSimple": {
             "en": "Asks for your password on a site that is not official",
@@ -613,8 +613,8 @@
           "layer": 2,
           "weight": 10,
           "label": {
-            "en": "Uses the name BSI but is not an official BSI domain",
-            "id": "Memakai nama BSI tapi bukan domain resmi BSI"
+            "en": "Uses the name BSI, but is not BSI's official address",
+            "id": "Memakai nama BSI, tapi bukan alamat resmi BSI"
           },
           "labelSimple": {
             "en": "This site uses the name BSI. It may not be the real one",
@@ -627,8 +627,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .xyz",
-            "id": "Akhiran domain murah .xyz"
+            "en": "The ending .xyz is cheap and often used by scammers",
+            "id": "Akhiran .xyz murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -642,7 +642,7 @@
           "weight": 35,
           "label": {
             "en": "Form asks for a PIN or passcode",
-            "id": "Form meminta PIN atau kode sandi"
+            "id": "Formulir meminta PIN atau kode sandi"
           },
           "labelSimple": {
             "en": "Asks for your secret PIN",
@@ -655,8 +655,8 @@
           "layer": 4,
           "weight": 30,
           "label": {
-            "en": "The data requested does not fit this kind of page",
-            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+            "en": "A page like this does not normally ask for that",
+            "id": "Halaman seperti ini biasanya tidak meminta data itu"
           },
           "labelSimple": {
             "en": "A real page of this kind would not ask for this",
@@ -669,7 +669,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -713,8 +713,8 @@
           "layer": 4,
           "weight": 30,
           "label": {
-            "en": "The data requested does not fit this kind of page",
-            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+            "en": "A page like this does not normally ask for that",
+            "id": "Halaman seperti ini biasanya tidak meminta data itu"
           },
           "labelSimple": {
             "en": "A real page of this kind would not ask for this",
@@ -727,7 +727,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -771,12 +771,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (BCA + blokir)",
-            "id": "Nama brand ditambah kata lain (BCA + blokir)"
+            "en": "BCA's name joined with \"blokir\", not BCA's official address",
+            "id": "Nama BCA disambung kata \"blokir\", bukan alamat resmi BCA"
           },
           "labelSimple": {
-            "en": "This address mixes BCA with the word \"blokir\"",
-            "id": "Alamat ini menggabungkan BCA dengan kata \"blokir\""
+            "en": "This address adds \"blokir\" to BCA's name. It is not BCA's official address",
+            "id": "Alamat ini menempelkan kata \"blokir\" ke nama BCA. Ini bukan alamat resmi BCA"
           },
           "evidence": "bca · level 2 · blokir"
         },
@@ -800,7 +800,7 @@
           "weight": 20,
           "label": {
             "en": "Form asks for a card number",
-            "id": "Form meminta nomor kartu"
+            "id": "Formulir meminta nomor kartu"
           },
           "labelSimple": {
             "en": "Asks for your bank card number",
@@ -830,8 +830,8 @@
           "layer": 2,
           "weight": 10,
           "label": {
-            "en": "Uses the name BRI but is not an official BRI domain",
-            "id": "Memakai nama BRI tapi bukan domain resmi BRI"
+            "en": "Uses the name BRI, but is not BRI's official address",
+            "id": "Memakai nama BRI, tapi bukan alamat resmi BRI"
           },
           "labelSimple": {
             "en": "This site uses the name BRI. It may not be the real one",
@@ -844,8 +844,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .top",
-            "id": "Akhiran domain murah .top"
+            "en": "The ending .top is cheap and often used by scammers",
+            "id": "Akhiran .top murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -859,7 +859,7 @@
           "weight": 35,
           "label": {
             "en": "Form asks for a PIN or passcode",
-            "id": "Form meminta PIN atau kode sandi"
+            "id": "Formulir meminta PIN atau kode sandi"
           },
           "labelSimple": {
             "en": "Asks for your secret PIN",
@@ -903,8 +903,8 @@
           "layer": 3,
           "weight": 35,
           "label": {
-            "en": "Form asks for a selfie with KTP",
-            "id": "Form meminta selfie dengan KTP"
+            "en": "Form asks for a photo of you holding your ID card",
+            "id": "Formulir meminta foto selfie sambil memegang KTP"
           },
           "labelSimple": {
             "en": "Asks for a photo of you holding your ID card",
@@ -917,8 +917,8 @@
           "layer": 4,
           "weight": 30,
           "label": {
-            "en": "The data requested does not fit this kind of page",
-            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+            "en": "A page like this does not normally ask for that",
+            "id": "Halaman seperti ini biasanya tidak meminta data itu"
           },
           "labelSimple": {
             "en": "A real page of this kind would not ask for this",
@@ -931,7 +931,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -975,12 +975,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (DANA + bonus)",
-            "id": "Nama brand ditambah kata lain (DANA + bonus)"
+            "en": "DANA's name joined with \"bonus\", not DANA's official address",
+            "id": "Nama DANA disambung kata \"bonus\", bukan alamat resmi DANA"
           },
           "labelSimple": {
-            "en": "This address mixes DANA with the word \"bonus\"",
-            "id": "Alamat ini menggabungkan DANA dengan kata \"bonus\""
+            "en": "This address adds \"bonus\" to DANA's name. It is not DANA's official address",
+            "id": "Alamat ini menempelkan kata \"bonus\" ke nama DANA. Ini bukan alamat resmi DANA"
           },
           "evidence": "dana · level 2 · bonus"
         },
@@ -989,8 +989,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .xyz",
-            "id": "Akhiran domain murah .xyz"
+            "en": "The ending .xyz is cheap and often used by scammers",
+            "id": "Akhiran .xyz murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1003,8 +1003,8 @@
           "layer": 4,
           "weight": 30,
           "label": {
-            "en": "The data requested does not fit this kind of page",
-            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+            "en": "A page like this does not normally ask for that",
+            "id": "Halaman seperti ini biasanya tidak meminta data itu"
           },
           "labelSimple": {
             "en": "A real page of this kind would not ask for this",
@@ -1017,7 +1017,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -1061,8 +1061,8 @@
           "layer": 2,
           "weight": 10,
           "label": {
-            "en": "Uses the name OVO but is not an official OVO domain",
-            "id": "Memakai nama OVO tapi bukan domain resmi OVO"
+            "en": "Uses the name OVO, but is not OVO's official address",
+            "id": "Memakai nama OVO, tapi bukan alamat resmi OVO"
           },
           "labelSimple": {
             "en": "This site uses the name OVO. It may not be the real one",
@@ -1075,8 +1075,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .top",
-            "id": "Akhiran domain murah .top"
+            "en": "The ending .top is cheap and often used by scammers",
+            "id": "Akhiran .top murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1090,7 +1090,7 @@
           "weight": 35,
           "label": {
             "en": "Form asks for a PIN or passcode",
-            "id": "Form meminta PIN atau kode sandi"
+            "id": "Formulir meminta PIN atau kode sandi"
           },
           "labelSimple": {
             "en": "Asks for your secret PIN",
@@ -1104,7 +1104,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -1148,12 +1148,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (GoPay + refund)",
-            "id": "Nama brand ditambah kata lain (GoPay + refund)"
+            "en": "GoPay's name joined with \"refund\", not GoPay's official address",
+            "id": "Nama GoPay disambung kata \"refund\", bukan alamat resmi GoPay"
           },
           "labelSimple": {
-            "en": "This address mixes GoPay with the word \"refund\"",
-            "id": "Alamat ini menggabungkan GoPay dengan kata \"refund\""
+            "en": "This address adds \"refund\" to GoPay's name. It is not GoPay's official address",
+            "id": "Alamat ini menempelkan kata \"refund\" ke nama GoPay. Ini bukan alamat resmi GoPay"
           },
           "evidence": "gopay · level 2 · refund"
         },
@@ -1162,8 +1162,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .site",
-            "id": "Akhiran domain murah .site"
+            "en": "The ending .site is cheap and often used by scammers",
+            "id": "Akhiran .site murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1177,7 +1177,7 @@
           "weight": 35,
           "label": {
             "en": "Form asks for a PIN or passcode",
-            "id": "Form meminta PIN atau kode sandi"
+            "id": "Formulir meminta PIN atau kode sandi"
           },
           "labelSimple": {
             "en": "Asks for your secret PIN",
@@ -1191,7 +1191,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -1235,12 +1235,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (Shopee + verifikasi)",
-            "id": "Nama brand ditambah kata lain (Shopee + verifikasi)"
+            "en": "Shopee's name joined with \"verifikasi\", not Shopee's official address",
+            "id": "Nama Shopee disambung kata \"verifikasi\", bukan alamat resmi Shopee"
           },
           "labelSimple": {
-            "en": "This address mixes Shopee with the word \"verifikasi\"",
-            "id": "Alamat ini menggabungkan Shopee dengan kata \"verifikasi\""
+            "en": "This address adds \"verifikasi\" to Shopee's name. It is not Shopee's official address",
+            "id": "Alamat ini menempelkan kata \"verifikasi\" ke nama Shopee. Ini bukan alamat resmi Shopee"
           },
           "evidence": "shopee · level 2 · verifikasi"
         },
@@ -1249,8 +1249,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .click",
-            "id": "Akhiran domain murah .click"
+            "en": "The ending .click is cheap and often used by scammers",
+            "id": "Akhiran .click murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1278,7 +1278,7 @@
           "weight": 15,
           "label": {
             "en": "Form asks for a password on an unofficial site",
-            "id": "Form meminta kata sandi di situs tidak resmi"
+            "id": "Formulir meminta kata sandi di situs tidak resmi"
           },
           "labelSimple": {
             "en": "Asks for your password on a site that is not official",
@@ -1309,7 +1309,7 @@
           "weight": 35,
           "label": {
             "en": "Form asks for a PIN or passcode",
-            "id": "Form meminta PIN atau kode sandi"
+            "id": "Formulir meminta PIN atau kode sandi"
           },
           "labelSimple": {
             "en": "Asks for your secret PIN",
@@ -1339,12 +1339,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (DANA + login)",
-            "id": "Nama brand ditambah kata lain (DANA + login)"
+            "en": "DANA's name joined with \"login\", not DANA's official address",
+            "id": "Nama DANA disambung kata \"login\", bukan alamat resmi DANA"
           },
           "labelSimple": {
-            "en": "This address mixes DANA with the word \"login\"",
-            "id": "Alamat ini menggabungkan DANA dengan kata \"login\""
+            "en": "This address adds \"login\" to DANA's name. It is not DANA's official address",
+            "id": "Alamat ini menempelkan kata \"login\" ke nama DANA. Ini bukan alamat resmi DANA"
           },
           "evidence": "dana · level 2 · login"
         },
@@ -1353,8 +1353,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .cfd",
-            "id": "Akhiran domain murah .cfd"
+            "en": "The ending .cfd is cheap and often used by scammers",
+            "id": "Akhiran .cfd murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1368,7 +1368,7 @@
           "weight": 35,
           "label": {
             "en": "Form asks for a PIN or passcode",
-            "id": "Form meminta PIN atau kode sandi"
+            "id": "Formulir meminta PIN atau kode sandi"
           },
           "labelSimple": {
             "en": "Asks for your secret PIN",
@@ -1382,7 +1382,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -1426,12 +1426,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (OVO + undian)",
-            "id": "Nama brand ditambah kata lain (OVO + undian)"
+            "en": "OVO's name joined with \"undian\", not OVO's official address",
+            "id": "Nama OVO disambung kata \"undian\", bukan alamat resmi OVO"
           },
           "labelSimple": {
-            "en": "This address mixes OVO with the word \"undian\"",
-            "id": "Alamat ini menggabungkan OVO dengan kata \"undian\""
+            "en": "This address adds \"undian\" to OVO's name. It is not OVO's official address",
+            "id": "Alamat ini menempelkan kata \"undian\" ke nama OVO. Ini bukan alamat resmi OVO"
           },
           "evidence": "ovo · level 2 · undian"
         },
@@ -1440,8 +1440,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .top",
-            "id": "Akhiran domain murah .top"
+            "en": "The ending .top is cheap and often used by scammers",
+            "id": "Akhiran .top murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1485,8 +1485,8 @@
           "layer": 2,
           "weight": 5,
           "label": {
-            "en": "Cheap domain ending .site",
-            "id": "Akhiran domain murah .site"
+            "en": "The ending .site is cheap and often used by scammers",
+            "id": "Akhiran .site murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1499,8 +1499,8 @@
           "layer": 3,
           "weight": 35,
           "label": {
-            "en": "Form asks for a selfie with KTP",
-            "id": "Form meminta selfie dengan KTP"
+            "en": "Form asks for a photo of you holding your ID card",
+            "id": "Formulir meminta foto selfie sambil memegang KTP"
           },
           "labelSimple": {
             "en": "Asks for a photo of you holding your ID card",
@@ -1514,7 +1514,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -1558,8 +1558,8 @@
           "layer": 2,
           "weight": 10,
           "label": {
-            "en": "Uses the name JNE but is not an official JNE domain",
-            "id": "Memakai nama JNE tapi bukan domain resmi JNE"
+            "en": "Uses the name JNE, but is not JNE's official address",
+            "id": "Memakai nama JNE, tapi bukan alamat resmi JNE"
           },
           "labelSimple": {
             "en": "This site uses the name JNE. It may not be the real one",
@@ -1572,8 +1572,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .top",
-            "id": "Akhiran domain murah .top"
+            "en": "The ending .top is cheap and often used by scammers",
+            "id": "Akhiran .top murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1601,7 +1601,7 @@
           "weight": 20,
           "label": {
             "en": "Form asks for a card number",
-            "id": "Form meminta nomor kartu"
+            "id": "Formulir meminta nomor kartu"
           },
           "labelSimple": {
             "en": "Asks for your bank card number",
@@ -1631,8 +1631,8 @@
           "layer": 2,
           "weight": 10,
           "label": {
-            "en": "Uses the name J&T Express but is not an official J&T Express domain",
-            "id": "Memakai nama J&T Express tapi bukan domain resmi J&T Express"
+            "en": "Uses the name J&T Express, but is not J&T Express's official address",
+            "id": "Memakai nama J&T Express, tapi bukan alamat resmi J&T Express"
           },
           "labelSimple": {
             "en": "This site uses the name J&T Express. It may not be the real one",
@@ -1645,8 +1645,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .site",
-            "id": "Akhiran domain murah .site"
+            "en": "The ending .site is cheap and often used by scammers",
+            "id": "Akhiran .site murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1690,8 +1690,8 @@
           "layer": 2,
           "weight": 25,
           "label": {
-            "en": "Domain spelled like Pos Indonesia",
-            "id": "Nama domain meniru Pos Indonesia"
+            "en": "The address is made to look like Pos Indonesia's",
+            "id": "Alamatnya dibuat mirip alamat Pos Indonesia"
           },
           "labelSimple": {
             "en": "This address looks like Pos Indonesia's, but it is not the real one",
@@ -1735,8 +1735,8 @@
           "layer": 2,
           "weight": 5,
           "label": {
-            "en": "Cheap domain ending .top",
-            "id": "Akhiran domain murah .top"
+            "en": "The ending .top is cheap and often used by scammers",
+            "id": "Akhiran .top murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1750,7 +1750,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -1780,8 +1780,8 @@
           "layer": 2,
           "weight": 5,
           "label": {
-            "en": "Cheap domain ending .xyz",
-            "id": "Akhiran domain murah .xyz"
+            "en": "The ending .xyz is cheap and often used by scammers",
+            "id": "Akhiran .xyz murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1795,7 +1795,7 @@
           "weight": 35,
           "label": {
             "en": "Form asks for a PIN or passcode",
-            "id": "Form meminta PIN atau kode sandi"
+            "id": "Formulir meminta PIN atau kode sandi"
           },
           "labelSimple": {
             "en": "Asks for your secret PIN",
@@ -1825,12 +1825,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (Tokopedia + undian)",
-            "id": "Nama brand ditambah kata lain (Tokopedia + undian)"
+            "en": "Tokopedia's name joined with \"undian\", not Tokopedia's official address",
+            "id": "Nama Tokopedia disambung kata \"undian\", bukan alamat resmi Tokopedia"
           },
           "labelSimple": {
-            "en": "This address mixes Tokopedia with the word \"undian\"",
-            "id": "Alamat ini menggabungkan Tokopedia dengan kata \"undian\""
+            "en": "This address adds \"undian\" to Tokopedia's name. It is not Tokopedia's official address",
+            "id": "Alamat ini menempelkan kata \"undian\" ke nama Tokopedia. Ini bukan alamat resmi Tokopedia"
           },
           "evidence": "tokopedia · level 2 · undian"
         },
@@ -1839,8 +1839,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .top",
-            "id": "Akhiran domain murah .top"
+            "en": "The ending .top is cheap and often used by scammers",
+            "id": "Akhiran .top murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1868,7 +1868,7 @@
           "weight": 15,
           "label": {
             "en": "Form asks for a password on an unofficial site",
-            "id": "Form meminta kata sandi di situs tidak resmi"
+            "id": "Formulir meminta kata sandi di situs tidak resmi"
           },
           "labelSimple": {
             "en": "Asks for your password on a site that is not official",
@@ -1898,8 +1898,8 @@
           "layer": 2,
           "weight": 10,
           "label": {
-            "en": "Uses the name Lazada but is not an official Lazada domain",
-            "id": "Memakai nama Lazada tapi bukan domain resmi Lazada"
+            "en": "Uses the name Lazada, but is not Lazada's official address",
+            "id": "Memakai nama Lazada, tapi bukan alamat resmi Lazada"
           },
           "labelSimple": {
             "en": "This site uses the name Lazada. It may not be the real one",
@@ -1912,8 +1912,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .click",
-            "id": "Akhiran domain murah .click"
+            "en": "The ending .click is cheap and often used by scammers",
+            "id": "Akhiran .click murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -1941,7 +1941,7 @@
           "weight": 20,
           "label": {
             "en": "Form asks for a card number",
-            "id": "Form meminta nomor kartu"
+            "id": "Formulir meminta nomor kartu"
           },
           "labelSimple": {
             "en": "Asks for your bank card number",
@@ -1971,12 +1971,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (Shopee + undian)",
-            "id": "Nama brand ditambah kata lain (Shopee + undian)"
+            "en": "Shopee's name joined with \"undian\", not Shopee's official address",
+            "id": "Nama Shopee disambung kata \"undian\", bukan alamat resmi Shopee"
           },
           "labelSimple": {
-            "en": "This address mixes Shopee with the word \"undian\"",
-            "id": "Alamat ini menggabungkan Shopee dengan kata \"undian\""
+            "en": "This address adds \"undian\" to Shopee's name. It is not Shopee's official address",
+            "id": "Alamat ini menempelkan kata \"undian\" ke nama Shopee. Ini bukan alamat resmi Shopee"
           },
           "evidence": "shopee · level 2 · undian"
         },
@@ -1985,8 +1985,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .site",
-            "id": "Akhiran domain murah .site"
+            "en": "The ending .site is cheap and often used by scammers",
+            "id": "Akhiran .site murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -2030,12 +2030,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (BPJS + bonus)",
-            "id": "Nama brand ditambah kata lain (BPJS + bonus)"
+            "en": "BPJS's name joined with \"bonus\", not BPJS's official address",
+            "id": "Nama BPJS disambung kata \"bonus\", bukan alamat resmi BPJS"
           },
           "labelSimple": {
-            "en": "This address mixes BPJS with the word \"bonus\"",
-            "id": "Alamat ini menggabungkan BPJS dengan kata \"bonus\""
+            "en": "This address adds \"bonus\" to BPJS's name. It is not BPJS's official address",
+            "id": "Alamat ini menempelkan kata \"bonus\" ke nama BPJS. Ini bukan alamat resmi BPJS"
           },
           "evidence": "bpjs · level 2 · bonus"
         },
@@ -2044,8 +2044,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .top",
-            "id": "Akhiran domain murah .top"
+            "en": "The ending .top is cheap and often used by scammers",
+            "id": "Akhiran .top murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -2073,7 +2073,7 @@
           "weight": 20,
           "label": {
             "en": "Form asks for a card number",
-            "id": "Form meminta nomor kartu"
+            "id": "Formulir meminta nomor kartu"
           },
           "labelSimple": {
             "en": "Asks for your bank card number",
@@ -2103,8 +2103,8 @@
           "layer": 3,
           "weight": 35,
           "label": {
-            "en": "Form asks for a selfie with KTP",
-            "id": "Form meminta selfie dengan KTP"
+            "en": "Form asks for a photo of you holding your ID card",
+            "id": "Formulir meminta foto selfie sambil memegang KTP"
           },
           "labelSimple": {
             "en": "Asks for a photo of you holding your ID card",
@@ -2118,7 +2118,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -2148,12 +2148,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (Bukalapak + voucher)",
-            "id": "Nama brand ditambah kata lain (Bukalapak + voucher)"
+            "en": "Bukalapak's name joined with \"voucher\", not Bukalapak's official address",
+            "id": "Nama Bukalapak disambung kata \"voucher\", bukan alamat resmi Bukalapak"
           },
           "labelSimple": {
-            "en": "This address mixes Bukalapak with the word \"voucher\"",
-            "id": "Alamat ini menggabungkan Bukalapak dengan kata \"voucher\""
+            "en": "This address adds \"voucher\" to Bukalapak's name. It is not Bukalapak's official address",
+            "id": "Alamat ini menempelkan kata \"voucher\" ke nama Bukalapak. Ini bukan alamat resmi Bukalapak"
           },
           "evidence": "bukalapak · level 2 · voucher"
         },
@@ -2162,8 +2162,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .xyz",
-            "id": "Akhiran domain murah .xyz"
+            "en": "The ending .xyz is cheap and often used by scammers",
+            "id": "Akhiran .xyz murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -2177,7 +2177,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -2221,8 +2221,8 @@
           "layer": 2,
           "weight": 10,
           "label": {
-            "en": "Uses the name BPJS but is not an official BPJS domain",
-            "id": "Memakai nama BPJS tapi bukan domain resmi BPJS"
+            "en": "Uses the name BPJS, but is not BPJS's official address",
+            "id": "Memakai nama BPJS, tapi bukan alamat resmi BPJS"
           },
           "labelSimple": {
             "en": "This site uses the name BPJS. It may not be the real one",
@@ -2235,8 +2235,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .site",
-            "id": "Akhiran domain murah .site"
+            "en": "The ending .site is cheap and often used by scammers",
+            "id": "Akhiran .site murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -2250,7 +2250,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -2294,12 +2294,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (DJP (Pajak) + refund)",
-            "id": "Nama brand ditambah kata lain (DJP (Pajak) + refund)"
+            "en": "DJP (Pajak)'s name joined with \"refund\", not DJP (Pajak)'s official address",
+            "id": "Nama DJP (Pajak) disambung kata \"refund\", bukan alamat resmi DJP (Pajak)"
           },
           "labelSimple": {
-            "en": "This address mixes DJP (Pajak) with the word \"refund\"",
-            "id": "Alamat ini menggabungkan DJP (Pajak) dengan kata \"refund\""
+            "en": "This address adds \"refund\" to DJP (Pajak)'s name. It is not DJP (Pajak)'s official address",
+            "id": "Alamat ini menempelkan kata \"refund\" ke nama DJP (Pajak). Ini bukan alamat resmi DJP (Pajak)"
           },
           "evidence": "djp · level 2 · refund"
         },
@@ -2308,8 +2308,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .top",
-            "id": "Akhiran domain murah .top"
+            "en": "The ending .top is cheap and often used by scammers",
+            "id": "Akhiran .top murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -2337,7 +2337,7 @@
           "weight": 15,
           "label": {
             "en": "Form asks for a password on an unofficial site",
-            "id": "Form meminta kata sandi di situs tidak resmi"
+            "id": "Formulir meminta kata sandi di situs tidak resmi"
           },
           "labelSimple": {
             "en": "Asks for your password on a site that is not official",
@@ -2367,8 +2367,8 @@
           "layer": 3,
           "weight": 35,
           "label": {
-            "en": "Form asks for a selfie with KTP",
-            "id": "Form meminta selfie dengan KTP"
+            "en": "Form asks for a photo of you holding your ID card",
+            "id": "Formulir meminta foto selfie sambil memegang KTP"
           },
           "labelSimple": {
             "en": "Asks for a photo of you holding your ID card",
@@ -2382,7 +2382,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -2396,7 +2396,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -2426,8 +2426,8 @@
           "layer": 3,
           "weight": 35,
           "label": {
-            "en": "Form asks for a selfie with KTP",
-            "id": "Form meminta selfie dengan KTP"
+            "en": "Form asks for a photo of you holding your ID card",
+            "id": "Formulir meminta foto selfie sambil memegang KTP"
           },
           "labelSimple": {
             "en": "Asks for a photo of you holding your ID card",
@@ -2441,7 +2441,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -2455,7 +2455,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -2485,12 +2485,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (Kemensos + bansos)",
-            "id": "Nama brand ditambah kata lain (Kemensos + bansos)"
+            "en": "Kemensos's name joined with \"bansos\", not Kemensos's official address",
+            "id": "Nama Kemensos disambung kata \"bansos\", bukan alamat resmi Kemensos"
           },
           "labelSimple": {
-            "en": "This address mixes Kemensos with the word \"bansos\"",
-            "id": "Alamat ini menggabungkan Kemensos dengan kata \"bansos\""
+            "en": "This address adds \"bansos\" to Kemensos's name. It is not Kemensos's official address",
+            "id": "Alamat ini menempelkan kata \"bansos\" ke nama Kemensos. Ini bukan alamat resmi Kemensos"
           },
           "evidence": "kemensos · level 2 · bansos"
         },
@@ -2500,7 +2500,7 @@
           "weight": 35,
           "label": {
             "en": "Form asks for a PIN or passcode",
-            "id": "Form meminta PIN atau kode sandi"
+            "id": "Formulir meminta PIN atau kode sandi"
           },
           "labelSimple": {
             "en": "Asks for your secret PIN",
@@ -2514,7 +2514,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -2558,12 +2558,12 @@
           "layer": 2,
           "weight": 14,
           "label": {
-            "en": "Brand name plus extra word (Apple + unlock)",
-            "id": "Nama brand ditambah kata lain (Apple + unlock)"
+            "en": "Apple's name joined with \"unlock\", not Apple's official address",
+            "id": "Nama Apple disambung kata \"unlock\", bukan alamat resmi Apple"
           },
           "labelSimple": {
-            "en": "This address mixes Apple with the word \"unlock\"",
-            "id": "Alamat ini menggabungkan Apple dengan kata \"unlock\""
+            "en": "This address adds \"unlock\" to Apple's name. It is not Apple's official address",
+            "id": "Alamat ini menempelkan kata \"unlock\" ke nama Apple. Ini bukan alamat resmi Apple"
           },
           "evidence": "apple · level 2 · unlock"
         },
@@ -2572,8 +2572,8 @@
           "layer": 2,
           "weight": 15,
           "label": {
-            "en": "Cheap domain ending .top",
-            "id": "Akhiran domain murah .top"
+            "en": "The ending .top is cheap and often used by scammers",
+            "id": "Akhiran .top murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -2587,7 +2587,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -2601,7 +2601,7 @@
           "weight": 15,
           "label": {
             "en": "Form asks for a password on an unofficial site",
-            "id": "Form meminta kata sandi di situs tidak resmi"
+            "id": "Formulir meminta kata sandi di situs tidak resmi"
           },
           "labelSimple": {
             "en": "Asks for your password on a site that is not official",
@@ -2631,8 +2631,8 @@
           "layer": 2,
           "weight": 5,
           "label": {
-            "en": "Cheap domain ending .xyz",
-            "id": "Akhiran domain murah .xyz"
+            "en": "The ending .xyz is cheap and often used by scammers",
+            "id": "Akhiran .xyz murah dan sering dipakai penipu"
           },
           "labelSimple": {
             "en": "This site uses a cheap address ending that scammers often use",
@@ -2645,8 +2645,8 @@
           "layer": 3,
           "weight": 35,
           "label": {
-            "en": "Form asks for a selfie with KTP",
-            "id": "Form meminta selfie dengan KTP"
+            "en": "Form asks for a photo of you holding your ID card",
+            "id": "Formulir meminta foto selfie sambil memegang KTP"
           },
           "labelSimple": {
             "en": "Asks for a photo of you holding your ID card",
@@ -2660,7 +2660,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a KTP number",
-            "id": "Form meminta nomor KTP"
+            "id": "Formulir meminta nomor KTP"
           },
           "labelSimple": {
             "en": "Asks for your ID card number",
@@ -2691,7 +2691,7 @@
           "weight": 25,
           "label": {
             "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
+            "id": "Formulir meminta kode sekali pakai (OTP)"
           },
           "labelSimple": {
             "en": "Asks for the code sent to your phone",
@@ -2705,7 +2705,7 @@
           "weight": 20,
           "label": {
             "en": "Form asks for a card number",
-            "id": "Form meminta nomor kartu"
+            "id": "Formulir meminta nomor kartu"
           },
           "labelSimple": {
             "en": "Asks for your bank card number",

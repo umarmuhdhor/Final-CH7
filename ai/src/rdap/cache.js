@@ -21,7 +21,8 @@ const DAY_MS = 86_400_000;
 
 /** value: { registeredAt: epoch ms, or null when the lookup failed } */
 const EARLIEST = Date.parse("1985-01-01T00:00:00Z");
-const validEntry = (v) => v !== null && typeof v === "object" && (v.registeredAt === null || (Number.isFinite(v.registeredAt) && v.registeredAt >= EARLIEST && v.registeredAt <= Date.now() + 86_400_000));
+// `now` is the caller's clock (tests inject one), so "not in the future" is judged on the same clock as the rest.
+const validEntry = (v, now = Date.now) => v !== null && typeof v === "object" && (v.registeredAt === null || (Number.isFinite(v.registeredAt) && v.registeredAt >= EARLIEST && v.registeredAt <= now() + 86_400_000));
 
 /**
  * Per-isolate cache. Oldest entry goes first once `max` is reached.
@@ -40,7 +41,7 @@ export function createMemoryCache({ max = MAX_ENTRIES, now = Date.now } = {}) {
             return { registeredAt: hit.value.registeredAt };
         },
         async set(domain, value, ttlMs) {
-            if (!validEntry(value)) return;
+            if (!validEntry(value, now)) return;
             map.delete(domain);
             map.set(domain, { value: { registeredAt: value.registeredAt }, expires: now() + ttlMs });
             while (map.size > max) map.delete(map.keys().next().value);
@@ -52,8 +53,9 @@ export function createMemoryCache({ max = MAX_ENTRIES, now = Date.now } = {}) {
  * Cloudflare KV adapter (binding RDAP_KV, namespace shoo-rdap-cache). Key `rdap:<domain>`, value `{"registeredAt":...}`.
  * KV's minimum expirationTtl is 60 seconds.
  * @param {{ get(key: string): Promise<string | null>, put(key: string, value: string, opts: { expirationTtl: number }): Promise<void> }} kv
+ * @param {{ now?: () => number }} [opts]
  */
-export function createKvCache(kv) {
+export function createKvCache(kv, { now = Date.now } = {}) {
     const key = (domain) => `rdap:${domain}`;
     return {
         async get(domain) {
@@ -61,13 +63,13 @@ export function createKvCache(kv) {
             if (!raw) return null;
             try {
                 const value = JSON.parse(raw);
-                return validEntry(value) ? { registeredAt: value.registeredAt } : null;
+                return validEntry(value, now) ? { registeredAt: value.registeredAt } : null;
             } catch {
                 return null;
             }
         },
         async set(domain, value, ttlMs) {
-            if (!validEntry(value)) return;
+            if (!validEntry(value, now)) return;
             await kv.put(key(domain), JSON.stringify({ registeredAt: value.registeredAt }), { expirationTtl: Math.max(60, Math.ceil(ttlMs / 1000)) });
         },
     };

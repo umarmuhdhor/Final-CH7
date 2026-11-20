@@ -64,7 +64,7 @@ test("RDAP_KV hit: no RDAP call, age from the stored date, and the hit is kept i
     const ctx = fakeCtx();
     const res = await call(app, { RDAP_KV: kv }, ctx);
     assert.equal(res.status, 200);
-    assert.equal((await newDomain(res)).label.en, "Domain age 2 days");
+    assert.equal((await newDomain(res)).label.en, "This site was made 2 days ago");
     assert.equal(f.rdapCalls().length, 0);
     await call(app, { RDAP_KV: kv }, ctx);
     assert.deepEqual(kv.gets, ["rdap:bca-verifikasi.com"]);
