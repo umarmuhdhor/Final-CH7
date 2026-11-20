@@ -39,6 +39,8 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     var beforeMe: (@Sendable () async -> Void)?
     /// `familyMembers` throws this.
     var membersFailure: (any Error)?
+    /// `familyMembers` answers this instead of the base's (someone joins between two reads).
+    var membersOverride: [FamilyMember]?
     /// `remindMember` throws this.
     var remindFailure: (any Error)?
     /// `setMemberNotify` throws this.
@@ -79,6 +81,7 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }
     func familyMembers() async throws -> [FamilyMember] {
         if let membersFailure { throw membersFailure }
+        if let membersOverride { return membersOverride }
         return try await base.familyMembers()
     }
     func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }

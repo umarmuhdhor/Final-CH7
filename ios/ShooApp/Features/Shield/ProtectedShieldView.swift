@@ -326,9 +326,23 @@ struct HeroStatusPill: View {
 /// a green 8.9 pt dot, 4 pt, "Terhubung dengan Virellia" in SF Pro Display 13 (-1 %, #1A1A1A); 17 pt sides.
 private struct ConnectedPill: View {
     let name: String
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var pops = false
 
     var body: some View {
         HeroStatusPill(text: Text("Connected with \(name)"), dot: HomeTheme.success)
+            // Option A: right after joining, the pill pops once with the toast, so the eye finds it.
+            .scaleEffect(pops ? 1.1 : 1)
+            .onChange(of: env.router.homeNoticeCount, initial: true) {
+                guard case .connected = env.router.homeNotice, !reduceMotion else { return }
+                Task {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    withAnimation(.spring(duration: 0.3, bounce: 0.5)) { pops = true }
+                    try? await Task.sleep(for: .milliseconds(300))
+                    withAnimation(.spring(duration: 0.4)) { pops = false }
+                }
+            }
             .accessibilityIdentifier("shield.guardian")
     }
 }

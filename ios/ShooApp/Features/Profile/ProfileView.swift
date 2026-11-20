@@ -79,7 +79,10 @@ struct ProfileView: View {
             TurnOffExtensionSheet()
         }
         .sheet(isPresented: $isInvitePresented, onDismiss: { Task { await model.load() } }) {
-            InviteSheet(repository: env.repository) { isInvitePresented = false }
+            InviteSheet(repository: env.repository, onJoined: { member in
+                isInvitePresented = false
+                env.memberJoined(member)
+            }) { isInvitePresented = false }
                 .environment(\.locale, locale)
         }
         .deleteAccountSheet(model: model, isPresented: $isDeleteConfirming)
