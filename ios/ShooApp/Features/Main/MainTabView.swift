@@ -39,8 +39,9 @@ struct MainTabView: View {
             }
         }
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: router.inviteNotice)
-        // Option A: after a role or pairing change, Home says what changed. Under Home's top bar (⇆, avatar);
-        // the invite banner, when there is one, comes first.
+        // Option A: after a role or pairing change, Home says what changed, like an iOS notification banner: 8 pt under
+        // the status bar, over ⇆ and the avatar while it shows, so the hero's shield stays clear (Alief, 20 Nov 2026).
+        // The invite banner, when there is one, comes first.
         .overlay(alignment: .top) {
             if let notice = router.homeNotice, router.inviteNotice == nil, !router.isSwitchTipPresented,
                env.launchSplash == .done {
@@ -49,7 +50,7 @@ struct MainTabView: View {
                     onInvite: notice == .guardianOn && router.canShareInvite ? { router.shareInvite() } : nil,
                     onClose: { router.homeNotice = nil }
                 )
-                .padding(.top, HomeTopBar.barHeight + 12)
+                .padding(.top, 8)
                 .id(router.homeNoticeCount)
                 .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 .environment(\.locale, env.settings.language.locale)

@@ -85,13 +85,11 @@ final class Router {
     var canShareInvite = false
     /// "Undang" on the toast: Home's invite card opens the iOS share sheet.
     private(set) var inviteShareRequests = 0
-    /// Family mode just turned on: the invite card and "Bagikan" glow once.
-    var invitesGlow = false
     /// The one-time tip at ⇆ ("Pindah mode di sini"): Family mode turned on for the first time, so ⇆ just appeared.
     private(set) var isSwitchTipPresented = false
     /// The toast that waits for the tip to close: both sit at the top, so they never show together.
     @ObservationIgnored private var noticeAfterTip: HomeNotice?
-    /// Someone just joined: their avatar on Home gets a ring and "Baru terhubung" once.
+    /// Someone just joined: "Baru terhubung" under their avatar on Home, once (no ring: Alief, 20 Nov 2026).
     var newMemberId: String?
     /// Shield's "Turn on" sheet (PR-04). Here, not in the view, so a link can close it first.
     var isTurnOnPresented = false
@@ -249,7 +247,6 @@ final class Router {
     func show(_ notice: HomeNotice) {
         homeNotice = notice
         homeNoticeCount += 1
-        invitesGlow = notice == .guardianOn
     }
 
     /// "Undang" on the "Mode Guardian aktif" toast.

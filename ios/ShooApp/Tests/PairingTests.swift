@@ -983,7 +983,6 @@ struct HomeNoticeTests {
         #expect(env.settings.familyModeOn)
         #expect(env.router.shieldPath.isEmpty)
         #expect(env.router.homeNotice == .guardianOn)
-        #expect(env.router.invitesGlow)
     }
 
     @Test func theFirstSwitchSaysNothingUntilMulai() {
@@ -1008,7 +1007,6 @@ struct HomeNoticeTests {
         #expect(!env.settings.familyModeOn)
         #expect(env.router.selectedTab == .shield)
         #expect(env.router.homeNotice == .personalOn)
-        #expect(!env.router.invitesGlow)
     }
 
     /// Decision 1: a Pribadi inviter now protects someone, so Family mode turns on and Home shows them.
@@ -1088,11 +1086,9 @@ struct SwitchTipTests {
         #expect(env.router.isSwitchTipPresented)
         #expect(env.settings.guardianSwitchTipSeen)
         #expect(env.router.homeNotice == nil)
-        #expect(!env.router.invitesGlow)
         env.router.closeSwitchTip()
         #expect(!env.router.isSwitchTipPresented)
         #expect(env.router.homeNotice == .guardianOn)
-        #expect(env.router.invitesGlow)
     }
 
     @Test func laterSwitchesGetOnlyTheToast() {
