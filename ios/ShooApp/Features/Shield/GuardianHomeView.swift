@@ -81,7 +81,9 @@ struct GuardianHomeView: View {
         // Switch and profile right under the status bar, where the (hidden) navigation bar would be.
         .overlay(alignment: .top) {
             // The cached avatar until `GET /devices/me` answers, so the circle never waits for the network.
-            HomeTopBar(isFamilyShown: isFamily, avatarId: model.profile?.avatarId ?? env.session?.avatarId, onSwitch: switchSide) {
+            // ⇆ only once this iPhone has been Guardian: before that there is nothing to switch to (Alief, 20 Nov 2026).
+            HomeTopBar(isFamilyShown: isFamily, avatarId: model.profile?.avatarId ?? env.session?.avatarId,
+                       onSwitch: isFamily || env.settings.guardianIntroSeen ? switchSide : nil) {
                 env.router.openProfile()
             }
         }
@@ -237,15 +239,23 @@ struct GuardianHomeView: View {
             .padding(.vertical, isFamily ? 24 : 0)
         case .loaded:
             if !isFamily {
-                // Figma 435:20058: the list, 35 pt, the scams; 1382:10567 puts the "Mode Terawasi" card first and
-                // 37 pt between the three.
-                let showsCard = model.showsSupervisedCard
+                // Figma 435:20058: the list, 35 pt, the scams; 1382:10567 puts a card first and 37 pt between the
+                // three: "Jadi Penjaga" (2366:10994) until the first time as Guardian, "Mode Terawasi" after that.
+                let showsCard = model.showsGuardianCard || model.showsSupervisedCard
                 VStack(spacing: 0) {
                     if model.refreshFailed {
                         refreshFailedNotice
                             .padding(.bottom, 24)
                     }
-                    if showsCard {
+                    if model.showsGuardianCard {
+                        // "Menjadi Guardian": the same way as Profile's card ("To be guardian" the first time).
+                        SupervisedModeCard(kind: .guardian, onConnect: { env.requestFamilyMode() }) {
+                            withAnimation(.easeOut(duration: 0.2)) { model.dismissGuardianCard() }
+                        }
+                        .padding(.top, 1)
+                        .padding(.bottom, 37)
+                        .transition(.opacity)
+                    } else if model.showsSupervisedCard {
                         // "Hubungkan": joining a family as protected lives in Profile › Account mode
                         // ("Have an invite code?"), which checks that nobody is looked after first.
                         SupervisedModeCard(onConnect: { env.router.show(.profilePage(.mode)) }) {

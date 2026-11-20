@@ -85,6 +85,10 @@ final class Router {
     var canShareInvite = false
     /// "Undang" on the toast: Home's invite card opens the iOS share sheet.
     private(set) var inviteShareRequests = 0
+    /// The one-time tip at ⇆ ("Pindah mode di sini"): Family mode turned on for the first time, so ⇆ just appeared.
+    private(set) var isSwitchTipPresented = false
+    /// The toast that waits for the tip to close: both sit at the top, so they never show together.
+    @ObservationIgnored private var noticeAfterTip: HomeNotice?
     /// Someone just joined: "Baru terhubung" under their avatar on Home, once (no ring: Alief, 20 Nov 2026).
     var newMemberId: String?
     /// Shield's "Turn on" sheet (PR-04). Here, not in the view, so a link can close it first.
@@ -129,6 +133,9 @@ final class Router {
     /// "Become supervised" sheet or the Guardian intro cover).
     private func closeSheets() {
         screenSheetsClosed += 1
+        // A push tap opens Detail on Activity: the tip at Home's ⇆ (and its waiting toast) must not stay over it.
+        isSwitchTipPresented = false
+        noticeAfterTip = nil
         isTurnOnPresented = false
         isConnectPresented = false
         isJoinFamilyPresented = false
@@ -217,6 +224,24 @@ final class Router {
     func landOnHome(saying notice: HomeNotice) {
         reset()
         show(notice)
+    }
+
+    /// Family mode is on for the first time: Home, the tip at ⇆ first; the toast (and the invite glow) once it closes.
+    /// The tip waits for a tap and the toast leaves by itself, so the tip goes first.
+    func landOnHomeWithSwitchTip(then notice: HomeNotice) {
+        reset()
+        noticeAfterTip = notice
+        isSwitchTipPresented = true
+    }
+
+    /// A tap anywhere (⇆ too) closes the tip; it never presses what is under it.
+    func closeSwitchTip() {
+        guard isSwitchTipPresented else { return }
+        isSwitchTipPresented = false
+        if let notice = noticeAfterTip {
+            noticeAfterTip = nil
+            show(notice)
+        }
     }
 
     func show(_ notice: HomeNotice) {

@@ -969,6 +969,8 @@ struct HomeNoticeTests {
         settings.chooseMode(mode)
         settings.onboardingCompleted = true
         settings.guardianIntroSeen = introSeen
+        // The tip at ⇆ has its own tests (`SwitchTipTests`): here it is seen along with the intro.
+        settings.guardianSwitchTipSeen = introSeen
         settings.familyModeOn = familyMode
         return AppEnvironment(repository: MockRepository(mode: mode, latency: .zero), settings: settings)
     }
@@ -993,6 +995,8 @@ struct HomeNoticeTests {
         env.startGuardian()
         #expect(!env.router.isGuardianIntroPresented)
         #expect(env.router.shieldPath.isEmpty)
+        // The first time, the tip at ⇆ goes first.
+        env.router.closeSwitchTip()
         #expect(env.router.homeNotice == .guardianOn)
     }
 
@@ -1013,6 +1017,7 @@ struct HomeNoticeTests {
         #expect(env.settings.familyModeOn)
         #expect(env.settings.guardianIntroSeen)
         #expect(env.router.shieldPath.isEmpty)
+        env.router.closeSwitchTip()
         #expect(env.router.homeNotice == .memberJoined(name: "Ibu"))
         #expect(env.router.newMemberId == "dev_new")
     }
@@ -1059,3 +1064,75 @@ struct HomeNoticeTests {
         #expect(model.joined?.deviceId == "dev_new")
     }
 }
+
+/// The one-time tip at ⇆ (Alief, 20 Nov 2026): ⇆ appears only after the first time as Guardian, the tip points at it
+/// once, and the toast waits for the tip (both sit at the top).
+@MainActor
+struct SwitchTipTests {
+    private func environment(introSeen: Bool, tipSeen: Bool? = nil) -> AppEnvironment {
+        let defaults = UserDefaults(suiteName: "test.tip.\(UUID().uuidString)")!
+        defaults.set(introSeen, forKey: "settings.guardianIntroSeen")
+        if let tipSeen { defaults.set(tipSeen, forKey: "settings.guardianSwitchTipSeen") }
+        let settings = AppSettings(defaults: defaults)
+        settings.chooseMode(.guardian)
+        settings.onboardingCompleted = true
+        return AppEnvironment(repository: MockRepository(mode: .guardian, latency: .zero), settings: settings)
+    }
+
+    @Test func theFirstTimeAsGuardianShowsTheTipThenTheToast() {
+        let env = environment(introSeen: false)
+        env.requestFamilyMode()
+        env.startGuardian()
+        #expect(env.router.isSwitchTipPresented)
+        #expect(env.settings.guardianSwitchTipSeen)
+        #expect(env.router.homeNotice == nil)
+        env.router.closeSwitchTip()
+        #expect(!env.router.isSwitchTipPresented)
+        #expect(env.router.homeNotice == .guardianOn)
+    }
+
+    @Test func laterSwitchesGetOnlyTheToast() {
+        let env = environment(introSeen: true, tipSeen: true)
+        env.requestFamilyMode()
+        #expect(!env.router.isSwitchTipPresented)
+        #expect(env.router.homeNotice == .guardianOn)
+        env.leaveFamilyMode()
+        env.requestFamilyMode()
+        #expect(!env.router.isSwitchTipPresented)
+    }
+
+    /// An install from before the tip that was Guardian already knows ⇆.
+    @Test func anEarlierGuardianNeverSeesTheTip() {
+        #expect(environment(introSeen: true).settings.guardianSwitchTipSeen)
+        #expect(!environment(introSeen: false).settings.guardianSwitchTipSeen)
+    }
+
+    /// A Pribadi inviter whose first member joins becomes Guardian too: ⇆ appears, so the tip comes first.
+    @Test func aFirstJoinFromProfileAlsoShowsTheTip() {
+        let env = environment(introSeen: false)
+        env.memberJoined(FamilyMember(deviceId: "dev_new", name: "Ibu", avatarId: "avatar_1", extensionActive: true))
+        #expect(env.router.isSwitchTipPresented)
+        env.router.closeSwitchTip()
+        #expect(env.router.homeNotice == .memberJoined(name: "Ibu"))
+    }
+
+    /// A push tap opens Detail on Activity: the tip and its waiting toast go.
+    @Test func aPushTapDropsTheTipAndItsToast() {
+        let env = environment(introSeen: false)
+        env.startGuardian()
+        env.router.openDetail(scanId: "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03")
+        #expect(!env.router.isSwitchTipPresented)
+        env.router.closeSwitchTip()
+        #expect(env.router.homeNotice == nil)
+    }
+
+    @Test func resetAndTheDemoKeepTheTipRight() throws {
+        let settings = AppSettings(defaults: try #require(UserDefaults(suiteName: "test.tip.\(UUID().uuidString)")))
+        settings.chooseMode(.guardian)
+        settings.enterDemo()
+        #expect(settings.guardianSwitchTipSeen)
+        settings.reset()
+        #expect(!settings.guardianSwitchTipSeen)
+    }
+}
+

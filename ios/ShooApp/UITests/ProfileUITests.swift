@@ -63,6 +63,8 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(switchButton.waitForExistence(timeout: 5), app.debugDescription)
         switchButton.tap()
         app.buttons["guardianIntro.start"].tapWhenHittable()
+        // The first time, the tip at the new ⇆ comes first; a tap closes it.
+        app.closeSwitchTip()
         // Option A: Profile closes on Home, which shows the family and says what changed.
         XCTAssertTrue(app.descendants(matching: .any)["home.notice"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(app.descendants(matching: .any)["family.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
@@ -77,6 +79,7 @@ final class ProfileUITests: XCTestCase {
         become.tap()
         // Figma "To be guardian" comes first, the first time; then Home (Option A).
         app.buttons["guardianIntro.start"].tapWhenHittable()
+        app.closeSwitchTip()
         XCTAssertTrue(app.descendants(matching: .any)["family.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["profileButton"].tapWhenHittable()
         XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
@@ -87,6 +90,25 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(close.waitForExistence(timeout: 5), again.debugDescription)
         close.tap()
         XCTAssertFalse(again.descendants(matching: .any)["profile.guardianCard"].exists)
+    }
+
+    /// Alief, 21 Nov 2026: X on Home's "Jadi Penjaga" card closes only that card; Profile's Guardian card stays.
+    @MainActor
+    func testClosingHomesGuardianCardKeepsProfiles() {
+        let app = XCUIApplication.mock([
+            "-settings.onboardingCompleted", "YES", "-settings.onboardingConnectPassed", "YES",
+            "-settings.mode", "guardian", "-settings.language", "en", "-settings.familyModeOn", "NO",
+            "-settings.guardianIntroSeen", "NO", "-settings.guardianCardDismissed", "NO",
+            "-settings.homeGuardianCardDismissed", "NO", "-mock.scenario", "empty",
+            "-UITestNotifications", "granted", "-UITestExtensionActive", "YES",
+        ])
+        let close = app.buttons["home.guardianCard.close"]
+        XCTAssertTrue(close.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        close.tapWhenHittable()
+        XCTAssertTrue(app.descendants(matching: .any)["home.guardianCard"].waitForNonExistence(timeout: 5))
+        app.buttons["profileButton"].tapWhenHittable()
+        let card = app.descendants(matching: .any)["profile.guardianCard"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
     }
 
     @MainActor

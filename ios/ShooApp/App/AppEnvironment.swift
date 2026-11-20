@@ -506,7 +506,7 @@ final class AppEnvironment {
         guard settings.mode == .guardian, !settings.familyModeOn else { return }
         if settings.guardianIntroSeen {
             settings.familyModeOn = true
-            router.landOnHome(saying: .guardianOn)
+            landOnGuardianHome(saying: .guardianOn)
         } else {
             router.isGuardianIntroPresented = true
         }
@@ -529,7 +529,19 @@ final class AppEnvironment {
             settings.familyModeOn = true
         }
         router.newMemberId = member.deviceId
-        router.landOnHome(saying: .memberJoined(name: member.name))
+        landOnGuardianHome(saying: .memberJoined(name: member.name))
+    }
+
+    /// Guardian Home after Family mode turned on. The first time, ⇆ has just appeared: the tip points at it once and
+    /// the toast waits for it (plan/alief/proposal/pairing-feedback.md, Figma 2368:13263).
+    @MainActor
+    private func landOnGuardianHome(saying notice: HomeNotice) {
+        if settings.guardianSwitchTipSeen {
+            router.landOnHome(saying: notice)
+        } else {
+            settings.guardianSwitchTipSeen = true
+            router.landOnHomeWithSwitchTip(then: notice)
+        }
     }
 
     /// "Mulai" on Figma "To be guardian": the cover closes on Home, Profile too.
@@ -537,7 +549,7 @@ final class AppEnvironment {
     func startGuardian() {
         settings.guardianIntroSeen = true
         settings.familyModeOn = true
-        router.landOnHome(saying: .guardianOn)
+        landOnGuardianHome(saying: .guardianOn)
     }
 
     /// PF-01 "Punya kode undangan?": a guardian without members joins another family. The server

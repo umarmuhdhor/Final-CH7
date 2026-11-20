@@ -131,8 +131,9 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(reminder.waitForExistence(timeout: 5), app.debugDescription)
         reminder.buttons["Not now"].firstMatch.tap()
         XCTAssertFalse(reminder.waitForExistence(timeout: 2))
-        // Pribadi Home offers to connect to a guardian (Figma 1253:8630).
-        XCTAssertTrue(app.descendants(matching: .any)["home.supervised"].waitForExistence(timeout: 5), app.debugDescription)
+        // Pribadi Home that has never been Guardian: no ⇆, the "Jadi Penjaga" card instead (Figma 1382:10567).
+        XCTAssertTrue(app.descendants(matching: .any)["home.guardianCard"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["familyModeToggle"].exists)
     }
 
     @MainActor
@@ -310,17 +311,28 @@ final class OnboardingUITests: XCTestCase {
         let app = XCUIApplication.mock(["-settings.language", "en", "-settings.mode", "guardian", "-settings.onboardingCompleted", "YES",
                                         "-settings.familyModeOn", "NO", "-UITestNotifications", "granted",
                                         "-mock.scenario", "empty"])
+        // Never Guardian: no ⇆ yet, the "Jadi Penjaga" card is the way in.
         let toggle = app.descendants(matching: .any)["familyModeToggle"].firstMatch
-        toggle.tapWhenHittable()
+        let card = app.buttons["home.guardianCard.action"]
+        card.tapWhenHittable()
+        XCTAssertFalse(toggle.exists)
         let start = app.buttons["guardianIntro.start"]
         XCTAssertTrue(start.waitForExistence(timeout: 5), app.debugDescription)
         // Back keeps Pribadi.
         app.buttons["onboarding.back"].tap()
         XCTAssertTrue(start.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(app.descendants(matching: .any)["home.supervised"].exists)
-        toggle.tapWhenHittable()
+        XCTAssertTrue(app.descendants(matching: .any)["home.guardianCard"].exists)
+        card.tapWhenHittable()
         app.buttons["guardianIntro.start"].tapWhenHittable()
         XCTAssertTrue(start.waitForNonExistence(timeout: 5))
-        XCTAssertFalse(app.descendants(matching: .any)["home.supervised"].exists)
+        // ⇆ appears, with the one-time tip; the toast waits until a tap closes it.
+        let tip = app.descendants(matching: .any)["home.switchTip"].firstMatch
+        XCTAssertTrue(tip.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(toggle.exists)
+        XCTAssertFalse(app.descendants(matching: .any)["home.notice"].exists)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6)).tap()
+        XCTAssertTrue(tip.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["home.notice"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["home.guardianCard"].exists)
     }
 }
