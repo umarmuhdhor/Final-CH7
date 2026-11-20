@@ -153,7 +153,7 @@ struct UnknownEnumMappingTests {
         func footer(canValidate: Bool) -> DetailFooter {
             DetailFooter(
                 verdict: verdict, viewerDeviceId: "dev_me", canValidate: canValidate, failure: nil,
-                ownerName: "Mom", isBlocked: true, changing: .constant(false), onDecide: { _ in }
+                isBlocked: true, changing: .constant(false), onDecide: { _ in }
             )
         }
         // A guardian can decide again; a protected person sees no "Verified safe" card.

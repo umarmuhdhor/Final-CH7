@@ -176,6 +176,14 @@ struct SafeReasonSheet: View {
                     .activityFont(16, rounded: true, tracking: -0.31)
                     .foregroundStyle(DetailStyle.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                // plan/alief/family-safe.md: one Guardian's "Aman" counts on every phone of the family, so nobody
+                // has to mark the same link again (usability test 20 Nov 2026).
+                Label("This link becomes safe on every phone in your family.", systemImage: "person.2.fill")
+                    .activityFont(14, rounded: true)
+                    .foregroundStyle(DetailStyle.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 6)
+                    .accessibilityIdentifier("safeReason.familyNote")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button { dismiss() } label: {

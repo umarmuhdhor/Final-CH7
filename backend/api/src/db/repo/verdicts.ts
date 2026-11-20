@@ -65,9 +65,12 @@ export async function decideVerdict(
     if (eligible) await tx`select pg_advisory_xact_lock(${LOCK.verdictQueue}, hashtext(${guardian.deviceId}))`;
     await lockDomain(tx, scan.domain);
     // #476: a safe verdict on this link stays until the weekly review has read it, whatever comes next.
+    // Family-wide (plan/alief/family-safe.md): the family's current verdict on the link is the newest one
+    // made on any member's scan, so a locked safe made on another member's scan holds here too.
     const [held] = await tx<{ lockedUntil: string | null }[]>`
       select ${lockedUntilSql(tx, "value", "decided_at")} as "lockedUntil"
-      from verdicts where owner_id = ${scan.ownerId} and url = ${scan.url} for update`;
+      from verdicts where owner_id = any(public.verdict_family(${scan.ownerId})) and url = ${scan.url}
+      order by decided_at desc limit 1 for update`;
     if (held?.lockedUntil) return { error: "locked" as const, lockedUntil: held.lockedUntil };
     if (eligible) {
       // A domain this owner already has queued (on any of its links) is not a new one: keep it.
@@ -160,23 +163,25 @@ export async function dropVerdicts(
 }
 
 /**
- * GET /verdicts?url=&domain= (contracts/api.md, #241), first match wins: a verdict on exactly this
- * link; else a not_safe by this owner on another link of the domain, unless either link is on a shared
+ * GET /verdicts?url=&domain= (contracts/api.md, #241), first match wins: the newest verdict on exactly
+ * this link made in this owner's family (public.verdict_family, plan/alief/family-safe.md: a Guardian's
+ * "Aman" on one member's scan opens the link on every phone of the family); else a not_safe by this
+ * owner on another link of the domain (never another member's: its link is that member's browsing),
+ * unless either link is on a shared
  * host (public.verdict_shared): the one asked about, or the one the not_safe was made on (#495, a scam
  * Google Form filed under google.com by an older build never answers for accounts.google.com); else
  * null. A safe never reaches past its own link.
  */
 export async function findVerdict(sql: Sql, ownerId: string, url: string, domain: string): Promise<Verdict | null> {
   const [row] = await sql<Verdict[]>`
-    with k as (select public.verdict_link(${url}) as link)
+    with k as (select public.verdict_link(${url}) as link, public.verdict_family(${ownerId}) as family)
     select v.value, v.by_device_id as "byDeviceId", v.by_name as "byName",
            to_char(v.decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "decidedAt", v.url,
            ${lockedUntilSql(sql, "v.value", "v.decided_at")} as "lockedUntil"
     from verdicts v, k
-    where v.owner_id = ${ownerId}
-      and (v.url = k.link
-           or (v.domain = ${domain} and v.value = 'not_safe' and not public.verdict_shared(k.link, ${domain})
-               and not public.verdict_shared(v.url, v.domain)))
+    where (v.url = k.link and v.owner_id = any(k.family))
+       or (v.owner_id = ${ownerId} and v.domain = ${domain} and v.value = 'not_safe'
+           and not public.verdict_shared(k.link, ${domain}) and not public.verdict_shared(v.url, v.domain))
     order by (v.url = k.link) desc, v.decided_at desc
     limit 1`;
   return row ? withLock(row) : null;

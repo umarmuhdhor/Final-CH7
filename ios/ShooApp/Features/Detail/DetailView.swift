@@ -224,7 +224,6 @@ struct DetailView: View {
             viewerDeviceId: model.viewer?.deviceId,
             canValidate: model.canValidate,
             failure: model.verdictError,
-            ownerName: ownerName(scan),
             isBlocked: scan.status == .blocked,
             changing: $changingVerdict,
             onDecide: { value in

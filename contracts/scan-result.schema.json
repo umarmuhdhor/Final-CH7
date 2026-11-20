@@ -195,7 +195,7 @@
         },
         "byName": {
           "type": "string",
-          "description": "Shown as 'Verified scam by [name]' / 'Marked safe by [name]'. 'you' is rendered client-side."
+          "description": "Shown as 'Verified scam by [name]' / 'Marked safe by [name]'. 'you' is rendered client-side. On a family member's scan this can be the Guardian who decided on another member's scan of the same link (family-wide verdicts)."
         },
         "url": {
           "type": "string",

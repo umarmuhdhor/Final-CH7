@@ -117,20 +117,22 @@ What the **app must do anyway** (a replica comes from a device, so the backend c
 ### Verdicts (per link)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/verdicts` | `{ scanId, value: "safe"\|"not_safe", notes? }` (guardian) | `{ verdict }` — applies to the scan's link for that owner. Error `verdict_not_allowed`: not the owner's guardian. `warning` and `blocked` scans can both get a verdict (#190) | GD-07 |
+| POST | `/verdicts` | `{ scanId, value: "safe"\|"not_safe", notes? }` (guardian) | `{ verdict }` — applies to the scan's link **for the whole family** of that owner (the Guardian and its connected Protected members, see lookup step 1). Error `verdict_not_allowed`: not the owner's guardian. `warning` and `blocked` scans can both get a verdict (#190) | GD-07 |
 | GET | `/verdicts?url=&domain=` | — | `{ verdict: Verdict \| null }` | EX-06 auto-open |
 | GET | `/verdicts?domain=` | — | `{ verdict: Verdict \| null }` — **deprecated**, for builds from before #241 | EX-06 auto-open |
 
 A **link** is origin + path, with no query or fragment (`shareableUrl` in the extension); its host has no trailing dot (#450). `domain` follows the rule in Scans "`domain`", as on a scan: the backend can't derive it from the link.
 
 Lookup (#241), first match wins:
-1. A verdict on exactly this link, `safe` or `not_safe`.
-2. A `not_safe` by this owner on another link of the same domain, unless **either** link is on a shared host (`backend/API.md`: on or under a `hosting = 'host_path'` row, or a domain with `hosting = 'subdomains'`): one page there says nothing about the others. That holds for the link being asked about **and** for the link the `not_safe` was made on (#495): a `not_safe` made on a shared host covers **only that link** and never reaches another host or page of the same registrable domain (a scam Google Form on `docs.google.com` never answers for `accounts.google.com`).
+1. The newest verdict on exactly this link made in this device's family (the device's Guardian, or the device itself when it is a Guardian or has no family, plus that Guardian's connected Protected members), `safe` or `not_safe`. A family is read when asked: a member who leaves stops getting the family's verdicts at once, and a new member gets them at once. Verdicts never cross families and never reach the global list.
+2. A `not_safe` by this owner on another link of the same domain (only this owner's: another member's `not_safe` would show the page that member visited), unless **either** link is on a shared host (`backend/API.md`: on or under a `hosting = 'host_path'` row, or a domain with `hosting = 'subdomains'`): one page there says nothing about the others. That holds for the link being asked about **and** for the link the `not_safe` was made on (#495): a `not_safe` made on a shared host covers **only that link** and never reaches another host or page of the same registrable domain (a scam Google Form on `docs.google.com` never answers for `accounts.google.com`).
 3. Otherwise `null`. A `safe` never reaches past its own link.
 
 A scan's `verdict` in Activity follows the same rule. `?domain=` alone answers with any `not_safe` on that domain, else the newest `safe`. It goes once the last older build is gone.
 
 `notes` (optional, at most 280 characters): why the Guardian decided. The app requires it on `not_safe`; the backend accepts a verdict without it, because older builds don't send it. It is never returned in a `Verdict`. It is cleared after 14 days and the decision stays, otherwise the link would be blocked again on day 15.
+
+The weekly-review lock (#476) is per family: while the family's newest verdict on a link is a locked `safe`, a new verdict on that link from any member's scan answers `verdict_locked`.
 
 Extension polls `GET /verdicts?url=&domain=` while the block screen is open (#350): every 2 s for the first 2 minutes, every 5 s up to 10 minutes, then every 15 s (a `429` waits out `Retry-After`), for **both modes**: Protected waits for the guardian, Guardian reopens the page after marking it safe for themselves (PRD §5 Validasi). Also polls once when the user comes back from the app. Realtime instead of polling: propose via PR.
 

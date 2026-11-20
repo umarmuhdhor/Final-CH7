@@ -54,8 +54,8 @@ export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; cr
       // - A row without a verdict (B-02, K14 of fase 28; the admins may lower blockAt): a block takes
       //   over a warning at any score, and a warning never takes over a block. So the row says what
       //   the member last saw, and the site pushes its block once (the push rule reads row status).
-      // "Has a verdict" is the selectScans rule below: a verdict on this link, or a not_safe on the
-      // domain unless this link or the not_safe's link is on a shared host (#495).
+      // "Has a verdict" is the selectScans rule below: a verdict on this link in the owner's family, or a
+      // not_safe of the owner on the domain unless this link or the not_safe's link is on a shared host (#495).
       await tx`
         with cur as (
           select r.id,
@@ -65,11 +65,11 @@ export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; cr
                  end as takes_over
           from (
             select s.id, s.score, s.status, exists (
-                     select 1 from verdicts v, (select public.verdict_link(s.url) as link) k
-                     where v.owner_id = s.owner_id
-                       and (v.url = k.link
-                            or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)
-                                and not public.verdict_shared(v.url, v.domain)))
+                     select 1 from verdicts v,
+                            (select public.verdict_link(s.url) as link, public.verdict_family(s.owner_id) as family) k
+                     where (v.url = k.link and v.owner_id = any(k.family))
+                        or (v.owner_id = s.owner_id and v.domain = s.domain and v.value = 'not_safe'
+                            and not public.verdict_shared(k.link, s.domain) and not public.verdict_shared(v.url, v.domain))
                    ) as decided
             from scans s where s.id = ${site!.linkId}
           ) r
@@ -534,8 +534,9 @@ export interface ScanRow {
 export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 
 // Columns shared by list and detail. ownerName is the owner's current name; the verdict is joined
-// for warning and blocked scans alike (GD-07), by the GET /verdicts?url= rule (#241): this link,
-// else a not_safe on the domain unless this link or the not_safe's link is on a shared host (#495).
+// for warning and blocked scans alike (GD-07), by the GET /verdicts?url= rule (#241): the newest verdict
+// on this link in the owner's family (verdict_family, plan/alief/family-safe.md), else a not_safe of
+// this owner on the domain unless this link or the not_safe's link is on a shared host (#495).
 // recordScan repeats this rule
 // ("has a verdict", B-02): change both together.
 // `from` yields the scan rows as `s`: the table for a detail, the already-cut page for a list
@@ -561,16 +562,19 @@ function selectScans(sql: Sql, from: PendingQuery<Row[]>) {
     from ${from} s
     join devices d on d.id = s.owner_id
     cross join lateral (
-      select case when exists (select 1 from verdicts x where x.owner_id = s.owner_id)
+      select public.verdict_family(s.owner_id) as family
+      offset 0
+    ) f
+    cross join lateral (
+      select case when exists (select 1 from verdicts x where x.owner_id = any(f.family))
                   then public.verdict_link(s.url) end as link
       offset 0
     ) k
     left join lateral (
       select v.* from verdicts v
-      where v.owner_id = s.owner_id
-        and (v.url = k.link
-             or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)
-                 and not public.verdict_shared(v.url, v.domain)))
+      where (v.url = k.link and v.owner_id = any(f.family))
+         or (v.owner_id = s.owner_id and v.domain = s.domain and v.value = 'not_safe'
+             and not public.verdict_shared(k.link, s.domain) and not public.verdict_shared(v.url, v.domain))
       order by (v.url = k.link) desc, v.decided_at desc
       limit 1
     ) v on true`;
