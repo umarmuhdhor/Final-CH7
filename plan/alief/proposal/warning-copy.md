@@ -1,7 +1,7 @@
 # Warning copy: plain-language detection reasons
 
 > Proposal by Alief (Team App), 20 Nov 2026. Docs only: no code is changed by this file.
-> Status: draft. The issue drafts at the end are **not opened yet**; Alief reviews them first.
+> Status: applied in PR #638 (20 Nov 2026). Alief chose to do the change in one PR instead of opening issues, so the issue drafts at the end are **not needed**; they are kept as the record of the questions, now asked as review points on PR #638.
 
 ## Why
 
@@ -204,7 +204,7 @@ must not translate or rewrite it. So the app fix for the tester's complaint come
 
 ## Issue draft 1: Lead (detector + extension)
 
-> Not opened. Template: Question / proposal. Label `question`. Assignee `umarmuhdhor`.
+> **Not needed, done in PR #638** (Alief, 20 Nov 2026: "kita aja yang kerjain gk usah issue"). @umarmuhdhor is asked for review there instead.
 
 **Title:** `EX-08 / detector: plain wording for warning reasons (usability test 20 Nov)`
 
@@ -245,7 +245,7 @@ app-side names (section E) wait for this answer so the words match on both sides
 
 ## Issue draft 2: Team AI (layer 3–4 labels)
 
-> Not opened. Template: Question / proposal. Label `question`. Assignee `imeldamayanti`.
+> **Not needed, done in PR #638** (Alief, 20 Nov 2026). @imeldamayanti is asked for review there instead.
 
 **Title:** `ai/layer3-4: plainer Guardian labels for 5 signals (usability test 20 Nov)`
 
