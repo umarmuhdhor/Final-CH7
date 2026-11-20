@@ -39,6 +39,21 @@ enum InviteNotice: Equatable {
     case alreadyProtected(guardian: String)
 }
 
+/// What just changed, said by a toast at the top of Home (plan/alief/proposal/pairing-feedback.md, Option A):
+/// every role or pairing change ends on Home, the screen that changed, and this names the change.
+enum HomeNotice: Equatable {
+    /// Family mode on ("Mulai" on "To be guardian", ⇆, Account mode, Profile's Guardian card).
+    case guardianOn
+    /// Family mode off.
+    case personalOn
+    /// Someone joined with this guardian's code while the invite was on screen.
+    case memberJoined(name: String)
+    /// This iPhone joined a guardian's family ("Selanjutnya" after "Berhasil Terhubung").
+    case connected(guardian: String)
+    /// The guardian disconnected someone.
+    case disconnected(name: String)
+}
+
 /// Tabs of the main screen.
 enum AppTab: String, Hashable, CaseIterable {
     case shield
@@ -62,6 +77,16 @@ final class Router {
     }
     /// PR-03 banner on Home for a link opened after onboarding (Figma "Notif undangan").
     var inviteNotice: InviteNotice?
+    /// The toast on Home after a role or pairing change (`HomeNotice`). Memory only.
+    var homeNotice: HomeNotice?
+    /// Bumped with every new `homeNotice`, so the same notice twice still shows again.
+    private(set) var homeNoticeCount = 0
+    /// Empty Family Home has a ready invite code: the "Mode Guardian aktif" toast offers "Undang".
+    var canShareInvite = false
+    /// "Undang" on the toast: Home's invite card opens the iOS share sheet.
+    private(set) var inviteShareRequests = 0
+    /// Someone just joined: "Baru terhubung" under their avatar on Home, once (no ring: Alief, 20 Nov 2026).
+    var newMemberId: String?
     /// Shield's "Turn on" sheet (PR-04). Here, not in the view, so a link can close it first.
     var isTurnOnPresented = false
     /// Figma "To be guardian": before Family mode turns on for the first time.
@@ -188,10 +213,29 @@ final class Router {
         closeSheets()
     }
 
+    /// Back on Home with a toast that says what changed (Option A).
+    func landOnHome(saying notice: HomeNotice) {
+        reset()
+        show(notice)
+    }
+
+    func show(_ notice: HomeNotice) {
+        homeNotice = notice
+        homeNoticeCount += 1
+    }
+
+    /// "Undang" on the "Mode Guardian aktif" toast.
+    func shareInvite() {
+        homeNotice = nil
+        inviteShareRequests += 1
+    }
+
     /// The account was deleted: its invite banner ("You're already protected by Budi") and waiting code must not
     /// greet the next account (delete = gone at once). `reset()` alone keeps them: a join closes its screens with it.
     func forgetInvite() {
         inviteNotice = nil
+        homeNotice = nil
+        newMemberId = nil
         pendingJoinCode = nil
     }
 

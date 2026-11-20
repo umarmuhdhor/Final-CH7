@@ -4,7 +4,7 @@ import { quietSql, runNotifications } from "../src/cron/notifications";
 import type { OpsWriter } from "../src/db/repo/ops";
 import { CRONS } from "../src/index";
 import { summaryText } from "../src/services/push/messages";
-import { guardianPush, ownPush } from "../src/services/push/notify";
+import { guardianPush } from "../src/services/push/notify";
 import { isQuiet, localTime } from "../src/services/push/quiet";
 import type { PushMessage, PushSender } from "../src/services/push/sender";
 import postgres from "postgres";
@@ -96,30 +96,16 @@ describe("quiet hours", () => {
 });
 
 describe("push switches (Situs berbahaya / diblokir / Aktivitas orang dilindungi)", () => {
-  it("own scan: pushed to the device itself by status switch, no domain in the text", async () => {
-    const d = await createDevice("Adhella", "guardian");
-    await patch(d, { apnsToken: TOKEN, language: "id" });
-    const self = principal(d, "Adhella", "guardian");
-    expect(await ownPush(sql, self, scan("blocked"), DAY_JAKARTA)).toEqual({
-      toDeviceId: d.deviceId, apnsToken: TOKEN, body: "Shoo memblokir situs berbahaya · 92%", scanId: scan("blocked").id,
-    });
-    await patch(d, { notifications: { blocked: false } });
-    expect(await ownPush(sql, self, scan("blocked"), DAY_JAKARTA)).toBeUndefined();
-    expect((await ownPush(sql, self, scan("warning"), DAY_JAKARTA))?.body).toBe("Shoo memperingatkanmu soal situs berisiko · 54%");
-    await patch(d, { notifications: { warning: false } });
-    expect(await ownPush(sql, self, scan("warning"), DAY_JAKARTA)).toBeUndefined();
-  });
-
-  it("own scan of a protected device: no push to it, only its guardian's", async () => {
+  it("own scan: no push to the device itself, whatever its switches (guardian-only push, 20 Nov 2026)", async () => {
     const g = await createDevice("G", "guardian");
     const p = await createDevice("Mom");
     await link(g, p);
-    await patch(g, { apnsToken: TOKEN_G });
+    await patch(g, { apnsToken: TOKEN_G, notifications: { warning: true, blocked: true } });
     await patch(p, { apnsToken: TOKEN });
-    const mom = principal(p, "Mom", "protected");
-    expect(await ownPush(sql, mom, scan("blocked"), DAY_JAKARTA)).toBeUndefined();
-    expect(await ownPush(sql, mom, scan("warning"), DAY_JAKARTA)).toBeUndefined();
-    expect((await guardianPush(sql, mom, scan("blocked"), DAY_JAKARTA))?.toDeviceId).toBe(g.deviceId);
+    expect(await guardianPush(sql, principal(g, "G", "guardian"), scan("blocked"), DAY_JAKARTA)).toBeUndefined();
+    expect(await guardianPush(sql, principal(g, "G", "guardian"), scan("warning"), DAY_JAKARTA)).toBeUndefined();
+    // The protected device's own scan goes to its guardian only.
+    expect((await guardianPush(sql, principal(p, "Mom", "protected"), scan("blocked"), DAY_JAKARTA))?.toDeviceId).toBe(g.deviceId);
   });
 
   it("quiet hours hold warnings but not blocked sites", async () => {
@@ -131,9 +117,6 @@ describe("push switches (Situs berbahaya / diblokir / Aktivitas orang dilindungi
     const mom = principal(p, "Mom", "protected");
     expect(await guardianPush(sql, mom, scan("warning"), NIGHT_JAKARTA)).toBeUndefined();
     expect(await guardianPush(sql, mom, scan("blocked"), NIGHT_JAKARTA)).toBeDefined();
-    const guardian = principal(g, "G", "guardian");
-    expect(await ownPush(sql, guardian, scan("warning"), NIGHT_JAKARTA)).toBeUndefined();
-    expect(await ownPush(sql, guardian, scan("blocked"), NIGHT_JAKARTA)).toBeDefined();
     await patch(g, { notifications: { quietHours: false } });
     expect(await guardianPush(sql, mom, scan("warning"), NIGHT_JAKARTA)).toBeDefined();
   });

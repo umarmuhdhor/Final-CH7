@@ -410,12 +410,12 @@ struct SafariDefaultSetupTests {
 
 struct ExtensionSetupTests {
     @Test(arguments: [
-        // Figma "Aktifkan Ekstensi": three steps; what Safari still needs shows as a note once back (#135).
-        (17, 5, [ExtensionSetup.Step.openSettingsLegacy, .switchOn, .comeBack]),
-        (18, 0, [.openSettingsModern, .switchOn, .comeBack]),
-        (26, 1, [.openSettingsModern, .switchOn, .comeBack]),
-        (26, 2, [.tapTurnOn, .switchOn, .comeBack]),
-        (27, 0, [.tapTurnOn, .switchOn, .comeBack]),
+        // All Websites → Allow is a required step on every version (usability test 20 Nov 2026).
+        (17, 5, [ExtensionSetup.Step.openSettingsLegacy, .switchOn, .allowEveryWebsite, .comeBack]),
+        (18, 0, [.openSettingsModern, .switchOn, .allowEveryWebsite, .comeBack]),
+        (26, 1, [.openSettingsModern, .switchOn, .allowEveryWebsite, .comeBack]),
+        (26, 2, [.tapTurnOn, .switchOn, .allowEveryWebsite, .comeBack]),
+        (27, 0, [.tapTurnOn, .switchOn, .allowEveryWebsite, .comeBack]),
     ])
     func stepsFollowIOSVersion(major: Int, minor: Int, expected: [ExtensionSetup.Step]) {
         #expect(ExtensionSetup.steps(for: OperatingSystemVersion(majorVersion: major, minorVersion: minor, patchVersion: 0)) == expected)

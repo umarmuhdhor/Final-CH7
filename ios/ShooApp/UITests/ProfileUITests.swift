@@ -63,9 +63,10 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(switchButton.waitForExistence(timeout: 5), app.debugDescription)
         switchButton.tap()
         app.buttons["guardianIntro.start"].tapWhenHittable()
-        XCTAssertFalse(switchButton.waitForExistence(timeout: 1), "Nothing left to switch")
-        app.buttons["profile.back"].firstMatch.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
+        // Option A: Profile closes on Home, which shows the family and says what changed.
+        XCTAssertTrue(app.descendants(matching: .any)["home.notice"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["family.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(switchButton.exists, "Account mode closed")
     }
 
     @MainActor
@@ -74,8 +75,10 @@ final class ProfileUITests: XCTestCase {
         let become = app.buttons["profile.guardianCard.action"]
         XCTAssertTrue(become.waitForExistence(timeout: 5), app.debugDescription)
         become.tap()
-        // Figma "To be guardian" comes first, the first time.
+        // Figma "To be guardian" comes first, the first time; then Home (Option A).
         app.buttons["guardianIntro.start"].tapWhenHittable()
+        XCTAssertTrue(app.descendants(matching: .any)["family.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["profileButton"].tapWhenHittable()
         XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertFalse(app.descendants(matching: .any)["profile.guardianCard"].exists)
 
@@ -202,8 +205,11 @@ final class ProfileUITests: XCTestCase {
         let confirm = app.buttons["member.disconnect.confirm"].firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 5), app.debugDescription)
         confirm.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertFalse(app.descendants(matching: .any)["profile.member.dev_dad"].exists)
+        // Option A: back on Home, which says who is gone.
+        let notice = app.descendants(matching: .any)["home.notice"]
+        XCTAssertTrue(notice.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["family.member.dev_mom"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["family.member.dev_dad"].exists)
     }
 
     @MainActor
@@ -245,9 +251,10 @@ final class ProfileUITests: XCTestCase {
         let row = app.buttons["profile.notifications"]
         reveal(row, in: app)
         row.tap()
-        let warning = app.switches["notifications.warning"]
-        XCTAssertTrue(warning.waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(app.switches["notifications.family"].exists)
+        XCTAssertTrue(app.switches["notifications.family"].waitForExistence(timeout: 5), app.debugDescription)
+        // No push about a device's own scans (20 Nov 2026): no "Dangerous sites" / "Blocked sites" switches.
+        XCTAssertFalse(app.switches["notifications.warning"].exists)
+        XCTAssertFalse(app.switches["notifications.blocked"].exists)
         XCTAssertTrue(app.switches["notifications.protectionOff"].exists)
         let summary = app.switches["notifications.summary"]
         reveal(summary, in: app)
@@ -258,7 +265,8 @@ final class ProfileUITests: XCTestCase {
         let personal = openProfile(mode: "guardian", familyMode: false)
         reveal(personal.buttons["profile.notifications"], in: personal)
         personal.buttons["profile.notifications"].tap()
-        XCTAssertTrue(personal.switches["notifications.blocked"].waitForExistence(timeout: 5))
+        XCTAssertTrue(personal.switches["notifications.summary"].waitForExistence(timeout: 5), personal.debugDescription)
+        XCTAssertFalse(personal.switches["notifications.blocked"].exists)
         XCTAssertFalse(personal.switches["notifications.family"].exists)
     }
 
@@ -355,6 +363,10 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(title.label.contains("Budi"), title.label)
         app.buttons["protectedBy.continue"].tap()
+        // Option A: back on Home, which says who this phone is now connected with.
+        let notice = app.descendants(matching: .any)["home.notice.text"].firstMatch
+        XCTAssertTrue(notice.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(notice.label.contains("Budi"), notice.label)
 
         let profile = app.buttons["profileButton"]
         XCTAssertTrue(profile.waitForExistence(timeout: 10), app.debugDescription)

@@ -268,15 +268,10 @@ private struct ModePage: View {
 
             if choice != current {
                 Button {
-                    let target = choice
-                    if target == .guardian { env.requestFamilyMode() } else { model.setFamilyMode(false) }
+                    // Profile closes on Home, where the change shows, with a toast VoiceOver reads (Option A). The
+                    // first Guardian switch opens "To be guardian" first.
+                    if choice == .guardian { env.requestFamilyMode() } else { env.leaveFamilyMode() }
                     selected = nil
-                    // The first Guardian switch only opens "To be guardian": nothing switched yet, so nothing to say.
-                    // (Read after `selected = nil`, `choice` is the old mode: it announced "Switched to Personal".)
-                    guard current == target else { return }
-                    AccessibilityNotification.Announcement(L10n.string(
-                        target == .guardian ? "Switched to Guardian" : "Switched to Personal", language: AppLanguage(locale: locale)
-                    )).post()
                 } label: {
                     Text(choice == .guardian ? "Switch to Guardian" : "Switch to Personal")
                         .profileFont(17, .semibold, tracking: -0.17)
@@ -399,7 +394,12 @@ struct JoinAnotherFamilySheet: View {
             if let model {
                 ConnectView(model: model, onBack: { dismiss() }, onSkip: cameFromLink ? { dismiss() } : nil, onFinish: {
                     dismiss()
-                    env.router.reset()
+                    // Option A: Home, with "Terhubung dengan <guardian>".
+                    if case .joined(let guardian) = model.state {
+                        env.router.landOnHome(saying: .connected(guardian: guardian.name))
+                    } else {
+                        env.router.reset()
+                    }
                 })
             } else {
                 // An empty Group never appears, so `onAppear` below would never run.
@@ -1027,25 +1027,8 @@ private struct NotificationsPage: View {
             // The switches show the server's settings: until they are read (or when the read failed) they would
             // show the defaults, and a tap would be dropped without a word (`updateNotifications` needs the profile).
             if model.profile != nil {
-                // Own-scan pushes go to Guardian and Personal devices only: a Protected device's scan pushes its Guardian.
-                if model.variant != .protected {
-                    ProfileSection(title: "Warnings") {
-                        ProfileToggleRow(
-                            symbol: "bell.fill", title: Text("Dangerous sites"), subtitle: Text("When you open a high-risk site"),
-                            style: .settings, isOn: binding(\.warning) { NotificationSettingsUpdate(warning: $0) }
-                        )
-                        .accessibilityIdentifier("notifications.warning")
-                        ProfileDivider()
-                        ProfileToggleRow(
-                            symbol: "network.badge.shield.half.filled", title: Text("Blocked sites"), subtitle: Text("Every time Shoo blocks a site"),
-                            style: .settings, isOn: binding(\.blocked) { NotificationSettingsUpdate(blocked: $0) }
-                        )
-                        .accessibilityIdentifier("notifications.blocked")
-                    }
-                    // Figma: the first title sits 24 pt under the back button; the header leaves 16.
-                    .padding(.top, model.notificationStatus.map { $0 != .authorized } ?? false ? 0 : -20)
-                }
-
+                // No "Warnings" section ("Dangerous sites" / "Blocked sites"): since 20 Nov 2026 no device gets a
+                // push about its own scans, only a Guardian about its members' (plan/alief/proposal/push-copy.md).
                 if model.variant == .guardian {
                     ProfileSection(title: "Family · Guardian mode") {
                         ProfileToggleRow(
@@ -1060,6 +1043,7 @@ private struct NotificationsPage: View {
                         )
                         .accessibilityIdentifier("notifications.protectionOff")
                     }
+                    .padding(.top, firstSectionOffset)
                 }
 
                 if model.variant == .protected {
@@ -1098,6 +1082,12 @@ private struct NotificationsPage: View {
         .modifier(ActionErrorAlert(model: model))
     }
 
+    /// Figma: the first title sits 24 pt under the back button; the header leaves 16. Not under the
+    /// "Notifications are off" card, which brings its own space.
+    private var firstSectionOffset: CGFloat {
+        model.notificationStatus.map { $0 != .authorized } ?? false ? 0 : -20
+    }
+
     @ViewBuilder private var summaryAndQuietHours: some View {
         ProfileSection(title: "Summary") {
             ProfileToggleRow(
@@ -1106,6 +1096,8 @@ private struct NotificationsPage: View {
             )
             .accessibilityIdentifier("notifications.summary")
         }
+        // A Personal device has no family section: "Summary" is the first title.
+        .padding(.top, model.variant == .personal ? firstSectionOffset : 0)
 
         ProfileSection(title: "Quiet hours") {
             ProfileToggleRow(
@@ -1126,7 +1118,10 @@ private struct NotificationsPage: View {
             .opacity(settings.quietHours ? 1 : 0.5)
             .accessibilityIdentifier("notifications.quietTime")
         }
-        PageNote(text: Text("Blocked-site alerts still come during quiet hours."))
+        // Only a Guardian gets blocked-site pushes (about its members), so a Personal device has no such alert.
+        if model.variant == .guardian {
+            PageNote(text: Text("Blocked-site alerts still come during quiet hours."))
+        }
     }
 
     /// First time: the system prompt here. After a yes or a no only Settings can change it.
