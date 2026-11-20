@@ -1,6 +1,6 @@
 # Usulan: teks push peringatan yang lebih jelas
 
-Status: **diputuskan Alief, 20 Nov 2026. Dibangun di branch `fix/GD-06-push-copy`.**
+Status: **diputuskan Alief, 20 Nov 2026. Dibangun di PR umarmuhdhor/Final-CH7#639 (`fix/GD-06-push-copy`).**
 Tanggal: 20 Nov 2026 · Area: GD-06 (push ke Guardian), PF-01 (push untuk scan sendiri) · Pemilik: Team App (`backend/`)
 
 ## Keputusan
@@ -268,15 +268,13 @@ Baris "Sendiri" di tabel ini **tidak dibangun** (keputusan nomor 3).
 5. Cek di simulator: teks terpotong di mana pada layar kunci, dengan ukuran teks standar dan besar, dan dengan nama anggota yang panjang. Lampirkan screenshot sebelum/sesudah di PR.
 6. Branch: `fix/GD-06-push-copy`.
 
-## 7. Issue yang perlu dibuka (belum dibuka)
+## 7. Issue
 
-Sesuai aturan 7 di `CLAUDE.md`, pakai template **Question / proposal**, label `question`, assign ke Umar (lead).
+Alief memutuskan tidak lewat issue ("kita aja yang kerjain gk usah issue"). Dua issue yang sempat dibuka (#634 contoh teks push di kontrak, #635 batas tingkat 50) sudah ditutup. Isinya dikerjakan di PR #639:
 
-| Kapan | Judul issue | Isi singkat |
-|---|---|---|
-| **Opsi A** dipilih | `GD-06: push text examples in contracts/api.md drop the score` | Bentuk JSON tidak berubah. Hanya contoh teks di "Push payloads" (`"Mom hit a blocked site · 92%"`) dan aturan SECURITY P10 "nama + kata kerja + skor" yang jadi usang. Tanya: boleh skor dibuang dari push, dan siapa yang memperbarui contoh di `contracts/api.md`? Sampai dijawab: PR backend bisa disiapkan, merge setelah lead setuju. |
-| **Opsi A** dipilih | `GD-06: push tier split at 50 when only warnAt/blockAt are public` | Backend tidak tahu `secondWarning`. Usul: pakai 50 seperti tabel `contracts/README.md`. Tanya: apakah `secondWarning` bisa diubah admin? Kalau ya, perlu ditambahkan ke `GET /config/public` supaya push dan popup selalu sama. |
-| **Opsi B** dipilih | `GD-06: push payloads: add aps.alert.title for scan pushes` | Tambahan opsional (aditif) `aps.alert.title` untuk push scan Guardian dan PF-01. Contoh teks di bagian 5. Sampai dijawab: tetap pakai Opsi A. |
+- Contoh teks push di `contracts/api.md` diperbarui di PR #639 (bentuk JSON tetap). Umar diminta review karena file itu milik lead.
+- Batas tingkat: backend memakai 50 (`SECOND_WARNING` di `messages.ts`), sama dengan tabel `contracts/README.md`. Kalau suatu saat `secondWarning` bisa diubah admin, push dan popup bisa berbeda kata untuk skor di sekitar batas itu.
+- `plan/alief/SECURITY.md` T9/P10 diperbarui: tanpa skor.
 
 ## 8. Hal kecil yang ketemu, di luar usulan ini
 
