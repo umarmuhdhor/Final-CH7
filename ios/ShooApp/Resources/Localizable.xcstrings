@@ -7674,6 +7674,16 @@
           }
         }
       }
+    },
+    "Tick the box above first to continue." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Centang kotak di atas dulu untuk lanjut."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

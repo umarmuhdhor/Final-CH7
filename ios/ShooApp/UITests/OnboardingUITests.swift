@@ -64,24 +64,51 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
-    func testTurnOnWorksWithoutTheConsentBoxAndShowsWhatIsSent() {
+    func testTurnOnWaitsForTheConsentBoxAndShowsWhatIsSent() {
         let app = launch(extensionActive: false, askConsent: true)
         app.onboardName("Rina")
         let turnOn = app.buttons["extension.turnOn"]
         XCTAssertTrue(turnOn.waitForExistence(timeout: 5), app.debugDescription)
-        // Guideline 5.1.1(iv): the online check is optional, so Turn on is not locked by the box.
-        XCTAssertTrue(turnOn.isEnabled)
         // No status note before the user has been to Settings (Figma has none).
         XCTAssertFalse(app.descendants(matching: .any)["extension.offHint"].exists)
+        let hint = app.descendants(matching: .any)["extension.consentHint"]
+        XCTAssertFalse(hint.exists)
+        // Figma 110:4505: grey until ticked. A tap says to tick the box first and does not leave for Settings.
+        turnOn.tap()
+        XCTAssertTrue(hint.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertEqual(app.state, .runningForeground)
         app.buttons["extension.dataSent"].tap()
         XCTAssertTrue(app.staticTexts["AI check by DeepSeek"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["dataSent.done"].tap()
         XCTAssertTrue(app.staticTexts["AI check by DeepSeek"].waitForNonExistence(timeout: 5))
         app.buttons["extension.consent"].tap()
-        XCTAssertTrue(turnOn.isEnabled)
+        XCTAssertTrue(hint.waitForNonExistence(timeout: 5), app.debugDescription)
         // Nothing saved yet: Back still reaches the name.
         app.buttons["onboarding.back"].tap()
         XCTAssertTrue(app.textFields["name.field"].waitForExistence(timeout: 5))
+    }
+
+    /// Before/after pictures for the PR: the grey button, then the hint after a tap. Runs only with `SHOO_SHOT_DIR`.
+    @MainActor
+    func testConsentHintScreenshotForPR() throws {
+        guard let dir = ProcessInfo.processInfo.environment["SHOO_SHOT_DIR"] else { throw XCTSkip("Set SHOO_SHOT_DIR") }
+        let app = XCUIApplication.mock([
+            "-settings.language", "id", "-UITestNotifications", "denied", "-debug.askDataConsent", "YES",
+            "-debug.onboardingStep", "turnOnExtension",
+        ])
+        let turnOn = app.buttons["extension.turnOn"]
+        XCTAssertTrue(turnOn.waitForExistence(timeout: 5), app.debugDescription)
+        func save(_ name: String) throws {
+            try XCUIScreen.main.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: dir).appendingPathComponent(name))
+        }
+        try save("on04-consent-grey.png")
+        turnOn.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["extension.consentHint"].waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 0.5)
+        try save("on04-consent-hint.png")
+        app.buttons["extension.consent"].tap()
+        Thread.sleep(forTimeInterval: 0.5)
+        try save("on04-consent-ticked.png")
     }
 
     @MainActor
