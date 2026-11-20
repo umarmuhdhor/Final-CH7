@@ -57,12 +57,32 @@
         }
       }
     },
+    "BECOME A GUARDIAN" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JADI PENJAGA"
+          }
+        }
+      }
+    },
     "Copy code" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Salin kode"
+          }
+        }
+      }
+    },
+    "Double-tap to close" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk dua kali untuk menutup"
           }
         }
       }
@@ -93,6 +113,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Baru terhubung"
+          }
+        }
+      }
+    },
+    "Move between Personal (just you) and Guardian (your family) any time." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beralih antara Pribadi (dirimu) dan Guardian (keluargamu) kapan saja."
           }
         }
       }
@@ -133,6 +163,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shoo tidak bisa menunjukkan bagian ini di halaman: mungkin tersembunyi"
+          }
+        }
+      }
+    },
+    "Switch modes here" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindah mode di sini"
           }
         }
       }

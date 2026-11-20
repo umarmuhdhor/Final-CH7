@@ -41,12 +41,14 @@ final class AppSettings {
         static let guardianCardDismissed = "settings.guardianCardDismissed"
         static let supervisedCardDismissed = "settings.supervisedCardDismissed"
         static let guardianIntroSeen = "settings.guardianIntroSeen"
+        static let guardianSwitchTipSeen = "settings.guardianSwitchTipSeen"
 
         static let all = [
             language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, dataConsent,
             inviteRegistrationPending, largeText,
             theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
-            dismissedHomeScanIds, guardianCardDismissed, supervisedCardDismissed, guardianIntroSeen, demoMode, demoReturn,
+            dismissedHomeScanIds, guardianCardDismissed, supervisedCardDismissed, guardianIntroSeen, guardianSwitchTipSeen,
+            demoMode, demoReturn,
         ]
     }
 
@@ -141,9 +143,15 @@ final class AppSettings {
         didSet { defaults.set(supervisedCardDismissed, forKey: Keys.supervisedCardDismissed) }
     }
 
-    /// Figma "To be guardian" was passed with "Mulai" once; Family mode then turns on without it.
+    /// Figma "To be guardian" was passed with "Mulai" once; Family mode then turns on without it. Set only there (and
+    /// by the demo, or a join from Profile's invite), so it also means "has been Guardian once": Home shows ⇆ only then.
     var guardianIntroSeen: Bool {
         didSet { defaults.set(guardianIntroSeen, forKey: Keys.guardianIntroSeen) }
+    }
+
+    /// The one-time tip at ⇆ ("Pindah mode di sini") was shown, on the first arrival at Guardian Home.
+    var guardianSwitchTipSeen: Bool {
+        didSet { defaults.set(guardianSwitchTipSeen, forKey: Keys.guardianSwitchTipSeen) }
     }
 
     /// "Try the demo": sample data on this phone, no device on the server. Read at launch (`AppEnvironment.live`).
@@ -178,6 +186,9 @@ final class AppSettings {
         guardianCardDismissed = defaults.bool(forKey: Keys.guardianCardDismissed)
         supervisedCardDismissed = defaults.bool(forKey: Keys.supervisedCardDismissed)
         guardianIntroSeen = defaults.bool(forKey: Keys.guardianIntroSeen)
+        // An install from before the tip that was Guardian already knows ⇆.
+        guardianSwitchTipSeen = defaults.object(forKey: Keys.guardianSwitchTipSeen) as? Bool
+            ?? defaults.bool(forKey: Keys.guardianIntroSeen)
         demoMode = defaults.bool(forKey: Keys.demoMode)
     }
 
@@ -195,6 +206,8 @@ final class AppSettings {
         var onboardingConnectPassed: Bool
         var dataConsent: String?
         var guardianIntroSeen: Bool
+        /// Missing in a demo started before the tip: then `guardianIntroSeen` stands in.
+        var guardianSwitchTipSeen: Bool?
     }
 
     /// A registered device entered the demo (code 000000, issue #616): its account waits underneath.
@@ -205,7 +218,8 @@ final class AppSettings {
     func enterDemo() {
         if !demoMode, let mode, let data = try? JSONEncoder().encode(DemoReturn(
             mode: mode, onboardingCompleted: onboardingCompleted, familyModeOn: familyModeOn,
-            onboardingConnectPassed: onboardingConnectPassed, dataConsent: dataConsent?.rawValue, guardianIntroSeen: guardianIntroSeen
+            onboardingConnectPassed: onboardingConnectPassed, dataConsent: dataConsent?.rawValue, guardianIntroSeen: guardianIntroSeen,
+            guardianSwitchTipSeen: guardianSwitchTipSeen
         )) {
             defaults.set(data, forKey: Keys.demoReturn)
         }
@@ -213,6 +227,7 @@ final class AppSettings {
         mode = .guardian
         familyModeOn = true
         guardianIntroSeen = true
+        guardianSwitchTipSeen = true
         dataConsent = .granted
         onboardingCompleted = true
     }
@@ -229,6 +244,7 @@ final class AppSettings {
         onboardingConnectPassed = saved.onboardingConnectPassed
         dataConsent = saved.dataConsent.flatMap(DataConsent.init(rawValue:))
         guardianIntroSeen = saved.guardianIntroSeen
+        guardianSwitchTipSeen = saved.guardianSwitchTipSeen ?? saved.guardianIntroSeen
         demoMode = false
         defaults.removeObject(forKey: Keys.demoReturn)
         return true
@@ -290,5 +306,6 @@ final class AppSettings {
         guardianCardDismissed = false
         supervisedCardDismissed = false
         guardianIntroSeen = false
+        guardianSwitchTipSeen = false
     }
 }

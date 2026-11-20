@@ -42,7 +42,8 @@ struct MainTabView: View {
         // Option A: after a role or pairing change, Home says what changed. Under Home's top bar (⇆, avatar);
         // the invite banner, when there is one, comes first.
         .overlay(alignment: .top) {
-            if let notice = router.homeNotice, router.inviteNotice == nil, env.launchSplash == .done {
+            if let notice = router.homeNotice, router.inviteNotice == nil, !router.isSwitchTipPresented,
+               env.launchSplash == .done {
                 HomeNoticeToast(
                     notice: notice,
                     onInvite: notice == .guardianOn && router.canShareInvite ? { router.shareInvite() } : nil,
@@ -56,6 +57,22 @@ struct MainTabView: View {
         }
         .animation(StateMotion.enter(reduceMotion: reduceMotion), value: router.homeNoticeCount)
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: router.homeNotice == nil)
+        // First time as Guardian: the tip at Home's ⇆, once. A tap anywhere closes it and presses nothing under it.
+        .overlay(alignment: .topLeading) {
+            if router.isSwitchTipPresented, env.launchSplash == .done {
+                ZStack(alignment: .topLeading) {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture { router.closeSwitchTip() }
+                        .accessibilityHidden(true)
+                    SwitchTip { router.closeSwitchTip() }
+                        .environment(\.locale, env.settings.language.locale)
+                }
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96, anchor: .topLeading)))
+            }
+        }
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: router.isSwitchTipPresented)
         // A success tap with every change except a disconnect, which stays neutral.
         .sensoryFeedback(trigger: router.homeNoticeCount) { _, _ in
             if case .disconnected = router.homeNotice { return nil }
@@ -152,7 +169,8 @@ private struct FamilyModeToggle: ToolbarContent {
     @Environment(AppEnvironment.self) private var env
 
     var body: some ToolbarContent {
-        if env.settings.mode == .guardian {
+        // Like Home's ⇆: only once this iPhone has been Guardian.
+        if env.settings.mode == .guardian && (env.settings.familyModeOn || env.settings.guardianIntroSeen) {
             ToolbarItem(placement: .topBarLeading) {
                 let isOn = env.settings.familyModeOn
                 Button {

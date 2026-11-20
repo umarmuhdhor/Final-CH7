@@ -63,6 +63,8 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(switchButton.waitForExistence(timeout: 5), app.debugDescription)
         switchButton.tap()
         app.buttons["guardianIntro.start"].tapWhenHittable()
+        // The first time, the tip at the new ⇆ comes first; a tap closes it.
+        app.closeSwitchTip()
         // Option A: Profile closes on Home, which shows the family and says what changed.
         XCTAssertTrue(app.descendants(matching: .any)["home.notice"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(app.descendants(matching: .any)["family.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
@@ -77,6 +79,7 @@ final class ProfileUITests: XCTestCase {
         become.tap()
         // Figma "To be guardian" comes first, the first time; then Home (Option A).
         app.buttons["guardianIntro.start"].tapWhenHittable()
+        app.closeSwitchTip()
         XCTAssertTrue(app.descendants(matching: .any)["family.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["profileButton"].tapWhenHittable()
         XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
