@@ -105,8 +105,8 @@ extension XCUIApplication {
 
     /// ON-04: ticks the consent box (once, when it shows) and taps the main button. With Shoo already on that
     /// is Next, which moves to Safari Default; otherwise Turn on, which opens Settings, so the test comes back
-    /// to Shoo. The box shows only while the question is unanswered (fase 27d K6): the mock answers it unless
-    /// `-debug.askDataConsent YES`.
+    /// to Shoo and taps Next (ON-04 never moves on by itself). The box shows only while the question is
+    /// unanswered (fase 27d K6): the mock answers it unless `-debug.askDataConsent YES`.
     @MainActor
     func passTurnOnExtension(file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(descendants(matching: .any)["extension.video"].waitForExistence(timeout: UITestTimeout.screen),
@@ -119,6 +119,8 @@ extension XCUIApplication {
         } else {
             buttons["extension.turnOn"].tapWhenHittable(file: file, line: line)
             comeBackFromSettings()
+            // Shoo still off (the mock's status): the screen stays, as the caller expects.
+            if next.waitForExistence(timeout: UITestTimeout.optional) { next.tapWhenHittable(file: file, line: line) }
         }
     }
 
@@ -144,7 +146,7 @@ extension XCUIApplication {
     @MainActor
     func onboardPersonal(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
         onboardName(name, file: file, line: line)
-        // Back from Settings with Shoo on, ON-04 moves on to Safari Default by itself.
+        // Back from Settings with Shoo on, ON-04 shows Next (it never moves on by itself).
         passTurnOnExtension(file: file, line: line)
         passSafariDefault(file: file, line: line)
         buttons["extensionOn.continue"].tapWhenHittable(file: file, line: line)

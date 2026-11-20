@@ -186,22 +186,17 @@ final class OnboardingModel {
         }
     }
 
-    /// Called on appear and every time the app comes back to the foreground (ON-04). Moves on only once
-    /// the device is registered and Shoo is on and has checked in from Safari, so a new install never shows
-    /// On before "Allow" (#135). After Back it stays, or Back would bounce straight forward again; the screen
-    /// then offers Next.
+    /// Called on appear and every time the app comes back to the foreground (ON-04). Only reads the status:
+    /// ON-04 never moves on by itself, so the consent box is seen once more after Settings and the user taps
+    /// Next (`skipExtensionCheck`). A new install still never shows On before "Allow" (#135).
     @discardableResult
     func refreshExtensionStatus() async -> ExtensionStatus? {
         guard step == .turnOnExtension else { return nil }
-        let status = await environment.extensionStatus()
-        // The step may have moved on (Back) while Safari answered.
-        guard step == .turnOnExtension, status.nextStep == nil, !movedBack, mode != nil else { return status }
-        step = .safariDefault
-        return status
+        return await environment.extensionStatus()
     }
 
-    /// "Continue without checking" (Safari says the switch is on, but no page has checked in yet), or Next
-    /// after Back from Safari Default, or when Shoo was already on before the first tap.
+    /// ON-04 Next once Shoo is on: back from Settings, after Back from Safari Default, or when Shoo was already
+    /// on before the first tap.
     func skipExtensionCheck() async {
         guard await activateExtension() else { return }
         movedBack = false

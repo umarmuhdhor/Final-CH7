@@ -24,8 +24,8 @@ struct TurnOnExtensionView: View {
     var refreshStatus: () async -> ExtensionStatus? = { nil }
     /// Onboarding only: back to the name or Connect.
     var onBack: (() -> Void)?
-    /// Onboarding only: Safari says Shoo is on but no page has checked in yet. A way on, so nobody is stuck
-    /// when Safari is not their default browser. Also Next after Back, when Shoo is already on.
+    /// Onboarding only: Next once Shoo is on (back from Settings, after Back, or switched on before). The screen
+    /// never moves on by itself, so the consent box is seen again before leaving. Outside onboarding it is not set.
     var onSkipCheck: (() -> Void)?
     /// Onboarding only: the consent checkbox.
     var consent: OnboardingExtensionConsent?
@@ -173,12 +173,10 @@ struct TurnOnExtensionView: View {
                 }
                 status = await refreshStatus()
                 if status != nil, nextStep == nil { return }
-                // Onboarding keeps the Figma screen (steps, consent, one button): back from Settings with the
-                // switch on, it moves on by itself instead of asking for a page to check in first.
-                if let onSkipCheck, consent != nil, !needsConsent, cameBack, status?.isActive == true {
-                    onSkipCheck()
-                    return
-                }
+                // Onboarding never moves on by itself: back from Settings with the switch on, the screen keeps the
+                // consent box and turns the main button into Next, so the box is seen once more before leaving.
+                // Next follows the same lock as Turn on: grey until the box is ticked.
+                if consent != nil, status?.isActive == true { return }
             }
         }
         .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: showsConsentHint)
