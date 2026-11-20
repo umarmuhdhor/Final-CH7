@@ -237,16 +237,6 @@
         }
       }
     },
-    "A summary of a suspicious page is sent to DeepSeek, an AI from China." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ringkasan halaman mencurigakan dikirim ke DeepSeek, AI asal Tiongkok."
-          }
-        }
-      }
-    },
     "Without the online check" : {
       "localizations" : {
         "id" : {
@@ -693,16 +683,6 @@
         }
       }
     },
-    "AI check by DeepSeek" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cek AI oleh DeepSeek"
-          }
-        }
-      }
-    },
     "Allow online check" : {
       "localizations" : {
         "id" : {
@@ -783,12 +763,12 @@
         }
       }
     },
-    "Sends pages to Shoo's server and suspicious-page summaries to DeepSeek" : {
+    "Sends pages to Shoo's server for a closer check" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mengirim halaman ke server Shoo dan ringkasan halaman mencurigakan ke DeepSeek"
+            "value" : "Mengirim halaman ke server Shoo untuk dicek lebih teliti"
           }
         }
       }
@@ -829,16 +809,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tonton Tutorial"
-          }
-        }
-      }
-    },
-    "With the online check on, Shoo's server may send DeepSeek, an AI company in China, a short summary of a suspicious page: site name, page title and form field names." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kalau cek online aktif, server Shoo bisa mengirim ringkasan singkat halaman mencurigakan ke DeepSeek, perusahaan AI di China: nama situs, judul halaman, dan nama kolom formulir."
           }
         }
       }

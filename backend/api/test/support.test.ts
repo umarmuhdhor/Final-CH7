@@ -30,11 +30,11 @@ describe("GET /support (E6, fase 24c-1)", () => {
 
   it("App Store 1.1 help: the 1.1 flow (Personal first, Guardian from Profile, 6-digit code) and an optional online check", async () => {
     const en = await (await call("/support?lang=en")).text();
-    for (const s of ["Getting started", "Modes and family", "Warnings and blocks", "Common problems", "Profile › Account mode", "6-digit invite code", "works for 30 minutes", "up to 3", "30% or more: Shoo shows a warning", "80% or more: the page is blocked", "DeepSeek", "iasc.ojk.go.id"]) {
+    for (const s of ["Getting started", "Modes and family", "Warnings and blocks", "Common problems", "Profile › Account mode", "6-digit invite code", "works for 30 minutes", "up to 3", "30% or more: Shoo shows a warning", "80% or more: the page is blocked", "never sent to an AI company", "iasc.ojk.go.id"]) {
       expect(en).toContain(s);
     }
     const id = await (await call("/support?lang=id")).text();
-    for (const s of ["Memulai", "Mode dan keluarga", "Peringatan dan blokir", "Masalah umum", "Profil › Mode akun", "kode undangan 6 angka", "berlaku 30 menit", "maksimal melindungi 3 orang", "80% ke atas: halaman diblokir", "DeepSeek", "iasc.ojk.go.id"]) {
+    for (const s of ["Memulai", "Mode dan keluarga", "Peringatan dan blokir", "Masalah umum", "Profil › Mode akun", "kode undangan 6 angka", "berlaku 30 menit", "maksimal melindungi 3 orang", "80% ke atas: halaman diblokir", "tidak pernah dikirim ke perusahaan AI", "iasc.ojk.go.id"]) {
       expect(id).toContain(s);
     }
     // Guideline 5.1.1(iv): the steps don't make the online check a condition for turning Shoo on.

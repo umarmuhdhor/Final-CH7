@@ -22,7 +22,7 @@ type Section = { h: string; items: string[] };
 const TEXT: Record<"en" | "id", LegalText> = {
   en: {
     title: "Shoo privacy policy",
-    updated: "Last updated: 5 November 2026",
+    updated: "Last updated: 21 November 2026",
     lead: "Shoo blocks scam websites on iPhone and lets a family member (the Guardian) help. We keep as little as we can, only to make that work.",
     sections: [
       { h: "What we store", items: [
@@ -82,24 +82,21 @@ const TEXT: Record<"en" | "id", LegalText> = {
       { h: "Site age check", items: [
         "To check how old a site is, our server asks the public domain registry (RDAP) about the site's domain. We keep only the domain name and its registration date, for up to 7 days, not linked to you or your device.",
       ] },
-      { h: "AI check of suspicious pages", items: [
-        "Shoo uses DeepSeek, a third-party AI provider run by Hangzhou DeepSeek Artificial Intelligence Co., Ltd. in China. This only happens if you allow the online check.",
-        "When a page scores from 30 to 79 and is not a known official site, Shoo's server may send a small summary of it to DeepSeek, with or without a form on the page, to check whether what the page asks for fits that kind of page.",
-        "The summary is only: the site's domain (for example bank-prize.xyz, without the rest of the address), the page title, the names of up to 12 form fields (for example \"OTP\" or \"card number\") with their type (such as text or password), the brands the page mentions, and which of our own checks fired. Emails and runs of 4 or more digits in the title and field names are hidden first.",
-        "We never send the page's text, the full web address, anything you type, or your Shoo name, device ID or token. The page title can still contain what the site itself shows, such as a name. The request comes from our server, so DeepSeek does not see your IP address. We do not store the request or the answer.",
-        "DeepSeek processes data in China. We cannot guarantee how long it keeps this summary, or that it does not use it to improve its models.",
+      { h: "AI", items: [
+        "Shoo does not send your pages, or a summary of them, to any AI company. Suspicious pages are checked by Shoo's own model on our server.",
+        "To help our team review the public blocklist, our server may send an AI provider the domain names waiting for review (for example bank-prize.xyz), with only counts of how often they were flagged and how many families marked them safe. Nothing about you or your device is sent.",
       ] },
       { h: "Service providers", items: [
         "Cloudflare (runs our API and stores page copies and site icons in Cloudflare R2), Supabase (database, and storage of older screenshots and site icons, Singapore region) and Apple (push notifications). They process data only to provide these services.",
         "Public domain registries (RDAP) receive the domain of a site we check, to tell us when it was registered.",
-        "DeepSeek (China) receives the page summary described above.",
+        "An AI provider receives blocklist domain names and counts, as described under AI.",
       ] },
       { h: "Contact", items: [`Questions: ${contactLink}.`] },
     ],
   },
   id: {
     title: "Kebijakan privasi Shoo",
-    updated: "Terakhir diperbarui: 5 November 2026",
+    updated: "Terakhir diperbarui: 21 November 2026",
     lead: "Shoo memblokir situs penipuan di iPhone dan membiarkan anggota keluarga (Guardian) membantu. Kami menyimpan sesedikit mungkin, hanya supaya itu berjalan.",
     sections: [
       { h: "Yang kami simpan", items: [
@@ -159,17 +156,14 @@ const TEXT: Record<"en" | "id", LegalText> = {
       { h: "Pemeriksaan umur situs", items: [
         "Untuk memeriksa umur sebuah situs, server kami bertanya ke registry domain publik (RDAP) tentang domain situs itu. Kami hanya menyimpan nama domain dan tanggal registrasinya, maksimal 7 hari, tidak terhubung ke kamu atau device-mu.",
       ] },
-      { h: "Pemeriksaan AI untuk halaman mencurigakan", items: [
-        "Shoo memakai DeepSeek, penyedia AI pihak ketiga yang dijalankan Hangzhou DeepSeek Artificial Intelligence Co., Ltd. di China. Ini hanya terjadi kalau kamu mengizinkan cek online.",
-        "Kalau skor sebuah halaman 30 sampai 79 dan bukan situs resmi yang dikenal, server Shoo bisa mengirim ringkasan kecil halaman itu ke DeepSeek, baik halamannya punya formulir maupun tidak, untuk memeriksa apakah yang diminta halaman itu wajar untuk jenis halamannya.",
-        "Ringkasannya hanya: domain situs (misalnya bank-hadiah.xyz, tanpa sisa alamatnya), judul halaman, nama maksimal 12 kolom formulir (misalnya \"OTP\" atau \"nomor kartu\") beserta jenisnya (misalnya teks atau password), merek yang disebut halaman, dan pemeriksaan kami yang terpicu. Email dan deretan 4 angka atau lebih di judul dan nama kolom disembunyikan dulu.",
-        "Kami tidak pernah mengirim isi teks halaman, alamat web lengkap, apa pun yang kamu ketik, atau nama Shoo-mu, ID device, maupun token. Judul halaman tetap bisa berisi apa yang ditampilkan situs itu sendiri, misalnya nama. Permintaan dikirim dari server kami, jadi DeepSeek tidak melihat alamat IP-mu. Kami tidak menyimpan permintaan maupun jawabannya.",
-        "DeepSeek memproses data di China. Kami tidak bisa menjamin berapa lama DeepSeek menyimpan ringkasan ini, atau bahwa DeepSeek tidak memakainya untuk memperbaiki modelnya.",
+      { h: "AI", items: [
+        "Shoo tidak mengirim halaman yang kamu buka, atau ringkasannya, ke perusahaan AI mana pun. Halaman mencurigakan dicek oleh model milik Shoo sendiri di server kami.",
+        "Untuk membantu tim kami meninjau daftar blokir publik, server kami bisa mengirim nama domain yang menunggu ditinjau (misalnya bank-hadiah.xyz) ke penyedia AI, hanya dengan jumlah berapa kali domain itu ditandai dan berapa keluarga yang menandainya aman. Tidak ada apa pun tentang kamu atau device-mu yang dikirim.",
       ] },
       { h: "Penyedia layanan", items: [
         "Cloudflare (menjalankan API kami dan menyimpan salinan halaman serta ikon situs di Cloudflare R2), Supabase (database, dan penyimpanan screenshot serta ikon situs lama, region Singapura), dan Apple (notifikasi push). Mereka memproses data hanya untuk menyediakan layanan itu.",
         "Registry domain publik (RDAP) menerima domain situs yang kami periksa, untuk memberi tahu kapan domain itu didaftarkan.",
-        "DeepSeek (China) menerima ringkasan halaman yang dijelaskan di atas.",
+        "Penyedia AI menerima nama domain daftar blokir dan jumlahnya, seperti dijelaskan di bagian AI.",
       ] },
       { h: "Kontak", items: [`Pertanyaan: ${contactLink}.`] },
     ],

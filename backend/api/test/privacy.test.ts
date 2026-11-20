@@ -17,21 +17,22 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
     expect(html).not.toContain("<script");
   });
 
-  it("discloses the AI layer 4 summary, the RDAP domain-age lookup and cache, what is never sent, and unknown retention (#97)", async () => {
+  it("says no page goes to an AI company, discloses the blocklist review, the RDAP domain-age lookup and cache (#97, L4 off 19 Nov 2026)", async () => {
     const en = await (await call("/privacy")).text();
-    for (const s of ["third-party AI provider", "the page title", "form fields", "never send the page's text", "full web address",
-      "anything you type", "your Shoo name", "can still contain what the site itself shows", "cannot guarantee how long", "5 November 2026",
+    for (const s of ["does not send your pages, or a summary of them, to any AI company", "Shoo's own model", "domain names waiting for review",
+      "Nothing about you or your device is sent", "21 November 2026",
       "public domain registry (RDAP)", "registration date, for up to 7 days", "Public domain registries (RDAP) receive",
       "Apart from the short domain-age cache"]) {
       expect(en).toContain(s);
     }
     const id = await (await call("/privacy?lang=id")).text();
-    for (const s of ["penyedia AI pihak ketiga", "judul halaman", "kolom formulir", "tidak pernah mengirim isi teks halaman",
-      "alamat web lengkap", "yang kamu ketik", "nama Shoo-mu", "tetap bisa berisi apa yang ditampilkan situs", "tidak bisa menjamin berapa lama",
-      "5 November 2026", "registry domain publik (RDAP)", "maksimal 7 hari", "Registry domain publik (RDAP) menerima",
+    for (const s of ["ke perusahaan AI mana pun", "model milik Shoo sendiri", "nama domain yang menunggu ditinjau",
+      "Tidak ada apa pun tentang kamu atau device-mu yang dikirim", "21 November 2026", "registry domain publik (RDAP)", "maksimal 7 hari", "Registry domain publik (RDAP) menerima",
       "Selain cache umur domain singkat"]) {
       expect(id).toContain(s);
     }
+    expect(en).not.toContain("DeepSeek");
+    expect(id).not.toContain("DeepSeek");
     expect(en).not.toContain("or any name,");
     expect(en).not.toContain("not stored by us. We keep no other browsing history");
   });
@@ -116,7 +117,7 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
       "This is sent with or without a family.",
       "see a code instead of your name (for example \"User a3f9c2e1\")",
       "A record of each flagged page", "is kept to improve detection until you delete your data.",
-      "that record loses its link to you", "What stays after you delete your data, with no time limit", "We do not clean the text in that kept record", "It is not deleted after 14 days", "Shoo uses DeepSeek", "with or without a form", "up to 20,000 characters", "Profile → About Shoo → Online check", "Apple.a.day.bali@gmail.com", "the time is rounded to the hour",
+      "that record loses its link to you", "What stays after you delete your data, with no time limit", "We do not clean the text in that kept record", "It is not deleted after 14 days", "does not send your pages, or a summary of them, to any AI company", "up to 20,000 characters", "Profile → About Shoo → Online check", "Apple.a.day.bali@gmail.com", "the time is rounded to the hour",
       "For a site shown to be a scam",
       "When you disconnect, the Guardian's decisions in the record are removed.",
       "replaced with random characters",
@@ -130,7 +131,7 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
       "Ini dikirim baik kamu terhubung dalam keluarga maupun tidak.",
       "melihat kode, bukan namamu (misalnya \"User a3f9c2e1\")",
       "Catatan setiap halaman yang ditandai", "disimpan untuk memperbaiki deteksi sampai kamu menghapus datamu.",
-      "catatan itu kehilangan kaitannya denganmu", "Yang tetap ada setelah kamu menghapus datamu, tanpa batas waktu", "Kami tidak membersihkan teks", "Shoo memakai DeepSeek", "baik halamannya punya formulir maupun tidak", "maksimal 20.000 karakter", "Profil → Tentang Shoo → Cek online", "waktunya dibulatkan ke jam",
+      "catatan itu kehilangan kaitannya denganmu", "Yang tetap ada setelah kamu menghapus datamu, tanpa batas waktu", "Kami tidak membersihkan teks", "ke perusahaan AI mana pun", "maksimal 20.000 karakter", "Profil → Tentang Shoo → Cek online", "waktunya dibulatkan ke jam",
       "Untuk situs yang terbukti penipuan",
       "Saat kamu memutus hubungan, keputusan Guardian di catatan itu dihapus.",
       "diganti dengan karakter acak",
