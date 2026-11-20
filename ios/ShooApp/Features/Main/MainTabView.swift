@@ -14,24 +14,6 @@ struct MainTabView: View {
                     .id(screenIdentity)
                     .navigationDestination(for: Route.self, destination: destination)
             }
-            // Option A: after a role or pairing change, Home says what changed. Just above the tab bar (inside this
-            // tab, so its safe area ends at the bar), as wide as Home's cards (Alief, 20 Nov 2026: not over the hero).
-            // The invite banner, when there is one, comes first.
-            .overlay(alignment: .bottom) {
-                if let notice = router.homeNotice, router.inviteNotice == nil, env.launchSplash == .done {
-                    HomeNoticeToast(
-                        notice: notice,
-                        onInvite: notice == .guardianOn && router.canShareInvite ? { router.shareInvite() } : nil,
-                        onClose: { router.homeNotice = nil }
-                    )
-                    .padding(.bottom, 12)
-                    .id(router.homeNoticeCount)
-                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
-                    .environment(\.locale, env.settings.language.locale)
-                }
-            }
-            .animation(StateMotion.enter(reduceMotion: reduceMotion), value: router.homeNoticeCount)
-            .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: router.homeNotice == nil)
             // Figma tab bar: "Shield" bolt-shield and "Activity" list circle.
             .tabItem { Label("Shield", systemImage: "bolt.shield.fill") }
             .tag(AppTab.shield)
@@ -57,6 +39,24 @@ struct MainTabView: View {
             }
         }
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: router.inviteNotice)
+        // Option A: after a role or pairing change, Home says what changed, like an iOS notification banner: 8 pt under
+        // the status bar, over ⇆ and the avatar while it shows, so the hero's shield stays clear (Alief, 20 Nov 2026).
+        // The invite banner, when there is one, comes first.
+        .overlay(alignment: .top) {
+            if let notice = router.homeNotice, router.inviteNotice == nil, env.launchSplash == .done {
+                HomeNoticeToast(
+                    notice: notice,
+                    onInvite: notice == .guardianOn && router.canShareInvite ? { router.shareInvite() } : nil,
+                    onClose: { router.homeNotice = nil }
+                )
+                .padding(.top, 8)
+                .id(router.homeNoticeCount)
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                .environment(\.locale, env.settings.language.locale)
+            }
+        }
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: router.homeNoticeCount)
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: router.homeNotice == nil)
         // A success tap with every change except a disconnect, which stays neutral.
         .sensoryFeedback(trigger: router.homeNoticeCount) { _, _ in
             if case .disconnected = router.homeNotice { return nil }

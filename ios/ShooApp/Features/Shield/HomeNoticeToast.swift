@@ -1,10 +1,11 @@
 import SwiftUI
 
 /// Option A (plan/alief/proposal/pairing-feedback.md, Figma "Alief Revishit Flow" 2364:3633): the toast on Home after a
-/// role or pairing change. A white card 12 pt above the tab bar, as wide as Home's cards (24 pt from the edges), so it
-/// never covers the hero (Alief, 20 Nov 2026); one row: a 44 pt tile in the change's colour, the title with one line
-/// under it, and "Undang" when Home has an invite ready. Closes by itself, with a tap, or swiped down; VoiceOver reads
-/// it once.
+/// role or pairing change. Like an iOS notification banner (Alief, 20 Nov 2026): a solid white card 8 pt under the
+/// status bar, 16 pt from the edges, over ⇆ and the avatar while it shows; compact, so the hero's shield stays clear.
+/// One row: a 40 pt tile in the change's colour, the title with at most two lines under it, and a small "Undang" when
+/// Home has an invite ready. Slides in from the top and leaves upwards (a fade with Reduce Motion); closes by itself,
+/// with a tap, or swiped up; VoiceOver reads it once.
 struct HomeNoticeToast: View {
     let notice: HomeNotice
     /// "Undang": only for "Mode Guardian aktif" while Home's invite code is ready.
@@ -12,6 +13,7 @@ struct HomeNoticeToast: View {
     let onClose: () -> Void
     @Environment(\.locale) private var locale
     @Environment(\.shooReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var drag: CGFloat = 0
 
     /// Long enough to read; longer with a button to reach, and much longer while VoiceOver reads (WCAG 2.2.1).
@@ -23,7 +25,7 @@ struct HomeNoticeToast: View {
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             tile
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: title)
@@ -32,7 +34,8 @@ struct HomeNoticeToast: View {
                 Text(verbatim: line)
                     .onboardingFont(14, relativeTo: .subheadline)
                     .foregroundStyle(HomeTheme.secondaryInk)
-                    .lineLimit(3)
+                    // Two lines keep the banner short; larger text sizes may wrap further (VoiceOver reads it all).
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
             }
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -41,34 +44,35 @@ struct HomeNoticeToast: View {
             if let onInvite {
                 Button(action: onInvite) {
                     Text("Invite")
-                        .onboardingFont(15, weight: .semibold, relativeTo: .subheadline)
+                        .onboardingFont(14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .frame(minHeight: 34)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 30)
                         .background(HomeTheme.action, in: Capsule())
-                        .contentShape(Rectangle().inset(by: -5))
+                        // 44 pt to tap, though it looks smaller.
+                        .contentShape(Rectangle().inset(by: -7))
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(Text("Opens the share sheet with your invite link"))
                 .accessibilityIdentifier("home.notice.invite")
             }
         }
-        .padding(.leading, 16)
-        .padding(.trailing, 14)
-        .padding(.vertical, 14)
+        .padding(.leading, 12)
+        .padding(.trailing, 12)
+        .padding(.vertical, 12)
         // Solid: over Home's cards, the text under it must not show through.
         .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.16), radius: 24, y: 8)
         .environment(\.colorScheme, .light)
-        .padding(.horizontal, 24)
-        .offset(y: max(drag, 0))
+        .padding(.horizontal, 16)
+        .offset(y: min(drag, 0))
         .contentShape(Rectangle())
         .onTapGesture(perform: onClose)
         .gesture(
             DragGesture(minimumDistance: 8)
                 .onChanged { drag = $0.translation.height }
                 .onEnded { value in
-                    if value.translation.height > 24 { onClose() }
+                    if value.translation.height < -24 { onClose() }
                     withAnimation(reduceMotion ? nil : .snappy) { drag = 0 }
                 }
         )
@@ -85,15 +89,15 @@ struct HomeNoticeToast: View {
         }
     }
 
-    /// Figma: a 44 pt tile, 12 pt corners, light-to-dark in the change's colour (the ⇆ tip's tile), a white glyph.
+    /// Figma: a 40 pt tile, 11 pt corners, light-to-dark in the change's colour (the ⇆ tip's tile), a white glyph.
     private var tile: some View {
         Image(systemName: isDisconnect ? "minus" : "checkmark")
-            .font(.system(size: 18, weight: .bold))
+            .font(.system(size: 17, weight: .bold))
             .foregroundStyle(.white)
-            .frame(width: 44, height: 44)
+            .frame(width: 40, height: 40)
             .background(
                 LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom),
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                in: RoundedRectangle(cornerRadius: 11, style: .continuous)
             )
             .accessibilityHidden(true)
     }
@@ -136,17 +140,17 @@ struct HomeNoticeToast: View {
 }
 
 #Preview("Guardian on") {
-    ZStack(alignment: .bottom) {
+    ZStack(alignment: .top) {
         Color.teal.ignoresSafeArea()
         HomeNoticeToast(notice: .guardianOn, onInvite: {}, onClose: {})
-            .padding(.bottom, 12)
+            .padding(.top, 8)
     }
 }
 
 #Preview("Member joined") {
-    ZStack(alignment: .bottom) {
+    ZStack(alignment: .top) {
         Color.teal.ignoresSafeArea()
         HomeNoticeToast(notice: .memberJoined(name: "Ibu"), onInvite: nil, onClose: {})
-            .padding(.bottom, 12)
+            .padding(.top, 8)
     }
 }
