@@ -50,6 +50,13 @@ struct TurnOnExtensionView: View {
 
     private var isWorking: Bool { consent?.isWorking ?? false }
     /// Onboarding with the box on screen and not ticked yet: the buttons look disabled.
+    /// Step 01 names the box, because the button stays grey until it is ticked (Alief, 20 Nov 2026). Without the
+    /// box (answered on an earlier install, or Shield's sheet) it still says "Tap the button below".
+    private func text(for step: ExtensionSetup.Step) -> LocalizedStringKey {
+        if step == .tapTurnOn, consent?.showsCheckbox == true { return "Tick the box below, then tap Turn on the extension." }
+        return step.text
+    }
+
     private var needsConsent: Bool { consent.map { $0.showsCheckbox && !$0.isChecked } ?? false }
     private var showsConsentHint: Bool { consentNudges > 0 && needsConsent }
 
@@ -81,7 +88,7 @@ struct TurnOnExtensionView: View {
                 // Once the switch is known to be on, the setup steps are done; only the callout is left.
                 if !showsStatusNote || nextStep?.opensSafariFirst != true {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                        OnboardingStepRow(number: index + 1, text: step.text)
+                        OnboardingStepRow(number: index + 1, text: text(for: step))
                             .accessibilityIdentifier("extension.step.\(index + 1)")
                     }
                 }

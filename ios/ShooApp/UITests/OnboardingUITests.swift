@@ -73,6 +73,9 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["extension.offHint"].exists)
         let hint = app.descendants(matching: .any)["extension.consentHint"]
         XCTAssertFalse(hint.exists)
+        if #available(iOS 26.2, *) {
+            XCTAssertTrue(app.staticTexts["Tick the box below, then tap Turn on the extension."].exists, app.debugDescription)
+        }
         // Figma 110:4505: grey until ticked. A tap says to tick the box first and does not leave for Settings.
         turnOn.tap()
         XCTAssertTrue(hint.waitForExistence(timeout: 5), app.debugDescription)
@@ -158,6 +161,10 @@ final class OnboardingUITests: XCTestCase {
         let app = launch(extensionActive: false, extensionStatus: "someSitesOnly")
         app.onboardName("Rina")
         XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
+        // The mock answered the data question, so there is no box and step 01 keeps "Tap the button below".
+        if #available(iOS 26.2, *) {
+            XCTAssertTrue(app.staticTexts["Tap the button below to open Safari settings."].exists, app.debugDescription)
+        }
         XCTAssertTrue(app.staticTexts["Tap All Websites and choose Allow, not Ask."].exists, app.debugDescription)
         XCTAssertTrue(app.descendants(matching: .any)["extension.step.4"].exists, app.debugDescription)
         XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5), app.debugDescription)
