@@ -163,11 +163,40 @@ Today:
 - Pribadi Home has only the **unlabelled ⇆ icon**, plus a "Mode Terawasi · Tidak yakin?" card that points the other way (become Protected, p01);
 - the only explainer is the "Mode Guardian · Lindungi orang terdekat" card on **Profile** (m02), which one tap on X hides for good.
 
-The smallest fix, two pieces in `ios/ShooApp/`, no backend:
-1. Show the existing `GuardianModeCard` ("Lindungi orang terdekat" + "Menjadi Guardian") on **Pribadi Home** as well, under the Mode Terawasi card, with the same dismiss rule. People see Home first, not Profile.
-2. Give ⇆ a short text label ("Keluarga") until Family mode has been turned on once. After that it can stay icon-only.
+### Decided (Alief, 20 Nov 2026): the first ⇆ tap opens the choice page
 
-A bigger alternative is a last onboarding question, "Mau jaga keluarga juga?". It costs one more onboarding step, so it is better tested after 1 + 2.
+Alief: *"pas pertama kali dia klik ⇆, arahin dlu ke page yang nampilin pilihan pribadi ama guardian"*.
+
+The **first** time a user taps ⇆ on Home, the mode does not flip. Instead, a page opens that shows the two choices, Pribadi and Guardian, each with a short line on what it means, and the user picks one. Every later ⇆ tap works as it does today (instant switch). This replaces the earlier idea of a "Keluarga" text label on ⇆.
+
+**The page: the existing Mode akun page (m06), reused almost as-is.** It already has the two cards, each with a subtitle and three feature lines ("Lindungi dirimu sendiri" / "Lindungi orang terdekatmu"), the current mode marked "Saat ini", and a "Ganti ke …" button once the other card is picked (`ModePage`, `Features/Profile/ProfilePages.swift:182-300`). Home's "Hubungkan" card already opens it the same way (`router.show(.profilePage(.mode))`, `GuardianHomeView.swift:254`). It opens on the Shield stack, so Back returns to Home.
+
+| Today: Mode akun, Pribadi current (c01) | Mock: first ⇆ tap, Guardian picked |
+|---|---|
+| <img src="img/pairing-feedback/c01-mode-personal.jpg" width="220"> | <img src="img/pairing-feedback/mock-4-first-switch-choice.jpg" width="220"> |
+
+What changes, numbered as in the mock:
+1. **Copy (optional, 1 string EN + ID).** When the page is opened from ⇆, the line under the title becomes "Shoo bisa menjaga kamu saja, atau juga keluargamu. Pilih salah satu." / "Shoo can protect just you, or your family too. Pick one." From Profile it keeps today's "Pilih cara kamu memakai Shoo. Kamu bisa menggantinya kapan saja." The page title stays "Mode akun". Nothing changes in the layout.
+2. **The cards: no change.** Pribadi is marked "Saat ini", and tapping Guardian selects it, as today. "Punya kode undangan?" stays: being protected is a valid third answer to "who is this for?".
+3. **"Ganti ke Guardian" must end on Home.** Today the user stays on Mode akun and only the "Saat ini" chip moves (m07 → m08, row #2 above). On this route that would repeat the test problem on the very first tap. Two behaviour changes:
+   - Opened from ⇆, the button switches at once and goes back to Home. With Option A, it also shows the "Mode Guardian aktif" toast and the code-card highlight (mock 2). Without Option A, it is at least a pop back to Home, where the teal Family Home is the visible change.
+   - The "To be guardian" intro is skipped on this route: the choice page has just explained Guardian, so a second explainer page before anything happens is one too many. This sets `guardianIntroSeen` too. **Recommendation, not yet confirmed by Alief.**
+4. **Back, or "Ganti ke Pribadi" / staying on Pribadi:** nothing changes and the user is back on Home. This still counts as the first time, so the next ⇆ tap flips as today.
+
+**How "first time" is stored:**
+- A new `AppSettings` Bool, e.g. `modeChoiceSeen` (key `settings.modeChoiceSeen`). It lives in UserDefaults on the device, like `guardianIntroSeen` (`App/AppSettings.swift:144-147`). Nothing goes to the server and nothing changes in `contracts/`.
+- It is set to `true` when the page opens from ⇆, whatever the user picks.
+- It is also set whenever the mode is switched any other way (Profile's "Menjadi Guardian" card, Mode akun from Profile). Someone who already chose is never asked again.
+- Existing installs with `guardianIntroSeen == true` count as seen, so a user who already became Guardian is not interrupted.
+- It is cleared in `reset()` (fresh start / delete account) like the other card flags (`AppSettings.swift:290-292`). It is saved and restored with the demo (`DemoReturn`, `AppSettings.swift:190-233`), the same way as `guardianIntroSeen`.
+- Where: `requestFamilyMode()` (`App/AppEnvironment.swift:505`) gets a branch: Pribadi, flag not set, call from ⇆ → set the flag and `router.show(.profilePage(.mode))` with a "from ⇆" note for the copy and the pop-to-Home. Other callers (Profile card, Mode akun) keep today's path.
+- The Activity tab's "Family: Off" toggle (`Features/Main/MainTabView.swift:129-157`) is the same switch in text form. It should follow the same first-time rule, on the Activity stack.
+
+Effort: S. Files: `App/AppSettings.swift`, `App/AppEnvironment.swift`, `Features/Profile/ProfilePages.swift` (`ModePage`: copy + end-on-Home), `Features/Shield/GuardianHomeView.swift` and `Features/Main/MainTabView.swift` (toggle callers), `Resources/Localizable.xcstrings`. The UI tests that flip ⇆ on a fresh install (`becomeGuardian()` in `UITests/UITestSupport.swift:155-161`, used by `LivePairingUITests` and others) need the extra page step.
+
+### Still open (smaller)
+
+Show the existing `GuardianModeCard` ("Lindungi orang terdekat" + "Menjadi Guardian") on **Pribadi Home** as well, under the Mode Terawasi card, with the same dismiss rule. People see Home first, not Profile. Its button could open the same choice page. A bigger alternative is a last onboarding question, "Mau jaga keluarga juga?". It costs one more onboarding step, so it is better tested after the ⇆ change.
 
 ## Not covered
 
