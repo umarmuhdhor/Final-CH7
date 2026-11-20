@@ -93,12 +93,12 @@ struct OnboardingModelTests {
     func model() -> OnboardingModel { OnboardingModel(environment: env) }
 
     /// Pribadi: name, then ON-04 with the box ticked and the first tap (registers).
-    func registeredPersonal() async -> OnboardingModel {
+    func registeredPersonal(consent: Bool = true) async -> OnboardingModel {
         let model = model()
         model.skipSplash()
         model.name = "Rina"
         model.submitName()
-        model.consentChecked = true
+        model.consentChecked = consent
         _ = await model.activateExtension()
         return model
     }
@@ -253,7 +253,10 @@ struct OnboardingModelTests {
         await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
         box.status = .active(lastSeen: Date())
+        // Shoo is on, but ON-04 never moves on by itself: the consent box is seen again, then Next.
         await model.refreshExtensionStatus()
+        #expect(model.step == .turnOnExtension)
+        await model.skipExtensionCheck()
         #expect(model.step == .safariDefault)
         model.continueFromSafariDefault()
         #expect(model.step == .extensionOn)
@@ -278,6 +281,8 @@ struct OnboardingModelTests {
         let model = await registeredPersonal()
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
+        await model.skipExtensionCheck()
+        #expect(model.step == .safariDefault)
         model.goBack()
         #expect(model.step == .turnOnExtension)
         // The screen re-reads the status on appear: Shoo is on, but Back must not bounce forward.
@@ -305,7 +310,25 @@ struct OnboardingModelTests {
         #expect(model.step == .turnOnExtension)
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
+        #expect(model.step == .turnOnExtension)
+        await model.skipExtensionCheck()
         #expect(model.step == .safariDefault)
+    }
+
+    /// Back from Settings with Shoo on, an unticked box can still be ticked before Next: the answer is a yes.
+    @Test func backFromSettingsTheBoxCanStillBeTickedBeforeNext() async {
+        settings.dataConsent = nil
+        let model = await registeredPersonal(consent: false)
+        #expect(settings.dataConsent == .declined)
+        box.status = .active(lastSeen: Date())
+        await model.refreshExtensionStatus()
+        #expect(model.step == .turnOnExtension)
+        #expect(model.showsConsentCheckbox)
+        model.consentChecked = true
+        #expect(settings.dataConsent == .granted)
+        await model.skipExtensionCheck()
+        #expect(model.step == .safariDefault)
+        #expect(settings.dataConsent == .granted)
     }
 
     /// Through ON-04 and Safari Default to the success screen.
@@ -313,6 +336,7 @@ struct OnboardingModelTests {
         model.consentChecked = true
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
+        await model.skipExtensionCheck()
         model.continueFromSafariDefault()
     }
 
