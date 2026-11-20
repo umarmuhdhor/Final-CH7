@@ -24,7 +24,7 @@ describe("guardianPush (R4 §3)", () => {
     await call("/family/join", { method: "POST", token: p.token, json: { code } });
 
     expect(await guardianPush(sql, principal(p, "Mom", "protected"), scan)).toEqual({
-      toDeviceId: g.deviceId, apnsToken: TOKEN, body: "Mom membuka situs yang diblokir · 92%", scanId: scan.id,
+      toDeviceId: g.deviceId, apnsToken: TOKEN, body: "Shoo menutup situs berbahaya yang dibuka Mom. Mom aman.", scanId: scan.id,
       guardianName: "G",
     });
   });
@@ -101,8 +101,9 @@ describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
     await link(g, p);
     await postScan(p.token, "b.example");
     await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } });
-    const own = await postScan(g.token, "c.example");
-    expect((await pushRows()).filter((r) => r.to_device_id === g.deviceId && r.scan_id !== own)).toEqual([]);
+    // The guardian's own scan pushes nobody, not even the guardian itself (guardian-only push, 20 Nov 2026).
+    await postScan(g.token, "c.example");
+    expect((await pushRows()).filter((r) => r.to_device_id === g.deviceId)).toEqual([]);
     // A later protected scan of another site does push: the checks above were not just too early.
     const later = await postScan(p.token, "d.example");
     expect((await pushRows()).filter((r) => r.scan_id === later)).toEqual([{ to_device_id: g.deviceId, scan_id: later, result: "logged" }]);

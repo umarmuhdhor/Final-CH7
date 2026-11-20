@@ -186,10 +186,11 @@ Nothing is stored for the card: it is counted from live scans, so a deleted devi
 
 ### Push payloads (APNs)
 ```json
-{ "aps": { "alert": { "body": "Mom hit a blocked site · 92%" } }, "scanId": "…" }
-{ "aps": { "alert": { "body": "Mom opened a suspicious site · 41%" } }, "scanId": "…" }
+{ "aps": { "alert": { "body": "Shoo closed a dangerous site Mom opened. Mom is safe." } }, "scanId": "…" }
+{ "aps": { "alert": { "body": "Be careful: Mom opened a suspicious site." } }, "scanId": "…" }
 ```
 Text is localized to the **guardian's** language (`PATCH /devices/me {language}`). The backend may add `aps.sound: "default"`.
+Only the Guardian of a Protected device gets a scan push; no device gets a push about its own scans. The body never contains the URL, the domain or the score (usability test 2026-11-20, `backend/API.md` "Push notification").
 Tap → open Detail for `scanId` (GD-06).
 
 ## AI (Team AI)
