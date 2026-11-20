@@ -223,8 +223,8 @@ test("analyze: 3-day-old domain -> new_domain 30, layer 3, bilingual label, no e
     assert.equal(s.layer, 3);
     assert.equal(s.weight, 30);
     assert.equal("evidence" in s, false);
-    assert.equal(s.label.en, "Domain age 3 days");
-    assert.equal(s.label.id, "Umur domain 3 hari");
+    assert.equal(s.label.en, "This site was made 3 days ago");
+    assert.equal(s.label.id, "Situs ini baru dibuat 3 hari lalu");
     assert.equal(s.labelSimple.en, "This site was made 3 days ago");
     assert.equal(s.labelSimple.id, "Situs ini baru dibuat 3 hari lalu");
 });
@@ -232,7 +232,7 @@ test("analyze: 3-day-old domain -> new_domain 30, layer 3, bilingual label, no e
 test("analyze: singular label for 1 day", async () => {
     const f = mockFetch({ rdap: () => json({ events: [{ eventAction: "registration", eventDate: iso(1) }] }) });
     const s = (await (await post(createApp({ fetch: f, now: () => NOW }), body())).json()).signals.find((x) => x.id === "new_domain");
-    assert.equal(s.label.en, "Domain age 1 day");
+    assert.equal(s.label.en, "This site was made 1 day ago");
     assert.equal(s.labelSimple.en, "This site was made 1 day ago");
 });
 

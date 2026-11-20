@@ -224,7 +224,7 @@ test("brand form: still one brand_logo_offsite when a logo alt matches too; the 
     const signals = analyzeSnapshot(page(SCAM_URL, MS_FIELDS(), { imageAlts: ["Logo BCA"] }));
     const found = brandSignals(signals);
     assert.equal(found.length, 1);
-    assert.ok(found[0].label.en.includes("sign-in form") && found[0].label.en.includes("Microsoft"));
+    assert.ok(found[0].label.en.includes("sign-in page") && found[0].label.en.includes("Microsoft"));
 });
 
 test("brand form: full weight even when no asks_* signal fired (a copied form is not just words)", () => {

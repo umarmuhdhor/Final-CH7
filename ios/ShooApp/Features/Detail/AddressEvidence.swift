@@ -84,7 +84,7 @@ struct AddressEvidence: View {
             Image(systemName: "checkmark.seal")
                 .font(.system(size: 14, weight: .semibold))
                 .accessibilityHidden(true)
-            Text("Real: \(official)")
+            Text("Real address: \(official)")
                 .activityFont(15, .semibold)
                 .lineLimit(2)
                 // Keep both ends of a long address readable; the middle goes first.
@@ -100,15 +100,15 @@ struct AddressEvidence: View {
         switch kind {
         case .newDomain:
             if let days = Self.days(in: reasonText) {
-                days == 1 ? Text("Address is 1 day old") : Text("Address is \(days) days old")
+                days == 1 ? Text("This site is only 1 day old") : Text("This site is only \(days) days old")
             } else {
-                Text("Address made recently")
+                Text("This site was made recently")
             }
         case .knownScam: Text("On a scam list")
         case .cheapEnding: Text("Cheap ending often used by scam sites")
         case .lookalikeDomain: Text("Not the brand's official address")
-        case .brandInAddress: Text("Brand name with extra words")
-        case .suspiciousLink: Text("The link itself looks like a scam link")
+        case .brandInAddress: Text("Brand name with extra words glued on")
+        case .suspiciousLink: Text("The address itself looks like a scam address")
         default: Text("Something is off with this address")
         }
     }

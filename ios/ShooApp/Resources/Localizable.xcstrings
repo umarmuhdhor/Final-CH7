@@ -4443,12 +4443,12 @@
         }
       }
     },
-    "Signal:" : {
+    "Sign:" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sinyal:"
+            "value" : "Jenis tanda:"
           }
         }
       }
@@ -4476,13 +4476,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cheap domain ending"
+            "value" : "Cheap address ending"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Akhiran domain murah"
+            "value" : "Akhiran alamat murah"
           }
         }
       }
@@ -4527,13 +4527,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Known scam list"
+            "value" : "Known scam"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Daftar penipuan"
+            "value" : "Penipuan yang sudah dikenal"
           }
         }
       }
@@ -4544,13 +4544,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Look-alike address"
+            "value" : "Copycat address"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alamat mirip"
+            "value" : "Alamat tiruan"
           }
         }
       }
@@ -4561,13 +4561,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Domain age"
+            "value" : "New site"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Umur domain"
+            "value" : "Situs baru"
           }
         }
       }
@@ -4578,13 +4578,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Other signal"
+            "value" : "Other sign"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sinyal lain"
+            "value" : "Tanda lain"
           }
         }
       }
@@ -4595,13 +4595,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sensitive form"
+            "value" : "Asks for private data"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Formulir sensitif"
+            "value" : "Meminta data rahasia"
           }
         }
       }
@@ -4612,13 +4612,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Suspicious link"
+            "value" : "Suspicious address"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tautan mencurigakan"
+            "value" : "Alamat mencurigakan"
           }
         }
       }
@@ -4646,13 +4646,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Urgent wording"
+            "value" : "Rushing words"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bahasa mendesak"
+            "value" : "Kalimat terburu-buru"
           }
         }
       }
@@ -7110,32 +7110,32 @@
         }
       }
     },
-    "Address is 1 day old" : {
+    "This site is only 1 day old" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Umur alamat 1 hari"
+            "value" : "Situs ini baru berumur 1 hari"
           }
         }
       }
     },
-    "Address is %lld days old" : {
+    "This site is only %lld days old" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Umur alamat %lld hari"
+            "value" : "Situs ini baru berumur %lld hari"
           }
         }
       }
     },
-    "Address made recently" : {
+    "This site was made recently" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alamat baru dibuat"
+            "value" : "Situs ini baru dibuat"
           }
         }
       }
@@ -7165,37 +7165,37 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bukan alamat resmi brand ini"
+            "value" : "Bukan alamat resmi merek ini"
           }
         }
       }
     },
-    "Real: %@" : {
+    "Real address: %@" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yang asli: %@"
+            "value" : "Alamat asli: %@"
           }
         }
       }
     },
-    "Brand name with extra words" : {
+    "Brand name with extra words glued on" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nama brand ditambah kata lain"
+            "value" : "Nama merek disambung kata lain"
           }
         }
       }
     },
-    "The link itself looks like a scam link" : {
+    "The address itself looks like a scam address" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Link-nya sendiri mirip link penipuan"
+            "value" : "Alamatnya sendiri mirip alamat penipu"
           }
         }
       }

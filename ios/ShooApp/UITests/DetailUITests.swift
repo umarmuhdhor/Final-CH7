@@ -185,7 +185,7 @@ final class DetailUITests: XCTestCase {
         let address = app.descendants(matching: .any)["detail.address.0"]
         XCTAssertTrue(address.waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertTrue(address.label.contains("bca-verifikasi.site"), address.label)
-        XCTAssertTrue(address.label.contains("Real: bca.co.id"), address.label)
+        XCTAssertTrue(address.label.contains("Real address: bca.co.id"), address.label)
         // new_domain has no `host`: no real-address line on its card.
         let age = app.descendants(matching: .any)["detail.address.1"]
         XCTAssertTrue(age.waitForExistence(timeout: 5), app.debugDescription)

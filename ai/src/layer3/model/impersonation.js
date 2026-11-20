@@ -470,7 +470,7 @@ export function buildModelSignal(result) {
         id: MODEL_SIGNAL_ID,
         layer: 3,
         weight: MODEL_WEIGHTS[result.tier],
-        label: { en: "Page looks like a fake copy of another site", id: "Halaman ini mirip tiruan situs lain" },
+        label: { en: "This page looks like a copy of another site", id: "Tampilan halaman ini seperti tiruan situs lain" },
         labelSimple: { en: "Looks like a fake site", id: "Terlihat seperti situs palsu" },
     };
 }

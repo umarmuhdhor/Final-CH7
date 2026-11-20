@@ -14,31 +14,31 @@ export const WEIGHTS = Object.freeze({
 // label = Guardian wording. labelSimple = Protected (parent) wording: short, no technical words.
 const TEXT = {
     asks_pin: {
-        label: { en: "Form asks for a PIN or passcode", id: "Form meminta PIN atau kode sandi" },
+        label: { en: "Form asks for a PIN or passcode", id: "Formulir meminta PIN atau kode sandi" },
         labelSimple: { en: "Asks for your secret PIN", id: "Meminta PIN rahasia kamu" },
     },
     asks_otp: {
-        label: { en: "Form asks for a one-time code (OTP)", id: "Form meminta kode sekali pakai (OTP)" },
+        label: { en: "Form asks for a one-time code (OTP)", id: "Formulir meminta kode sekali pakai (OTP)" },
         labelSimple: { en: "Asks for the code sent to your phone", id: "Meminta kode yang dikirim ke HP kamu" },
     },
     asks_password: {
-        label: { en: "Form asks for a password on an unofficial site", id: "Form meminta kata sandi di situs tidak resmi" },
+        label: { en: "Form asks for a password on an unofficial site", id: "Formulir meminta kata sandi di situs tidak resmi" },
         labelSimple: { en: "Asks for your password on a site that is not official", id: "Meminta kata sandi kamu di situs yang tidak resmi" },
     },
     asks_card: {
-        label: { en: "Form asks for a card number", id: "Form meminta nomor kartu" },
+        label: { en: "Form asks for a card number", id: "Formulir meminta nomor kartu" },
         labelSimple: { en: "Asks for your bank card number", id: "Meminta nomor kartu bank kamu" },
     },
     asks_cvv: {
-        label: { en: "Form asks for the card security code (CVV)", id: "Form meminta kode keamanan kartu (CVV)" },
+        label: { en: "Form asks for the card security code (CVV)", id: "Formulir meminta kode keamanan kartu (CVV)" },
         labelSimple: { en: "Asks for the 3 digits on the back of your card", id: "Meminta 3 angka di belakang kartu kamu" },
     },
     asks_ktp: {
-        label: { en: "Form asks for a KTP number", id: "Form meminta nomor KTP" },
+        label: { en: "Form asks for a KTP number", id: "Formulir meminta nomor KTP" },
         labelSimple: { en: "Asks for your ID card number", id: "Meminta nomor KTP kamu" },
     },
     asks_selfie_ktp: {
-        label: { en: "Form asks for a selfie with KTP", id: "Form meminta selfie dengan KTP" },
+        label: { en: "Form asks for a photo of you holding your ID card", id: "Formulir meminta foto selfie sambil memegang KTP" },
         labelSimple: { en: "Asks for a photo of you holding your ID card", id: "Meminta foto kamu sambil memegang KTP" },
     },
 };
@@ -66,7 +66,7 @@ export function buildUrgentSignal(phrase, evidence, { quiet = false } = {}) {
         id: "urgent_language",
         layer: 3,
         weight: (quiet ? QUIET_CONTENT_WEIGHTS : CONTENT_WEIGHTS).urgent_language,
-        label: { en: `Urgent language: "${phrase}"`, id: `Kalimat mendesak: "${phrase}"` },
+        label: { en: `Words that rush you: "${phrase}"`, id: `Kalimat yang membuat buru-buru: "${phrase}"` },
         labelSimple: { en: "Rushes you to act fast", id: "Memaksa kamu cepat-cepat bertindak" },
         evidence,
     };
@@ -96,7 +96,7 @@ export function buildBrandFormSignal(brandName) {
         id: "brand_logo_offsite",
         layer: 3,
         weight: CONTENT_WEIGHTS.brand_logo_offsite,
-        label: { en: `${brandName} sign-in form copied on an unofficial site`, id: `Form login ${brandName} ditiru di situs tidak resmi` },
+        label: { en: `${brandName}'s sign-in page copied on a site ${brandName} does not own`, id: `Halaman masuk ${brandName} ditiru di situs yang bukan milik ${brandName}` },
         labelSimple: { en: `Pretends to be ${brandName}`, id: `Berpura-pura menjadi ${brandName}` },
     };
 }
@@ -117,7 +117,7 @@ export function buildNewDomainSignal(days) {
         id: "new_domain",
         layer: 3,
         weight,
-        label: { en: `Domain age ${days} ${days === 1 ? "day" : "days"}`, id: `Umur domain ${days} hari` },
+        label: { en: days === 1 ? "This site was made 1 day ago" : `This site was made ${days} days ago`, id: `Situs ini baru dibuat ${days} hari lalu` },
         labelSimple: { en: days === 1 ? "This site was made 1 day ago" : `This site was made ${days} days ago`, id: `Situs ini baru dibuat ${days} hari lalu` },
         // no `evidence`: the extension highlights it on the page, and an age is not page text (contracts/fixtures)
     };

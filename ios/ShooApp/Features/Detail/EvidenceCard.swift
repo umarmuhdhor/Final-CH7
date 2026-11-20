@@ -503,7 +503,7 @@ struct EvidenceCard: View {
                     .figmaLineHeight(22, relativeTo: .body)
                     .foregroundStyle(DetailStyle.title)
                     .fixedSize(horizontal: false, vertical: true)
-                (Text("Signal:").foregroundStyle(DetailStyle.secondary) + Text(verbatim: " ")
+                (Text("Sign:").foregroundStyle(DetailStyle.secondary) + Text(verbatim: " ")
                     + Text(verbatim: L10n.string(reason.kind.title, language: language))
                     .foregroundStyle(DetailStyle.title))
                     .activityFont(17, rounded: true)

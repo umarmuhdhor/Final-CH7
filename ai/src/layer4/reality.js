@@ -116,7 +116,7 @@ function buildSignal(evidence, score) {
         id: "unreasonable_request",
         layer: 4,
         weight: Math.max(WEIGHT, Math.ceil(GATE_BLOCK_SCORE - score)),
-        label: { en: "The data requested does not fit this kind of page", id: "Data yang diminta tidak wajar untuk jenis halaman ini" },
+        label: { en: "A page like this does not normally ask for that", id: "Halaman seperti ini biasanya tidak meminta data itu" },
         labelSimple: { en: "A real page of this kind would not ask for this", id: "Halaman asli seperti ini tidak akan meminta ini" },
         ...(evidence ? { evidence } : {}),
     };

@@ -102,8 +102,8 @@ struct AddressEvidenceTests {
     }
 
     @Test func officialAddressLineInBothLanguages() {
-        #expect(L10n.string("Real: \("bca.co.id")", language: .english) == "Real: bca.co.id")
-        #expect(L10n.string("Real: \("bca.co.id")", language: .indonesian) == "Yang asli: bca.co.id")
+        #expect(L10n.string("Real address: \("bca.co.id")", language: .english) == "Real address: bca.co.id")
+        #expect(L10n.string("Real address: \("bca.co.id")", language: .indonesian) == "Alamat asli: bca.co.id")
     }
 
     @Test func officialLineOnlyWhenTheDetectorNamesIt() {
