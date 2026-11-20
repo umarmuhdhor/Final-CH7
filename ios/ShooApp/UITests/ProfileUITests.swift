@@ -361,6 +361,10 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(title.label.contains("Budi"), title.label)
         app.buttons["protectedBy.continue"].tap()
+        // Option A: back on Home, which says who this phone is now connected with.
+        let notice = app.descendants(matching: .any)["home.notice.text"].firstMatch
+        XCTAssertTrue(notice.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(notice.label.contains("Budi"), notice.label)
 
         let profile = app.buttons["profileButton"]
         XCTAssertTrue(profile.waitForExistence(timeout: 10), app.debugDescription)
