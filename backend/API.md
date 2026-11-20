@@ -233,8 +233,8 @@ uses to decide which pushes go out (see [Push notification](#push-notification) 
 
 | Key | Figma row | Effect |
 |---|---|---|
-| `warning` | Situs berbahaya | Guardian: push to this device for its own `warning` scans |
-| `blocked` | Situs diblokir | Guardian: push to this device for its own `blocked` scans |
+| `warning` | Situs berbahaya | *Unused since 20 Nov 2026* (no push for a device's own scans). Still read and saved, so older apps keep working |
+| `blocked` | Situs diblokir | *Unused since 20 Nov 2026*, same as `warning` |
 | `family` | Aktivitas orang dilindungi | Guardian: push for members' scans (together with the per-member "Kabari saya") |
 | `protectionOff` | Perlindungan mati | Guardian: one push when a member's extension has not reported for 24 h |
 | `weeklySummary` | Ringkasan mingguan | Monday from 08:00 local: counts of the last 7 days |
@@ -1043,28 +1043,27 @@ Not an endpoint: `POST /scans` from a Protected device sends its Guardian this A
 from the Worker over HTTP/2 (GD-06):
 
 ```json
-{ "aps": { "alert": { "body": "Mom hit a blocked site · 92%" }, "sound": "default" }, "scanId": "6f1c2a4e-…" }
+{ "aps": { "alert": { "body": "Shoo menutup situs berbahaya yang dibuka Mom. Mom aman." }, "sound": "default" }, "scanId": "6f1c2a4e-…" }
 ```
 
-- The text is in the Guardian's `language` and never contains the URL:
+- The text is in the Guardian's `language`: one short sentence of what happened (a blocked push adds
+  that the member is safe). A warning starts with the level word the in-page popup uses. It never
+  contains the URL, the domain or the score (usability test 20 Nov 2026,
+  `plan/alief/proposal/push-copy.md`, option A, shortened by Alief the same day). The level comes
+  from `status` + `score`: below 50 Waspada, from 50 Risiko tinggi (the default second popup tier,
+  contracts/README.md), `blocked`:
 
-  | Status | `en` | `id` |
+  | Level | `en` | `id` |
   |---|---|---|
-  | `blocked` | `Mom hit a blocked site · 92%` | `Mom membuka situs yang diblokir · 92%` |
-  | `warning` | `Mom opened a suspicious site · 41%` | `Mom membuka situs mencurigakan · 41%` |
+  | `warning` < 50 | `Be careful: Mom opened a suspicious site.` | `Waspada: Mom membuka situs mencurigakan.` |
+  | `warning` ≥ 50 | `High risk: Mom opened a site that may be a scam.` | `Risiko tinggi: Mom membuka situs yang mungkin penipuan.` |
+  | `blocked` | `Shoo closed a dangerous site Mom opened. Mom is safe.` | `Shoo menutup situs berbahaya yang dibuka Mom. Mom aman.` |
 
-- No push for a Guardian's own scans, when the Guardian has no APNs token, or (*PF-01 proposed*) when
-  the Guardian turned "Kabari saya" off for that member or `notifications.family` off.
-- *PF-01 proposed:* a Guardian device also gets a push for its own scan when its
-  `notifications.blocked` / `notifications.warning` is on (default on). A Protected device never
-  gets a push for its own scan: it already sees the block page, and its Guardian gets the push. It carries the `scanId`;
-  the body never names the site.
-
-  | Status | `en` | `id` |
-  |---|---|---|
-  | `blocked` | `Shoo blocked a dangerous site · 92%` | `Shoo memblokir situs berbahaya · 92%` |
-  | `warning` | `Shoo warned you about a risky site · 41%` | `Shoo memperingatkanmu soal situs berisiko · 41%` |
-
+- Only the Guardian of a Protected device gets a scan push. No device gets a push about its own
+  scan (Alief, 20 Nov 2026): not a Guardian or Personal device for the sites it opens (it already saw
+  the popup or the block page), and not a Protected device (its Guardian gets the push).
+- No push when the Guardian has no APNs token, or (*PF-01 proposed*) when the Guardian turned
+  "Kabari saya" off for that member or `notifications.family` off.
 - *PF-01 proposed:* quiet hours of the receiving device hold `warning` pushes (they are not sent
   later); `blocked` pushes always go out.
 - Tapping it opens Detail for `scanId`.

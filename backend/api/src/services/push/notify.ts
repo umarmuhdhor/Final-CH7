@@ -1,6 +1,6 @@
 import type { Sql } from "postgres";
 import type { Language, Principal } from "../../env";
-import { ownPushText, pushText } from "./messages";
+import { pushText } from "./messages";
 import { isQuiet } from "./quiet";
 import type { PushMessage } from "./sender";
 
@@ -62,26 +62,5 @@ export async function guardianPush(sql: Sql, owner: Principal, scan: Scan, now =
     body: pushText(g.language, scan.status, owner.name, scan.score),
     scanId: scan.id,
     guardianName: g.name,
-  };
-}
-
-/**
- * PF-01 "Situs berbahaya" / "Situs diblokir": a push to the device about its own scan, when that
- * switch is on. Same quiet hours and cap as the guardian push. Guardian devices only: a protected
- * device already sees the block page, and its guardian gets the push (guardianPush).
- */
-export async function ownPush(sql: Sql, owner: Principal, scan: Scan, now = new Date()): Promise<PushMessage | undefined> {
-  if (owner.mode !== "guardian") return undefined;
-  const [d] = await sql<Target[]>`
-    select ${targetColumns(sql)}
-    from devices d
-    where d.id = ${owner.deviceId}
-      and (case when ${scan.status} = 'blocked' then d.notify_blocked else d.notify_warning end)`;
-  if (!d || !allowed(d, scan, now)) return undefined;
-  return {
-    toDeviceId: d.id,
-    apnsToken: d.apnsToken!,
-    body: ownPushText(d.language, scan.status, scan.score),
-    scanId: scan.id,
   };
 }
