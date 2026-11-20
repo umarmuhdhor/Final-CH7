@@ -440,31 +440,13 @@ private struct MembersRow: View {
 
 private struct MemberCell: View {
     let member: FamilyMember
-    /// Just joined (Option A, Figma 2364:4656): a green ring that pulses once and "Baru terhubung" under the name.
+    /// Just joined (Option A, Figma 2364:4656): "Baru terhubung" under the name. No ring round the avatar (Alief).
     var isNew = false
-    @Environment(\.shooReduceMotion) private var reduceMotion
-    @State private var ringOut = false
 
     var body: some View {
         VStack(spacing: 8) {
             // Figma "Avatar": 44 pt, the member's picked avatar (the name is read out below it).
             AvatarView(id: member.avatarId, size: 44)
-                .overlay {
-                    if isNew {
-                        Circle()
-                            .strokeBorder(HomeTheme.success, lineWidth: 3)
-                            .padding(-5)
-                            .background(
-                                Circle()
-                                    .stroke(HomeTheme.success.opacity(ringOut ? 0 : 0.45), lineWidth: 8)
-                                    .padding(ringOut && !reduceMotion ? -14 : -6)
-                            )
-                            .onAppear {
-                                withAnimation(.easeOut(duration: 1.2).delay(0.3)) { ringOut = true }
-                            }
-                            .transition(.opacity)
-                    }
-                }
                 .overlay(alignment: .bottomTrailing) {
                     // Figma: 12 pt dot, 1 pt white ring outside, flush with the avatar's bottom right.
                     Circle()
@@ -782,7 +764,7 @@ private struct DecisionPressStyle: ButtonStyle {
 
 /// Figma "Kode Undangan" (1382:10500): QR, the code with how long it lasts (GD-04). Under it "Bagikan" is the main
 /// button, full width, and "Salin kode" a text button (Figma 2364:3800, Option A). "Undang" on the
-/// "Mode Guardian aktif" toast opens the same iOS share sheet; the card and "Bagikan" glow once after the switch.
+/// "Mode Guardian aktif" toast opens the same iOS share sheet. No glow on the card or "Bagikan" (Alief, 20 Nov 2026).
 private struct InviteCodeCard: View {
     /// The member who joined while the code was on screen (`nil`: someone did, but not known who).
     let onJoined: (FamilyMember?) -> Void
@@ -792,8 +774,6 @@ private struct InviteCodeCard: View {
     @State private var model: FamilyCodeModel
     /// "Undang" on the toast: the invite text for the iOS share sheet.
     @State private var shareText: String?
-    /// The one-time glow after Family mode turned on.
-    @State private var glows = false
 
     init(repository: any ShooRepository, onJoined: @escaping (FamilyMember?) -> Void) {
         _model = State(initialValue: FamilyCodeModel(repository: repository))
@@ -813,7 +793,6 @@ private struct InviteCodeCard: View {
             }
             .padding(17)
             .homeCard()
-            .overlay(glow(cornerRadius: 20))
             if case .ready(let code) = model.codeState, model.inviteURL != nil {
                 actions(code)
             }
@@ -835,11 +814,6 @@ private struct InviteCodeCard: View {
                 InviteActivityView(text: shareText)
                     .presentationDetents([.medium, .large])
             }
-        }
-        .onChange(of: env.router.invitesGlow, initial: true) { _, glow in
-            guard glow else { return }
-            env.router.invitesGlow = false
-            glowOnce()
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.invite")
@@ -876,7 +850,6 @@ private struct InviteCodeCard: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(HomeTheme.action, in: Capsule())
-                    .overlay(glow(cornerRadius: 25))
                     .contentShape(Capsule())
             }
             .accessibilityIdentifier("family.invite")
@@ -897,27 +870,6 @@ private struct InviteCodeCard: View {
             .accessibilityIdentifier("familyCode.copy")
         }
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.3), value: model.copied)
-    }
-
-    /// Figma "Kartu kode bersinar sekali": a teal ring that brightens and fades, once. A plain fade with Reduce Motion.
-    private func glow(cornerRadius: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .strokeBorder(Color(red: 0.05, green: 0.62, blue: 0.60), lineWidth: 3)
-            .shadow(color: Color(red: 0.05, green: 0.62, blue: 0.60).opacity(0.5), radius: glows && !reduceMotion ? 10 : 0)
-            .padding(-4)
-            .opacity(glows ? 1 : 0)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
-
-    private func glowOnce() {
-        Task {
-            // After the toast has slid in, so the eye goes from the toast to the card.
-            try? await Task.sleep(for: .milliseconds(450))
-            withAnimation(.easeOut(duration: 0.35)) { glows = true }
-            try? await Task.sleep(for: .seconds(2))
-            withAnimation(.easeIn(duration: 0.8)) { glows = false }
-        }
     }
 
     @ViewBuilder

@@ -85,9 +85,7 @@ final class Router {
     var canShareInvite = false
     /// "Undang" on the toast: Home's invite card opens the iOS share sheet.
     private(set) var inviteShareRequests = 0
-    /// Family mode just turned on: the invite card and "Bagikan" glow once.
-    var invitesGlow = false
-    /// Someone just joined: their avatar on Home gets a ring and "Baru terhubung" once.
+    /// Someone just joined: "Baru terhubung" under their avatar on Home, once (no ring: Alief, 20 Nov 2026).
     var newMemberId: String?
     /// Shield's "Turn on" sheet (PR-04). Here, not in the view, so a link can close it first.
     var isTurnOnPresented = false
@@ -224,7 +222,6 @@ final class Router {
     func show(_ notice: HomeNotice) {
         homeNotice = notice
         homeNoticeCount += 1
-        invitesGlow = notice == .guardianOn
     }
 
     /// "Undang" on the "Mode Guardian aktif" toast.

@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// Option A (plan/alief/proposal/pairing-feedback.md, Figma "Alief Revishit Flow" 2364:3633): the toast on Home after a
-/// role or pairing change. A white card 12 pt under the top bar, so it never covers ⇆ or the avatar; one row: a 44 pt
-/// tile in the change's colour, the title with one line under it, and "Undang" when Home has an invite ready.
-/// Closes by itself, with a tap, or swiped up; VoiceOver reads it once.
+/// role or pairing change. A white card 12 pt above the tab bar, as wide as Home's cards (24 pt from the edges), so it
+/// never covers the hero (Alief, 20 Nov 2026); one row: a 44 pt tile in the change's colour, the title with one line
+/// under it, and "Undang" when Home has an invite ready. Closes by itself, with a tap, or swiped down; VoiceOver reads
+/// it once.
 struct HomeNoticeToast: View {
     let notice: HomeNotice
     /// "Undang": only for "Mode Guardian aktif" while Home's invite code is ready.
@@ -55,19 +56,19 @@ struct HomeNoticeToast: View {
         .padding(.leading, 16)
         .padding(.trailing, 14)
         .padding(.vertical, 14)
-        // Near solid, like "Notif undangan", so the text keeps its contrast over every hero.
-        .background(Color.white.opacity(0.97), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        // Solid: over Home's cards, the text under it must not show through.
+        .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.16), radius: 24, y: 8)
         .environment(\.colorScheme, .light)
-        .padding(.horizontal, 16)
-        .offset(y: min(drag, 0))
+        .padding(.horizontal, 24)
+        .offset(y: max(drag, 0))
         .contentShape(Rectangle())
         .onTapGesture(perform: onClose)
         .gesture(
             DragGesture(minimumDistance: 8)
                 .onChanged { drag = $0.translation.height }
                 .onEnded { value in
-                    if value.translation.height < -24 { onClose() }
+                    if value.translation.height > 24 { onClose() }
                     withAnimation(reduceMotion ? nil : .snappy) { drag = 0 }
                 }
         )
@@ -135,17 +136,17 @@ struct HomeNoticeToast: View {
 }
 
 #Preview("Guardian on") {
-    ZStack(alignment: .top) {
+    ZStack(alignment: .bottom) {
         Color.teal.ignoresSafeArea()
         HomeNoticeToast(notice: .guardianOn, onInvite: {}, onClose: {})
-            .padding(.top, 66)
+            .padding(.bottom, 12)
     }
 }
 
 #Preview("Member joined") {
-    ZStack(alignment: .top) {
+    ZStack(alignment: .bottom) {
         Color.teal.ignoresSafeArea()
         HomeNoticeToast(notice: .memberJoined(name: "Ibu"), onInvite: nil, onClose: {})
-            .padding(.top, 66)
+            .padding(.bottom, 12)
     }
 }
