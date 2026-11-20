@@ -2,9 +2,10 @@ import AVFoundation
 import SwiftUI
 
 /// ON-04 inside onboarding: the online check question as a checkbox (Figma "Persetujuan · Checkbox", 1328:13421).
-/// Turn on works either way (Guideline 5.1.1(iv)); `prepare` saves the box as the answer (unticked = no online
-/// check; Profile › Online check changes it later) and registers the device. The Figma layout is unchanged.
-/// Without the checkbox (answered before, e.g. on the invite path's consent step) nothing changes (fase 27d K6).
+/// Figma "Aktifkan Ekstensi" (110:4505): the button stays grey until the box is ticked, and a tap on the grey
+/// button says to tick it first (Alief, 20 Nov 2026). This brings back the lock 5dbec833 removed for App Review
+/// 5.1.1(iv) (#616), on Alief's decision. `prepare` saves the answer and registers the device. Without the
+/// checkbox (answered before, e.g. on the invite path's consent step) the buttons are on (fase 27d K6).
 struct OnboardingExtensionConsent {
     @Binding var isChecked: Bool
     var showsCheckbox = true
@@ -40,12 +41,24 @@ struct TurnOnExtensionView: View {
     /// back and Shoo is still not on (#135).
     @State private var leftForSettings = false
     @State private var cameBack = false
+    /// Taps on the grey button before the box was ticked; "tick the box first" shows under the box from the first.
+    @State private var consentNudges = 0
 
     /// A heartbeat can land a moment after the user is back from Safari: look again for this long (#135).
     private static let recheck = (times: 10, every: Duration.seconds(2))
     private let steps = ExtensionSetup.steps(for: ProcessInfo.processInfo.operatingSystemVersion)
 
     private var isWorking: Bool { consent?.isWorking ?? false }
+    /// Onboarding with the box on screen and not ticked yet: the buttons look disabled.
+    /// Step 01 names the box, because the button stays grey until it is ticked (Alief, 20 Nov 2026). Without the
+    /// box (answered on an earlier install, or Shield's sheet) it still says "Tap the button below".
+    private func text(for step: ExtensionSetup.Step) -> LocalizedStringKey {
+        if step == .tapTurnOn, consent?.showsCheckbox == true { return "Tick the box below, then tap Turn on the extension." }
+        return step.text
+    }
+
+    private var needsConsent: Bool { consent.map { $0.showsCheckbox && !$0.isChecked } ?? false }
+    private var showsConsentHint: Bool { consentNudges > 0 && needsConsent }
 
     var body: some View {
         OnboardingFormPage(
@@ -53,12 +66,14 @@ struct TurnOnExtensionView: View {
             onBack: onBack
         ) {
             // Figma "image 1" at y 72.5, the headline right under it at 373.
-            OnboardingHeroImage(name: "ExtensionIllustration", top: 10.5, bottom: 0.5)
+            // Figma 110:4440 has it 10.5 lower; with four steps that is the room step 04 needs above the box.
+            OnboardingHeroImage(name: "ExtensionIllustration", top: 0, bottom: 0.5)
         } content: {
-            // Figma "stack": 16 between rows, 40 under the headline.
-            VStack(alignment: .leading, spacing: 16) {
+            // Figma "stack" had 16 between rows and 40 under the headline for three steps; 12 and 20 fit all four
+            // above the consent box on a 402 × 874 iPhone without scrolling (Alief, 20 Nov 2026).
+            VStack(alignment: .leading, spacing: 12) {
                 // The reason first, above the steps, so it is seen without scrolling (#135).
-                if let nextStep, showsStatusNote {
+                if let nextStep, showsStatusNote || showsAllSitesWarning {
                     Label { Text(nextStep.message) } icon: { Image(systemName: "info.circle.fill") }
                         .onboardingFont(15, design: .rounded, relativeTo: .subheadline)
                         .foregroundStyle(OnboardingTheme.ink)
@@ -73,7 +88,7 @@ struct TurnOnExtensionView: View {
                 // Once the switch is known to be on, the setup steps are done; only the callout is left.
                 if !showsStatusNote || nextStep?.opensSafariFirst != true {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                        OnboardingStepRow(number: index + 1, text: step.text)
+                        OnboardingStepRow(number: index + 1, text: text(for: step))
                             .accessibilityIdentifier("extension.step.\(index + 1)")
                     }
                 }
@@ -88,29 +103,42 @@ struct TurnOnExtensionView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 40)
+            .padding(.top, 20)
         } footer: {
             if let consent, consent.showsCheckbox {
-                // Figma: 24 under the steps' area, 55 above the button.
-                // Figma: the checkbox block ends 55 above the button (footer rows are 12 apart).
-                ConsentCheckbox(isChecked: consent.$isChecked) { isDataSheetPresented = true }
-                    .padding(.bottom, 43)
+                // Figma 110:4440: the box sits right above the button (Alief: lower it so every step shows).
+                VStack(alignment: .leading, spacing: 8) {
+                    ConsentCheckbox(isChecked: consent.$isChecked) { isDataSheetPresented = true }
+                    if showsConsentHint {
+                        OnboardingErrorLabel(text: Text("Tick the box above first to continue."))
+                            .multilineTextAlignment(.leading)
+                            .transition(.opacity)
+                            .accessibilityIdentifier("extension.consentHint")
+                    }
+                }
+                .padding(.bottom, showsConsentHint ? 4 : 12)
             }
             if let onSkipCheck, status != nil, nextStep == nil || (consent != nil && status?.isActive == true) {
                 // Shoo is already on (Back from Safari Default, or switched on before): nothing left to do here.
                 // In onboarding the switch is enough; Safari Default then sends the user to Safari.
-                Button(action: onSkipCheck) { workingLabel("Next") }
-                    .buttonStyle(OnboardingCapsuleButtonStyle())
+                Button {
+                    guard consentGiven() else { return }
+                    onSkipCheck()
+                } label: { workingLabel("Next") }
+                    .buttonStyle(OnboardingCapsuleButtonStyle(looksDisabled: needsConsent))
+                    .accessibilityHint(needsConsent ? Text("Tick the box above first to continue.") : Text(verbatim: ""))
                     .accessibilityIdentifier("extension.continue")
             } else {
                 // One main button that fits the reason (#135); the other half of the fix stays one tap away.
                 let step = showsStatusNote ? (nextStep ?? .switchOn) : .switchOn
                 Button {
+                    guard consentGiven() else { return }
                     Task { await open(safariFirst: step.opensSafariFirst) }
                 } label: {
                     workingLabel(step.opensSafariFirst ? "Open Safari" : "Turn on the extension")
                 }
-                .buttonStyle(OnboardingCapsuleButtonStyle())
+                .buttonStyle(OnboardingCapsuleButtonStyle(looksDisabled: needsConsent))
+                .accessibilityHint(needsConsent ? Text("Tick the box above first to continue.") : Text(verbatim: ""))
                 .accessibilityIdentifier(step.opensSafariFirst ? "extension.openSafari" : "extension.turnOn")
                 if showsStatusNote, step.hasSecondAction {
                     Button(step.opensSafariFirst ? "Open Safari settings" : "Open Safari") {
@@ -147,12 +175,18 @@ struct TurnOnExtensionView: View {
                 if status != nil, nextStep == nil { return }
                 // Onboarding keeps the Figma screen (steps, consent, one button): back from Settings with the
                 // switch on, it moves on by itself instead of asking for a page to check in first.
-                if let onSkipCheck, consent != nil, cameBack, status?.isActive == true {
+                if let onSkipCheck, consent != nil, !needsConsent, cameBack, status?.isActive == true {
                     onSkipCheck()
                     return
                 }
             }
         }
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: showsConsentHint)
+        .onChange(of: needsConsent) { _, needed in
+            if !needed { consentNudges = 0 }
+        }
+        // Every tap on the grey button, not only the first.
+        .sensoryFeedback(.warning, trigger: consentNudges) { old, new in new > old }
         .onChange(of: consent?.failed ?? false) { _, failed in
             guard failed else { return }
             AccessibilityNotification.Announcement(
@@ -173,6 +207,21 @@ struct TurnOnExtensionView: View {
     /// Only outside onboarding (Home "Turn on"). Onboarding always shows the Figma "Aktifkan Ekstensi" frame:
     /// the steps, the consent box, Turn on and the tutorial link, also after Settings.
     private var showsStatusNote: Bool { consent == nil }
+
+    /// Onboarding too: the extension has reported that Safari lets it read only some sites (`extension.allSites`
+    /// false). The one case the app can see; with Ask and no page loaded yet nothing reports in, so the step
+    /// above is what tells the user (usability test 20 Nov 2026).
+    private var showsAllSitesWarning: Bool { consent != nil && nextStep == .allowEveryWebsite }
+
+    /// `false` while the box is unticked: shows "tick the box first" and tells VoiceOver, instead of going on.
+    private func consentGiven() -> Bool {
+        guard needsConsent else { return true }
+        consentNudges += 1
+        AccessibilityNotification.Announcement(
+            L10n.string("Tick the box above first to continue.", language: AppLanguage(locale: locale))
+        ).post()
+        return false
+    }
 
     private func open(safariFirst: Bool) async {
         if let consent {

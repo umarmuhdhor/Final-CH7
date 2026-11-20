@@ -4907,7 +4907,6 @@
       }
     },
     "Tap All Websites and choose Allow, not Ask." : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -7642,6 +7641,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kode sekarang dan link undangan yang sudah kamu kirim tidak akan bisa dipakai lagi."
+          }
+        }
+      }
+    },
+    "Tick the box above first to continue." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Centang kotak di atas dulu untuk lanjut."
+          }
+        }
+      }
+    },
+    "Tick the box below, then tap Turn on the extension." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Centang kotak di bawah, lalu tekan Aktifkan Ekstensi."
           }
         }
       }

@@ -88,7 +88,11 @@ extension View {
 
 /// Blue pill, 56 pt; grey when disabled ("Selanjutnya" in Figma).
 struct OnboardingCapsuleButtonStyle: ButtonStyle {
-    @Environment(\.isEnabled) private var isEnabled
+    /// Grey like a disabled button but still tappable, so a tap can say what is missing (ON-04 consent box).
+    var looksDisabled = false
+    @Environment(\.isEnabled) private var environmentEnabled
+
+    private var isEnabled: Bool { environmentEnabled && !looksDisabled }
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
