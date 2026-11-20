@@ -163,10 +163,18 @@ final class GuardianHomeModel {
     /// Family Home with no one to look after: the invite takes the sheet.
     var hasNoFamily: Bool { scope == .family && state == .loaded && members.isEmpty }
 
-    /// Pribadi with nobody to look after ("Pribadi/Home kalau belum setting guardian or protected" 1382:10567): the
-    /// "Mode Terawasi" card, until it is closed. Unknown members (their call failed) hide it.
+    /// Pribadi that has never been Guardian ("Pribadi/Home kalau belum setting guardian or protected" 1382:10567, card
+    /// 2366:10994): "Jadi Penjaga · Lindungi orang terdekat", until it is closed. This Home has no ⇆ yet, so the card is
+    /// the way to Guardian. Closing it hides only this card: Profile's Guardian card stays (Alief, 21 Nov 2026).
+    var showsGuardianCard: Bool {
+        scope == .personal && state == .loaded && !settings.guardianIntroSeen && !settings.homeGuardianCardDismissed
+    }
+
+    /// Pribadi back from Guardian with nobody to look after: the "Mode Terawasi" card, until it is closed. Unknown
+    /// members (their call failed) hide it. Never next to the Guardian card.
     var showsSupervisedCard: Bool {
-        scope == .personal && state == .loaded && personalMembersKnown && members.isEmpty && !settings.supervisedCardDismissed
+        scope == .personal && state == .loaded && settings.guardianIntroSeen && personalMembersKnown && members.isEmpty
+            && !settings.supervisedCardDismissed
     }
 
     // MARK: Actions
@@ -220,7 +228,11 @@ final class GuardianHomeModel {
         personalMembersKnown = true
     }
 
-    /// X on the "Mode Terawasi" card: gone for good on this iPhone.
+    /// X on the "Jadi Penjaga" card: gone for good from this Home on this iPhone.
+    func dismissGuardianCard() {
+        settings.homeGuardianCardDismissed = true
+    }
+
     func dismissSupervisedCard() {
         settings.supervisedCardDismissed = true
     }

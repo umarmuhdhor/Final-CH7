@@ -14,6 +14,8 @@ actor MockRepository: ShooRepository {
         case empty
         /// Like `empty`, and a Protected phone has no guardian yet: joining a family works (Figma "Berhasil Terhubung").
         case unpaired
+        /// Like `empty`; Grandma joins `joinDelay` after launch, so a UI test sees "Grandma is connected" (GD-02).
+        case joinsLater
         /// Fixture data with only the first member (UI gate GD-03: 1 person).
         case oneMember
         /// Fixture data plus a third, connected member without risky sites (UI gate GD-03: 3 people).
@@ -44,7 +46,7 @@ actor MockRepository: ShooRepository {
         /// Draws the Figma "Scam Terbaru" cards on Home.
         var hasScamCases: Bool {
             switch self {
-            case .standard, .empty, .unpaired, .oneMember, .threeMembers, .mixedVerdicts, .heavy, .edge, .allSafe,
+            case .standard, .empty, .unpaired, .joinsLater, .oneMember, .threeMembers, .mixedVerdicts, .heavy, .edge, .allSafe,
                  .allBlocked, .corpus, .addressMarks: false
             case .figma, .homePribadi, .homePribadiAlone, .protectedQuiet, .protectedBlocked, .protectedBlockedScam,
                  .protectedBlockedSafe, .protectedWarning, .protectedWarningScam, .protectedWarningSafe, .protectedAlone: true
@@ -52,7 +54,7 @@ actor MockRepository: ShooRepository {
         }
     }
 
-    /// Not in contracts/fixtures: only the 3-member UI gate uses it.
+    /// Not in contracts/fixtures: only the 3-member UI gate and `joinsLater` use it.
     static let extraMember = FamilyMember(
         deviceId: "dev_grandma", name: "Grandma", avatarId: "avatar_05", extensionActive: true, lastScan: nil
     )
@@ -100,6 +102,9 @@ actor MockRepository: ShooRepository {
     /// The guardian's active code, handed out again while more than 5 min is left.
     private var familyCode: FamilyCode?
     nonisolated let scenario: Scenario
+    /// `joinsLater`: when Grandma has joined.
+    private nonisolated let joinAt: Date
+    static let joinDelay: TimeInterval = 8
     nonisolated let latency: Duration
     nonisolated let pageSize: Int
     private nonisolated let bundle: Bundle
@@ -138,6 +143,7 @@ actor MockRepository: ShooRepository {
         self.pageSize = pageSize
         self.bundle = bundle
         self.now = now
+        joinAt = now().addingTimeInterval(Self.joinDelay)
         switch scenario {
         case .standard, .oneMember, .threeMembers:
             allScans = Self.load(ScanPage.self, "activity-family", bundle: bundle)?.items ?? []
@@ -147,7 +153,7 @@ actor MockRepository: ShooRepository {
             case .threeMembers: members = (fixture + [Self.extraMember]).map(Self.withDetails)
             default: members = fixture.map(Self.withDetails)
             }
-        case .empty, .unpaired:
+        case .empty, .unpaired, .joinsLater:
             allScans = []
             members = []
         case .figma, .mixedVerdicts, .heavy, .edge, .allSafe, .allBlocked, .corpus, .addressMarks, .homePribadi, .homePribadiAlone,
@@ -285,6 +291,11 @@ actor MockRepository: ShooRepository {
         try await pause()
         try failIfAsked("familyMembers")
         try require(.guardian)
+        if scenario == .joinsLater, now() >= joinAt, !members.contains(where: { $0.deviceId == Self.extraMember.deviceId }) {
+            var grandma = Self.withDetails(Self.extraMember)
+            grandma.connectedAt = now()
+            members.append(grandma)
+        }
         return members
     }
 

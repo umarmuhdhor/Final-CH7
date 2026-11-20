@@ -150,21 +150,38 @@ extension XCUIApplication {
         buttons["extensionOn.continue"].tapWhenHittable(file: file, line: line)
     }
 
-    /// GD-02: Pribadi to Guardian: the Family mode toggle (Home ⇆), then the "To be guardian" intro the first time.
+    /// GD-02: Pribadi to Guardian. Never Guardian yet: Home has no ⇆, so its "Jadi Penjaga" card, then "To be
+    /// guardian" and the one-time tip at ⇆ (closed with a tap). After that: Home ⇆.
     @MainActor
     func becomeGuardian(file: StaticString = #filePath, line: UInt = #line) {
+        let card = buttons["home.guardianCard.action"]
         let toggle = descendants(matching: .any)["familyModeToggle"].firstMatch
-        XCTAssertTrue(toggle.waitForExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
-        toggle.tap()
+        let shown = card.waitForExistence(timeout: UITestTimeout.screen) || toggle.exists
+        XCTAssertTrue(shown, debugDescription, file: file, line: line)
+        (card.exists ? card : toggle).tap()
         let start = buttons["guardianIntro.start"]
         if start.waitForExistence(timeout: UITestTimeout.optional) { start.tapWhenHittable(file: file, line: line) }
+        closeSwitchTip(file: file, line: line)
     }
 
-    /// PR-01: Pribadi to Terawasi from Home: the "Mode Terawasi" card opens Profile › Account mode, whose
-    /// "Have an invite code?" opens the Connect sheet.
+    /// The one-time tip at ⇆ after the first time as Guardian: a tap anywhere closes it (and presses nothing under it).
+    @MainActor
+    func closeSwitchTip(file: StaticString = #filePath, line: UInt = #line) {
+        let tip = descendants(matching: .any)["home.switchTip"].firstMatch
+        guard tip.waitForExistence(timeout: UITestTimeout.optional) else { return }
+        tip.tap()
+        XCTAssertTrue(tip.waitForNonExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
+    }
+
+    /// PR-01: Pribadi to Terawasi: Profile › Account mode, whose "Have an invite code?" opens the Connect sheet. (A
+    /// Pribadi Home that has never been Guardian shows the "Jadi Penjaga" card, not "Mode Terawasi".)
     @MainActor
     func openSupervisedConnect(file: StaticString = #filePath, line: UInt = #line) {
-        buttons["home.supervised.connect"].tapWhenHittable(file: file, line: line)
+        buttons["profileButton"].tapWhenHittable(file: file, line: line)
+        let mode = buttons["profile.mode"]
+        XCTAssertTrue(mode.waitForExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
+        for _ in 0..<6 where !mode.isHittable { swipeUp() }
+        mode.tapWhenHittable(file: file, line: line)
         buttons["mode.joinFamily"].tapWhenHittable(file: file, line: line)
         XCTAssertTrue(textFields["connect.code"].waitForExistence(timeout: UITestTimeout.screen), debugDescription,
                       file: file, line: line)

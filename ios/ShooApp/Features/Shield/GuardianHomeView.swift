@@ -81,7 +81,9 @@ struct GuardianHomeView: View {
         // Switch and profile right under the status bar, where the (hidden) navigation bar would be.
         .overlay(alignment: .top) {
             // The cached avatar until `GET /devices/me` answers, so the circle never waits for the network.
-            HomeTopBar(isFamilyShown: isFamily, avatarId: model.profile?.avatarId ?? env.session?.avatarId, onSwitch: switchSide) {
+            // ⇆ only once this iPhone has been Guardian: before that there is nothing to switch to (Alief, 20 Nov 2026).
+            HomeTopBar(isFamilyShown: isFamily, avatarId: model.profile?.avatarId ?? env.session?.avatarId,
+                       onSwitch: isFamily || env.settings.guardianIntroSeen ? switchSide : nil) {
                 env.router.openProfile()
             }
         }
@@ -131,12 +133,9 @@ struct GuardianHomeView: View {
         .onChange(of: env.router.screenSheetsClosed) { safeReasonScanId = nil }
     }
 
+    /// The Home toast says (and VoiceOver reads) what changed; the first Guardian switch opens "To be guardian".
     private func switchSide() {
-        if isFamily { env.settings.familyModeOn = false } else { env.requestFamilyMode() }
-        AccessibilityNotification.Announcement(
-            L10n.string(isFamily ? "Family mode off. Showing your Shield." : "Family mode on. Showing your family.",
-                        language: env.settings.language)
-        ).post()
+        if isFamily { env.leaveFamilyMode() } else { env.requestFamilyMode() }
     }
 
     // MARK: Hero and status
@@ -240,15 +239,23 @@ struct GuardianHomeView: View {
             .padding(.vertical, isFamily ? 24 : 0)
         case .loaded:
             if !isFamily {
-                // Figma 435:20058: the list, 35 pt, the scams; 1382:10567 puts the "Mode Terawasi" card first and
-                // 37 pt between the three.
-                let showsCard = model.showsSupervisedCard
+                // Figma 435:20058: the list, 35 pt, the scams; 1382:10567 puts a card first and 37 pt between the
+                // three: "Jadi Penjaga" (2366:10994) until the first time as Guardian, "Mode Terawasi" after that.
+                let showsCard = model.showsGuardianCard || model.showsSupervisedCard
                 VStack(spacing: 0) {
                     if model.refreshFailed {
                         refreshFailedNotice
                             .padding(.bottom, 24)
                     }
-                    if showsCard {
+                    if model.showsGuardianCard {
+                        // "Menjadi Guardian": the same way as Profile's card ("To be guardian" the first time).
+                        SupervisedModeCard(kind: .guardian, onConnect: { env.requestFamilyMode() }) {
+                            withAnimation(.easeOut(duration: 0.2)) { model.dismissGuardianCard() }
+                        }
+                        .padding(.top, 1)
+                        .padding(.bottom, 37)
+                        .transition(.opacity)
+                    } else if model.showsSupervisedCard {
                         // "Hubungkan": joining a family as protected lives in Profile › Account mode
                         // ("Have an invite code?"), which checks that nobody is looked after first.
                         SupervisedModeCard(onConnect: { env.router.show(.profilePage(.mode)) }) {
@@ -273,8 +280,13 @@ struct GuardianHomeView: View {
                 }
             } else if model.hasNoFamily {
                 // Figma "Konten" 1382:10499: the card 16 under the sheet's top, 24 from its sides, 20 above its bottom.
-                InviteCodeCard(repository: env.repository) {
+                InviteCodeCard(repository: env.repository) { member in
                     joinAnimates = true
+                    // Option A: say who joined, and ring them once on the family row.
+                    if let member {
+                        env.router.newMemberId = member.deviceId
+                        env.router.show(.memberJoined(name: member.name))
+                    }
                     Task { await model.refresh() }
                 }
                     .padding(.horizontal, 24)
@@ -307,7 +319,15 @@ struct GuardianHomeView: View {
                 // Figma "Status" 435:20432: the title 24 under the sheet's top, the row 8 under it, 16 above the bottom.
                 VStack(alignment: .leading, spacing: 8) {
                     HomeSectionTitle("People you protect")
-                    MembersRow(members: model.shownMembers) { env.router.show(.member(deviceId: $0.deviceId)) }
+                    MembersRow(members: model.shownMembers, newMemberId: env.router.newMemberId) {
+                        env.router.show(.member(deviceId: $0.deviceId))
+                    }
+                    // The mark is for this moment only: gone after a few seconds and on the next visit.
+                    .task(id: env.router.newMemberId) {
+                        guard env.router.newMemberId != nil else { return }
+                        try? await Task.sleep(for: .seconds(6))
+                        withAnimation(handOver) { env.router.newMemberId = nil }
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 24)
@@ -390,6 +410,8 @@ private extension GuardianHomeModel.Level {
 /// Figma "Frame 1618872221": up to three people side by side, a dot for whether Shoo is on for them.
 private struct MembersRow: View {
     let members: [FamilyMember]
+    /// Option A: the person who just joined, marked once.
+    var newMemberId: String?
     let onOpen: (FamilyMember) -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -414,7 +436,7 @@ private struct MembersRow: View {
                     }
                 }
                 Button { onOpen(member) } label: {
-                    MemberCell(member: member)
+                    MemberCell(member: member, isNew: member.deviceId == newMemberId)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("family.member.\(member.deviceId)")
@@ -428,6 +450,8 @@ private struct MembersRow: View {
 
 private struct MemberCell: View {
     let member: FamilyMember
+    /// Just joined (Option A, Figma 2364:4656): "Baru terhubung" under the name. No ring round the avatar (Alief).
+    var isNew = false
 
     var body: some View {
         VStack(spacing: 8) {
@@ -451,6 +475,17 @@ private struct MemberCell: View {
                     .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
                     .figmaLineHeight(18, glyphOffset: 1, relativeTo: .footnote)
                     .foregroundStyle(HomeTheme.memberStatus)
+                if isNew {
+                    Text("Just connected")
+                        .onboardingFont(12, weight: .semibold, design: .rounded, relativeTo: .caption)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(HomeTheme.successText, in: Capsule())
+                        .padding(.top, 4)
+                        .transition(.opacity)
+                        .accessibilityIdentifier("family.member.new")
+                }
             }
         }
         .padding(.vertical, 12)
@@ -737,15 +772,20 @@ private struct DecisionPressStyle: ButtonStyle {
 
 // MARK: - Family: nobody yet
 
-/// Figma "Kode Undangan" (1382:10500): QR, the code with how long it lasts; Bagikan / Salin centred under the card
-/// ("Aksi" 1382:10506) (GD-04).
+/// Figma "Kode Undangan" (1382:10500): QR, the code with how long it lasts (GD-04). Under it "Bagikan" is the main
+/// button, full width, and "Salin kode" a text button (Figma 2364:3800, Option A). "Undang" on the
+/// "Mode Guardian aktif" toast opens the same iOS share sheet. No glow on the card or "Bagikan" (Alief, 20 Nov 2026).
 private struct InviteCodeCard: View {
-    let onJoined: () -> Void
+    /// The member who joined while the code was on screen (`nil`: someone did, but not known who).
+    let onJoined: (FamilyMember?) -> Void
+    @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: FamilyCodeModel
+    /// "Undang" on the toast: the invite text for the iOS share sheet.
+    @State private var shareText: String?
 
-    init(repository: any ShooRepository, onJoined: @escaping () -> Void) {
+    init(repository: any ShooRepository, onJoined: @escaping (FamilyMember?) -> Void) {
         _model = State(initialValue: FamilyCodeModel(repository: repository))
         self.onJoined = onJoined
     }
@@ -770,7 +810,20 @@ private struct InviteCodeCard: View {
         .task { await model.run() }
         // Someone joined while the code was on screen: Home shows the family.
         .onChange(of: model.members.count) { _, count in
-            if count > 0 { onJoined() }
+            if count > 0 { onJoined(model.joined ?? model.members.last) }
+        }
+        // "Undang" on the toast works only while there is a code to send.
+        .onChange(of: model.inviteURL, initial: true) { _, url in env.router.canShareInvite = url != nil }
+        .onDisappear { env.router.canShareInvite = false }
+        .onChange(of: env.router.inviteShareRequests) {
+            guard let code = model.code, model.inviteURL != nil else { return }
+            shareText = FamilyCodeModel.inviteText(for: code, language: language)
+        }
+        .sheet(isPresented: Binding(get: { shareText != nil }, set: { if !$0 { shareText = nil } })) {
+            if let shareText {
+                InviteActivityView(text: shareText)
+                    .presentationDetents([.medium, .large])
+            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.invite")
@@ -797,20 +850,17 @@ private struct InviteCodeCard: View {
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(HomeTheme.rowStroke, lineWidth: 1))
     }
 
-    /// Figma "Aksi": 34 pt pills 8 apart, SF Pro Rounded 17 (140 %); Bagikan #186FB9, Salin #E6E8EC.
+    /// Figma 2364:3800 (Option A): "Bagikan" full width, 50 pt, #186FB9 with the share glyph; "Salin kode" a text button
+    /// under it. Bagikan opens the iOS share sheet directly, never the "Kirim Undangan" sheet.
     private func actions(_ code: FamilyCode) -> some View {
-        HStack(spacing: 8) {
+        VStack(spacing: 2) {
             ShareLink(item: FamilyCodeModel.inviteText(for: code, language: language)) {
-                Text("Share")
-                    .onboardingFont(17, design: .rounded, relativeTo: .body)
-                    .figmaLineHeight(23.8, relativeTo: .body)
+                Label("Share", systemImage: "square.and.arrow.up")
+                    .onboardingFont(17, weight: .semibold, design: .rounded, relativeTo: .body)
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 17)
-                    .padding(.vertical, 5)
-                    .frame(minHeight: 34)
+                    .frame(maxWidth: .infinity, minHeight: 50)
                     .background(HomeTheme.action, in: Capsule())
-                    // 34 pt pill; the touch area still reaches 44.
-                    .contentShape(Rectangle().inset(by: -5))
+                    .contentShape(Capsule())
             }
             .accessibilityIdentifier("family.invite")
             Button {
@@ -818,23 +868,17 @@ private struct InviteCodeCard: View {
                     AccessibilityNotification.Announcement(L10n.string("Invite link copied", language: language)).post()
                 }
             } label: {
-                Text(model.copied ? "Copied" : "Copy")
-                    .onboardingFont(17, design: .rounded, relativeTo: .body)
-                    .figmaLineHeight(23.8, relativeTo: .body)
-                    // Copy → Copied cross-fades while the pill eases to its new width (pattern: InviteSheet).
+                Text(model.copied ? "Copied" : "Copy code")
+                    .onboardingFont(15, weight: .medium, design: .rounded, relativeTo: .subheadline)
                     .contentTransition(.opacity)
-                    .foregroundStyle(HomeTheme.bodyInk)
-                    .padding(.horizontal, 16.5)
-                    .padding(.vertical, 5)
-                    .frame(minHeight: 34)
-                    .background(HomeTheme.quietFill, in: Capsule())
-                    .contentShape(Rectangle().inset(by: -5))
+                    .foregroundStyle(HomeTheme.action)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .sensoryFeedback(.success, trigger: model.copied) { _, now in now }
             .accessibilityIdentifier("familyCode.copy")
         }
-        // On the row, so "Share" glides aside as the pill widens instead of jumping.
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.3), value: model.copied)
     }
 

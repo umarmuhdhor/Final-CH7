@@ -32,6 +32,9 @@ final class FamilyCodeModel {
     /// Seconds until "Refresh code" works again; 0 = now.
     private(set) var replaceWait = 0
     private(set) var members: [FamilyMember] = []
+    /// The newest person who joined while this screen was open: not one already there at the first load (Option A
+    /// says who joined).
+    private(set) var joined: FamilyMember?
     private(set) var membersFailed = false
     private(set) var removingId: String?
     /// "Copied" on the button, for the code on screen only.
@@ -48,6 +51,7 @@ final class FamilyCodeModel {
     /// Bumped by `remove`: a members answer asked for before it is out of date.
     @ObservationIgnored private var membersVersion = 0
     @ObservationIgnored private var isLoadingMembers = false
+    @ObservationIgnored private var membersLoaded = false
     /// Code requests can overlap (the countdown's, the members refresh's, "Refresh code"), and an older answer
     /// may hold the code a refresh just killed (fase 27k, F-A10). Each request gets a number; an answer changes
     /// the screen only when no newer one has, and no newer request is still on its way. A cancelled request
@@ -105,6 +109,12 @@ final class FamilyCodeModel {
         do {
             let fresh = try await repository.familyMembers()
             guard version == membersVersion else { return }
+            let known = Set(members.map(\.deviceId))
+            if membersLoaded, let newcomer = fresh.filter({ !known.contains($0.deviceId) })
+                .max(by: { ($0.connectedAt ?? .distantPast) < ($1.connectedAt ?? .distantPast) }) {
+                joined = newcomer
+            }
+            membersLoaded = true
             members = fresh
             membersFailed = false
             if isFull {

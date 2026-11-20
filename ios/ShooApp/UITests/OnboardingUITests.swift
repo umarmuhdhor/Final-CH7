@@ -64,24 +64,54 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
-    func testTurnOnWorksWithoutTheConsentBoxAndShowsWhatIsSent() {
+    func testTurnOnWaitsForTheConsentBoxAndShowsWhatIsSent() {
         let app = launch(extensionActive: false, askConsent: true)
         app.onboardName("Rina")
         let turnOn = app.buttons["extension.turnOn"]
         XCTAssertTrue(turnOn.waitForExistence(timeout: 5), app.debugDescription)
-        // Guideline 5.1.1(iv): the online check is optional, so Turn on is not locked by the box.
-        XCTAssertTrue(turnOn.isEnabled)
         // No status note before the user has been to Settings (Figma has none).
         XCTAssertFalse(app.descendants(matching: .any)["extension.offHint"].exists)
+        let hint = app.descendants(matching: .any)["extension.consentHint"]
+        XCTAssertFalse(hint.exists)
+        if #available(iOS 26.2, *) {
+            XCTAssertTrue(app.staticTexts["Tick the box below, then tap Turn on the extension."].exists, app.debugDescription)
+        }
+        // Figma 110:4505: grey until ticked. A tap says to tick the box first and does not leave for Settings.
+        turnOn.tap()
+        XCTAssertTrue(hint.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertEqual(app.state, .runningForeground)
         app.buttons["extension.dataSent"].tap()
         XCTAssertTrue(app.staticTexts["AI check by DeepSeek"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["dataSent.done"].tap()
         XCTAssertTrue(app.staticTexts["AI check by DeepSeek"].waitForNonExistence(timeout: 5))
         app.buttons["extension.consent"].tap()
-        XCTAssertTrue(turnOn.isEnabled)
+        XCTAssertTrue(hint.waitForNonExistence(timeout: 5), app.debugDescription)
         // Nothing saved yet: Back still reaches the name.
         app.buttons["onboarding.back"].tap()
         XCTAssertTrue(app.textFields["name.field"].waitForExistence(timeout: 5))
+    }
+
+    /// Before/after pictures for the PR: the grey button, then the hint after a tap. Runs only with `SHOO_SHOT_DIR`.
+    @MainActor
+    func testConsentHintScreenshotForPR() throws {
+        guard let dir = ProcessInfo.processInfo.environment["SHOO_SHOT_DIR"] else { throw XCTSkip("Set SHOO_SHOT_DIR") }
+        let app = XCUIApplication.mock([
+            "-settings.language", "id", "-UITestNotifications", "denied", "-debug.askDataConsent", "YES",
+            "-debug.onboardingStep", "turnOnExtension",
+        ])
+        let turnOn = app.buttons["extension.turnOn"]
+        XCTAssertTrue(turnOn.waitForExistence(timeout: 5), app.debugDescription)
+        func save(_ name: String) throws {
+            try XCUIScreen.main.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: dir).appendingPathComponent(name))
+        }
+        try save("on04-consent-grey.png")
+        turnOn.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["extension.consentHint"].waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 0.5)
+        try save("on04-consent-hint.png")
+        app.buttons["extension.consent"].tap()
+        Thread.sleep(forTimeInterval: 0.5)
+        try save("on04-consent-ticked.png")
     }
 
     @MainActor
@@ -101,8 +131,9 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(reminder.waitForExistence(timeout: 5), app.debugDescription)
         reminder.buttons["Not now"].firstMatch.tap()
         XCTAssertFalse(reminder.waitForExistence(timeout: 2))
-        // Pribadi Home offers to connect to a guardian (Figma 1253:8630).
-        XCTAssertTrue(app.descendants(matching: .any)["home.supervised"].waitForExistence(timeout: 5), app.debugDescription)
+        // Pribadi Home that has never been Guardian: no ⇆, the "Jadi Penjaga" card instead (Figma 1382:10567).
+        XCTAssertTrue(app.descendants(matching: .any)["home.guardianCard"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["familyModeToggle"].exists)
     }
 
     @MainActor
@@ -122,6 +153,43 @@ final class OnboardingUITests: XCTestCase {
         app.terminate()
         let again = XCUIApplication.mock(["-settings.language", "en", "-UITestNotifications", "denied"], reset: false)
         XCTAssertTrue(again.tabBars.buttons["Shield"].waitForExistence(timeout: 10), again.debugDescription)
+    }
+
+    /// Usability test 20 Nov 2026: "All Websites → Allow" is a numbered step, and when
+    /// the extension has reported that it may read only some sites, onboarding says so and does not move on.
+    @MainActor
+    func testAllWebsitesStepAndWarningWhenShooCanReadOnlySomeSites() {
+        let app = launch(extensionActive: false, extensionStatus: "someSitesOnly")
+        app.onboardName("Rina")
+        XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
+        // The mock answered the data question, so there is no box and step 01 keeps "Tap the button below".
+        if #available(iOS 26.2, *) {
+            XCTAssertTrue(app.staticTexts["Tap the button below to open Safari settings."].exists, app.debugDescription)
+        }
+        XCTAssertTrue(app.staticTexts["Tap All Websites and choose Allow, not Ask."].exists, app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["extension.step.4"].exists, app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.buttons["extension.continue"].exists)
+    }
+
+    /// Figma 110:4440 (Alief, 20 Nov 2026): on a 402 × 874 iPhone all four steps show above the consent box
+    /// without scrolling. `SHOO_SHOT_DIR` keeps the screen, in Indonesian, for the PR.
+    @MainActor
+    func testAllFourStepsFitAboveTheConsentBoxWithoutScrolling() throws {
+        let app = XCUIApplication.mock([
+            "-settings.language", "id", "-UITestNotifications", "denied", "-debug.askDataConsent", "YES",
+            "-debug.onboardingStep", "turnOnExtension",
+        ])
+        let consent = app.buttons["extension.consent"]
+        XCTAssertTrue(consent.waitForExistence(timeout: 5), app.debugDescription)
+        guard app.windows.firstMatch.frame.height >= 874 else { throw XCTSkip("Figma's page is 874 pt; smaller iPhones scroll") }
+        let step4 = app.descendants(matching: .any)["extension.step.4"]
+        XCTAssertTrue(step4.exists, app.debugDescription)
+        XCTAssertLessThanOrEqual(step4.frame.maxY, consent.frame.minY, "step 04 \(step4.frame) vs box \(consent.frame)")
+        if let directory = ProcessInfo.processInfo.environment["SHOO_SHOT_DIR"] {
+            try XCUIScreen.main.screenshot().pngRepresentation
+                .write(to: URL(fileURLWithPath: directory).appendingPathComponent("on04-all-steps-fit.png"))
+        }
     }
 
     /// QA 2026-11-11 #7: back from Settings with Shoo still off, the note above the steps pushes step 03 down
@@ -243,17 +311,28 @@ final class OnboardingUITests: XCTestCase {
         let app = XCUIApplication.mock(["-settings.language", "en", "-settings.mode", "guardian", "-settings.onboardingCompleted", "YES",
                                         "-settings.familyModeOn", "NO", "-UITestNotifications", "granted",
                                         "-mock.scenario", "empty"])
+        // Never Guardian: no ⇆ yet, the "Jadi Penjaga" card is the way in.
         let toggle = app.descendants(matching: .any)["familyModeToggle"].firstMatch
-        toggle.tapWhenHittable()
+        let card = app.buttons["home.guardianCard.action"]
+        card.tapWhenHittable()
+        XCTAssertFalse(toggle.exists)
         let start = app.buttons["guardianIntro.start"]
         XCTAssertTrue(start.waitForExistence(timeout: 5), app.debugDescription)
         // Back keeps Pribadi.
         app.buttons["onboarding.back"].tap()
         XCTAssertTrue(start.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(app.descendants(matching: .any)["home.supervised"].exists)
-        toggle.tapWhenHittable()
+        XCTAssertTrue(app.descendants(matching: .any)["home.guardianCard"].exists)
+        card.tapWhenHittable()
         app.buttons["guardianIntro.start"].tapWhenHittable()
         XCTAssertTrue(start.waitForNonExistence(timeout: 5))
-        XCTAssertFalse(app.descendants(matching: .any)["home.supervised"].exists)
+        // ⇆ appears, with the one-time tip; the toast waits until a tap closes it.
+        let tip = app.descendants(matching: .any)["home.switchTip"].firstMatch
+        XCTAssertTrue(tip.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(toggle.exists)
+        XCTAssertFalse(app.descendants(matching: .any)["home.notice"].exists)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6)).tap()
+        XCTAssertTrue(tip.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["home.notice"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["home.guardianCard"].exists)
     }
 }

@@ -606,6 +606,14 @@ private struct HatchedBar: View {
 /// connect so someone close can check sites again. 354 × 205, 24 pt corners; the teal shield (exported from Figma,
 /// 145 × 177 at 209, 19) is clipped by the card. X hides it on this iPhone.
 struct SupervisedModeCard: View {
+    /// The same card twice on Figma's HOME: "Mode Terawasi" (become protected) and, on a Pribadi Home that has never
+    /// been Guardian, "Jadi Penjaga" (2366:10994): only the words and the button change.
+    enum Kind {
+        case supervised
+        case guardian
+    }
+
+    var kind: Kind = .supervised
     let onConnect: () -> Void
     let onDismiss: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -627,20 +635,20 @@ struct SupervisedModeCard: View {
             }
             VStack(alignment: .leading, spacing: 0) {
                 // Figma: SF Pro Rounded Semibold 11, 13 pt lines, 0.06 tracking, #0D8F93.
-                Text("SUPERVISED MODE")
+                Text(kind == .guardian ? "BECOME A GUARDIAN" : "SUPERVISED MODE")
                     .onboardingFont(11, weight: .semibold, design: .rounded, tracking: 0.06, relativeTo: .caption2)
                     .figmaLineHeight(13, relativeTo: .caption2)
                     .foregroundStyle(Color(hex: 0x0D8F93))
                     .padding(.top, 22)
                 // SF Pro Display Semibold 20, 25 pt lines, -0.45, #151617.
-                Text("Not sure?")
+                Text(kind == .guardian ? "Protect the people closest to you" : "Not sure?")
                     .onboardingFont(20, weight: .semibold, tracking: -0.45, relativeTo: .title3)
                     .figmaLineHeight(25, relativeTo: .title3)
                     .foregroundStyle(HomeTheme.ink)
                     .accessibilityAddTraits(.isHeader)
                     .padding(.top, 7)
                 // SF Pro Rounded 16, 21 pt lines, -0.31, #6A717E, 206 wide.
-                Text("Connect so someone you love can check it again")
+                Text(kind == .guardian ? "Help check suspicious sites your family opens." : "Connect so someone you love can check it again")
                     .onboardingFont(16, design: .rounded, tracking: -0.31, relativeTo: .callout)
                     .figmaLineHeight(21, relativeTo: .callout)
                     .foregroundStyle(OnboardingTheme.bodyInk)
@@ -649,7 +657,7 @@ struct SupervisedModeCard: View {
                     .padding(.top, 5)
                 Button(action: onConnect) {
                     // SF Pro Display Semibold 17, 22 pt line; 38 pt capsule, 18 pt sides.
-                    Text("Connect")
+                    Text(kind == .guardian ? "Become a Guardian" : "Connect")
                         .onboardingFont(17, weight: .semibold, relativeTo: .headline)
                         .figmaLineHeight(22, relativeTo: .headline)
                         .foregroundStyle(.white)
@@ -660,7 +668,7 @@ struct SupervisedModeCard: View {
                         .contentShape(Rectangle().inset(by: -3))
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("home.supervised.connect")
+                .accessibilityIdentifier(kind == .guardian ? "home.guardianCard.action" : "home.supervised.connect")
                 .padding(.top, 10)
             }
             .padding(.leading, 20)
@@ -683,7 +691,7 @@ struct SupervisedModeCard: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Close"))
-            .accessibilityIdentifier("home.supervised.close")
+            .accessibilityIdentifier(kind == .guardian ? "home.guardianCard.close" : "home.supervised.close")
             .frame(maxWidth: .infinity, alignment: .topTrailing)
             .padding(.top, 4)
             .padding(.trailing, 4)
@@ -694,7 +702,7 @@ struct SupervisedModeCard: View {
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(.white.opacity(0.9), lineWidth: 1))
         .figmaCardShadow()
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("home.supervised")
+        .accessibilityIdentifier(kind == .guardian ? "home.guardianCard" : "home.supervised")
     }
 }
 

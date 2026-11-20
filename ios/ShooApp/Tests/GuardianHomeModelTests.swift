@@ -102,6 +102,8 @@ struct GuardianHomeModelTests {
 
     @Test func personalHomeOffersSupervisedModeUntilClosed() async throws {
         let settings = try settings()
+        // Back from Guardian: before the first time, the "Jadi Penjaga" card takes this place.
+        settings.guardianIntroSeen = true
         let model = model(repository: MockRepository(mode: .guardian, scenario: .homePribadiAlone, latency: .zero),
                           settings: settings, scope: .personal)
         await model.refresh()
@@ -109,6 +111,32 @@ struct GuardianHomeModelTests {
         model.dismissSupervisedCard()
         #expect(!model.showsSupervisedCard)
         #expect(settings.supervisedCardDismissed)
+    }
+
+    /// Alief, 20 Nov 2026: a Pribadi Home that has never been Guardian has no ⇆; "Jadi Penjaga" (2366:10994) is the way
+    /// in, never next to "Mode Terawasi". Closing it leaves Profile's Guardian card (Alief, 21 Nov 2026).
+    @Test func neverGuardianHomeOffersTheGuardianCardUntilClosed() async throws {
+        let settings = try settings()
+        let model = model(repository: MockRepository(mode: .guardian, scenario: .homePribadiAlone, latency: .zero),
+                          settings: settings, scope: .personal)
+        await model.refresh()
+        #expect(model.showsGuardianCard)
+        #expect(!model.showsSupervisedCard)
+        model.dismissGuardianCard()
+        #expect(!model.showsGuardianCard)
+        #expect(settings.homeGuardianCardDismissed)
+        #expect(!settings.guardianCardDismissed)
+        #expect(!model.showsSupervisedCard)
+    }
+
+    @Test func theGuardianCardIsGoneOnceGuardian() async throws {
+        let settings = try settings()
+        settings.guardianIntroSeen = true
+        let model = model(repository: MockRepository(mode: .guardian, scenario: .homePribadiAlone, latency: .zero),
+                          settings: settings, scope: .personal)
+        await model.refresh()
+        #expect(!model.showsGuardianCard)
+        #expect(model.showsSupervisedCard)
     }
 
     @Test func familyHomeShowsAtMostThreePeople() async throws {

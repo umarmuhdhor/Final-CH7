@@ -23,7 +23,7 @@ enum MockScenarios {
     /// The data for a QA scenario, or `nil` for the fixture scenarios (`standard`, `empty`, …).
     static func dataset(for scenario: MockRepository.Scenario, now: Date, bundle: Bundle) -> MockDataset? {
         switch scenario {
-        case .standard, .empty, .unpaired, .oneMember, .threeMembers: nil
+        case .standard, .empty, .unpaired, .joinsLater, .oneMember, .threeMembers: nil
         case .figma: figma(now: now)
         case .mixedVerdicts: mixedVerdicts(now: now)
         case .heavy: heavy(now: now)

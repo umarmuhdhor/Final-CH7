@@ -268,15 +268,10 @@ private struct ModePage: View {
 
             if choice != current {
                 Button {
-                    let target = choice
-                    if target == .guardian { env.requestFamilyMode() } else { model.setFamilyMode(false) }
+                    // Profile closes on Home, where the change shows, with a toast VoiceOver reads (Option A). The
+                    // first Guardian switch opens "To be guardian" first.
+                    if choice == .guardian { env.requestFamilyMode() } else { env.leaveFamilyMode() }
                     selected = nil
-                    // The first Guardian switch only opens "To be guardian": nothing switched yet, so nothing to say.
-                    // (Read after `selected = nil`, `choice` is the old mode: it announced "Switched to Personal".)
-                    guard current == target else { return }
-                    AccessibilityNotification.Announcement(L10n.string(
-                        target == .guardian ? "Switched to Guardian" : "Switched to Personal", language: AppLanguage(locale: locale)
-                    )).post()
                 } label: {
                     Text(choice == .guardian ? "Switch to Guardian" : "Switch to Personal")
                         .profileFont(17, .semibold, tracking: -0.17)
@@ -399,7 +394,12 @@ struct JoinAnotherFamilySheet: View {
             if let model {
                 ConnectView(model: model, onBack: { dismiss() }, onSkip: cameFromLink ? { dismiss() } : nil, onFinish: {
                     dismiss()
-                    env.router.reset()
+                    // Option A: Home, with "Terhubung dengan <guardian>".
+                    if case .joined(let guardian) = model.state {
+                        env.router.landOnHome(saying: .connected(guardian: guardian.name))
+                    } else {
+                        env.router.reset()
+                    }
                 })
             } else {
                 // An empty Group never appears, so `onAppear` below would never run.

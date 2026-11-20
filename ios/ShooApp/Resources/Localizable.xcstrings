@@ -1,6 +1,36 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ is connected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sudah terhubung"
+          }
+        }
+      }
+    },
+    "%@ is no longer connected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ tidak lagi terhubung"
+          }
+        }
+      }
+    },
+    "%@ will be told about dangerous sites." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ akan dikabari saat ada situs berbahaya."
+          }
+        }
+      }
+    },
     "%@, %lld of %lld" : {
       "localizations" : {
         "en" : {
@@ -27,12 +57,92 @@
         }
       }
     },
+    "BECOME A GUARDIAN" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JADI PENJAGA"
+          }
+        }
+      }
+    },
+    "Copy code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin kode"
+          }
+        }
+      }
+    },
+    "Double-tap to close" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk dua kali untuk menutup"
+          }
+        }
+      }
+    },
+    "Guardian mode on" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode Guardian aktif"
+          }
+        }
+      }
+    },
     "I agree to pages being checked online." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Saya setuju halaman dicek secara online."
+          }
+        }
+      }
+    },
+    "Just connected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baru terhubung"
+          }
+        }
+      }
+    },
+    "Move between Personal (just you) and Guardian (your family) any time." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beralih antara Pribadi (dirimu) dan Guardian (keluargamu) kapan saja."
+          }
+        }
+      }
+    },
+    "Opens the share sheet with your invite link" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membuka menu bagikan dengan link undanganmu"
+          }
+        }
+      }
+    },
+    "Personal mode on" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode Pribadi aktif"
           }
         }
       }
@@ -53,6 +163,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shoo tidak bisa menunjukkan bagian ini di halaman: mungkin tersembunyi"
+          }
+        }
+      }
+    },
+    "Switch modes here" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindah mode di sini"
           }
         }
       }
@@ -753,12 +873,52 @@
         }
       }
     },
+    "You no longer get their warnings." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu tidak lagi menerima peringatannya."
+          }
+        }
+      }
+    },
+    "You now help protect %@." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sekarang ikut menjaga %@."
+          }
+        }
+      }
+    },
+    "You'll be told when your family opens a dangerous site." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu akan dikabari saat keluarga buka situs berbahaya."
+          }
+        }
+      }
+    },
     "You're no longer this person's guardian, so you can't mark this site." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kamu bukan lagi Guardian orang ini, jadi tidak bisa menandai situs ini."
+          }
+        }
+      }
+    },
+    "Your protection stays on." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlindunganmu tetap menyala."
           }
         }
       }
@@ -1624,7 +1784,6 @@
       }
     },
     "Copied" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -2594,7 +2753,6 @@
       }
     },
     "Invite" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -4917,7 +5075,6 @@
       }
     },
     "Tap All Websites and choose Allow, not Ask." : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -7652,6 +7809,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kode sekarang dan link undangan yang sudah kamu kirim tidak akan bisa dipakai lagi."
+          }
+        }
+      }
+    },
+    "Tick the box above first to continue." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Centang kotak di atas dulu untuk lanjut."
+          }
+        }
+      }
+    },
+    "Tick the box below, then tap Turn on the extension." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Centang kotak di bawah, lalu tekan Aktifkan Ekstensi."
           }
         }
       }

@@ -500,23 +500,56 @@ final class AppEnvironment {
     }
 
     /// Family mode on (Pribadi → Guardian). The first time, Figma "To be guardian" shows first and its
-    /// "Mulai" turns it on (`startGuardian`).
+    /// "Mulai" turns it on (`startGuardian`). Ends on Home with "Mode Guardian aktif" (Option A).
     @MainActor
     func requestFamilyMode() {
         guard settings.mode == .guardian, !settings.familyModeOn else { return }
         if settings.guardianIntroSeen {
             settings.familyModeOn = true
+            landOnGuardianHome(saying: .guardianOn)
         } else {
             router.isGuardianIntroPresented = true
         }
     }
 
-    /// "Mulai" on Figma "To be guardian".
+    /// Family mode off (Guardian → Pribadi): Home with "Mode Pribadi aktif" (Option A).
+    @MainActor
+    func leaveFamilyMode() {
+        guard settings.mode == .guardian, settings.familyModeOn else { return }
+        settings.familyModeOn = false
+        router.landOnHome(saying: .personalOn)
+    }
+
+    /// Someone joined with the invite from Profile: Home shows them, with "<name> sudah terhubung" (Option A). A Pribadi
+    /// inviter now protects someone, so Family mode turns on, or the new member would not be on Home at all.
+    @MainActor
+    func memberJoined(_ member: FamilyMember) {
+        if settings.mode == .guardian, !settings.familyModeOn {
+            settings.guardianIntroSeen = true
+            settings.familyModeOn = true
+        }
+        router.newMemberId = member.deviceId
+        landOnGuardianHome(saying: .memberJoined(name: member.name))
+    }
+
+    /// Guardian Home after Family mode turned on. The first time, ⇆ has just appeared: the tip points at it once and
+    /// the toast waits for it (plan/alief/proposal/pairing-feedback.md, Figma 2368:13263).
+    @MainActor
+    private func landOnGuardianHome(saying notice: HomeNotice) {
+        if settings.guardianSwitchTipSeen {
+            router.landOnHome(saying: notice)
+        } else {
+            settings.guardianSwitchTipSeen = true
+            router.landOnHomeWithSwitchTip(then: notice)
+        }
+    }
+
+    /// "Mulai" on Figma "To be guardian": the cover closes on Home, Profile too.
     @MainActor
     func startGuardian() {
         settings.guardianIntroSeen = true
         settings.familyModeOn = true
-        router.isGuardianIntroPresented = false
+        landOnGuardianHome(saying: .guardianOn)
     }
 
     /// PF-01 "Punya kode undangan?": a guardian without members joins another family. The server
