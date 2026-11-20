@@ -500,23 +500,44 @@ final class AppEnvironment {
     }
 
     /// Family mode on (Pribadi → Guardian). The first time, Figma "To be guardian" shows first and its
-    /// "Mulai" turns it on (`startGuardian`).
+    /// "Mulai" turns it on (`startGuardian`). Ends on Home with "Mode Guardian aktif" (Option A).
     @MainActor
     func requestFamilyMode() {
         guard settings.mode == .guardian, !settings.familyModeOn else { return }
         if settings.guardianIntroSeen {
             settings.familyModeOn = true
+            router.landOnHome(saying: .guardianOn)
         } else {
             router.isGuardianIntroPresented = true
         }
     }
 
-    /// "Mulai" on Figma "To be guardian".
+    /// Family mode off (Guardian → Pribadi): Home with "Mode Pribadi aktif" (Option A).
+    @MainActor
+    func leaveFamilyMode() {
+        guard settings.mode == .guardian, settings.familyModeOn else { return }
+        settings.familyModeOn = false
+        router.landOnHome(saying: .personalOn)
+    }
+
+    /// Someone joined with the invite from Profile: Home shows them, with "<name> sudah terhubung" (Option A). A Pribadi
+    /// inviter now protects someone, so Family mode turns on, or the new member would not be on Home at all.
+    @MainActor
+    func memberJoined(_ member: FamilyMember) {
+        if settings.mode == .guardian, !settings.familyModeOn {
+            settings.guardianIntroSeen = true
+            settings.familyModeOn = true
+        }
+        router.newMemberId = member.deviceId
+        router.landOnHome(saying: .memberJoined(name: member.name))
+    }
+
+    /// "Mulai" on Figma "To be guardian": the cover closes on Home, Profile too.
     @MainActor
     func startGuardian() {
         settings.guardianIntroSeen = true
         settings.familyModeOn = true
-        router.isGuardianIntroPresented = false
+        router.landOnHome(saying: .guardianOn)
     }
 
     /// PF-01 "Punya kode undangan?": a guardian without members joins another family. The server

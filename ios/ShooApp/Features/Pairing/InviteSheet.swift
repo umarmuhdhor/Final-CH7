@@ -6,6 +6,8 @@ import UIKit
 struct InviteSheet: View {
     /// The check mark: the Guardian is done inviting.
     let onDone: () -> Void
+    /// Someone joined while the sheet was open (Option A: the sheet closes on Home, which says who).
+    var onJoined: ((FamilyMember) -> Void)?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
     @Environment(\.openURL) private var openURL
@@ -19,8 +21,9 @@ struct InviteSheet: View {
     /// "Refresh code" asks first: a new code also stops every invite link already sent (EGM audit B8).
     @State private var confirmsRefresh = false
 
-    init(repository: any ShooRepository, onDone: @escaping () -> Void) {
+    init(repository: any ShooRepository, onJoined: ((FamilyMember) -> Void)? = nil, onDone: @escaping () -> Void) {
         _model = State(initialValue: FamilyCodeModel(repository: repository))
+        self.onJoined = onJoined
         self.onDone = onDone
     }
 
@@ -77,6 +80,10 @@ struct InviteSheet: View {
                 }
             }
             .task { await model.run() }
+            // Before this, the sheet only ticked its timer while someone joined (tester: "nothing happens").
+            .onChange(of: model.joined) { _, member in
+                if let member { onJoined?(member) }
+            }
             .task(id: copies) {
                 guard copies > 0 else { return }
                 withAnimation(StateMotion.enter(reduceMotion: reduceMotion)) { showsCopiedNote = true }
@@ -433,7 +440,7 @@ private struct InviteShareRowSkeleton: View {
 }
 
 /// System share sheet for the invite text.
-private struct InviteActivityView: UIViewControllerRepresentable {
+struct InviteActivityView: UIViewControllerRepresentable {
     let text: String
 
     func makeUIViewController(context: Context) -> UIActivityViewController {

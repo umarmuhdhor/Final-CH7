@@ -39,6 +39,28 @@ struct MainTabView: View {
             }
         }
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: router.inviteNotice)
+        // Option A: after a role or pairing change, Home says what changed. Under Home's top bar (⇆, avatar);
+        // the invite banner, when there is one, comes first.
+        .overlay(alignment: .top) {
+            if let notice = router.homeNotice, router.inviteNotice == nil, env.launchSplash == .done {
+                HomeNoticeToast(
+                    notice: notice,
+                    onInvite: notice == .guardianOn && router.canShareInvite ? { router.shareInvite() } : nil,
+                    onClose: { router.homeNotice = nil }
+                )
+                .padding(.top, HomeTopBar.barHeight + 12)
+                .id(router.homeNoticeCount)
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                .environment(\.locale, env.settings.language.locale)
+            }
+        }
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: router.homeNoticeCount)
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: router.homeNotice == nil)
+        // A success tap with every change except a disconnect, which stays neutral.
+        .sensoryFeedback(trigger: router.homeNoticeCount) { _, _ in
+            if case .disconnected = router.homeNotice { return nil }
+            return router.homeNotice == nil ? nil : .success
+        }
         // PR-03: an invite link opened before or during onboarding opens its join sheet now the tabs are here.
         .onAppear { env.presentInviteAfterOnboarding() }
         // An invite link that started the app (PR-03): Connect comes up once the launch splash (ON-01) is gone.
@@ -134,11 +156,8 @@ private struct FamilyModeToggle: ToolbarContent {
             ToolbarItem(placement: .topBarLeading) {
                 let isOn = env.settings.familyModeOn
                 Button {
-                    if isOn { env.settings.familyModeOn = false } else { env.requestFamilyMode() }
-                    AccessibilityNotification.Announcement(
-                        L10n.string(isOn ? "Family mode off. Showing your Shield." : "Family mode on. Showing your family.",
-                                    language: env.settings.language)
-                    ).post()
+                    // Ends on Home with the toast, which VoiceOver reads (Option A).
+                    if isOn { env.leaveFamilyMode() } else { env.requestFamilyMode() }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: isOn ? "person.3.fill" : "person.3")
@@ -188,7 +207,13 @@ private struct ConnectSheet: View {
     var body: some View {
         Group {
             if let model {
-                ConnectView(model: model, onBack: { dismiss() }, onSkip: { dismiss() }, onFinish: { dismiss() })
+                ConnectView(model: model, onBack: { dismiss() }, onSkip: { dismiss() }, onFinish: {
+                    dismiss()
+                    // Option A: Home, with "Terhubung dengan <guardian>".
+                    if case .joined(let guardian) = model.state {
+                        env.router.landOnHome(saying: .connected(guardian: guardian.name))
+                    }
+                })
             } else {
                 // An empty Group never appears, so `onAppear` below would never run.
                 Color(.systemBackground)

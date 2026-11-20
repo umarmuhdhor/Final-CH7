@@ -85,7 +85,8 @@ struct MemberDetailView: View {
                         guard await model.disconnect() else { return }
                         env.familyChanges += 1
                         isDisconnectConfirming = false
-                        env.router.pop()
+                        // Option A: back on Home, which says who is gone (neutral, no success tap).
+                        env.router.landOnHome(saying: .disconnected(name: member.name))
                     }
                 }
                 .environment(\.locale, locale)
