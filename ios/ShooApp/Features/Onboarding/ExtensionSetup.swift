@@ -9,6 +9,9 @@ enum ExtensionSetup {
         case openSettingsModern
         case openSettingsLegacy
         case switchOn
+        /// Safari Settings › Extensions › Shoo › All Websites → Allow. Required: with Ask (the default) Shoo
+        /// runs on no page until the user grants it there, so nothing is checked (usability test 20 Nov 2026).
+        case allowEveryWebsite
         case comeBack
     }
 
@@ -21,9 +24,10 @@ enum ExtensionSetup {
         } else {
             first = .openSettingsLegacy
         }
-        // Figma "Aktifkan Ekstensi": three steps. What Safari still needs (All Websites → Allow, or a page load
-        // before iOS 26.2) shows as a note once the user is back and Shoo is not on yet (#135).
-        return [first, .switchOn, .comeBack]
+        // Figma "Aktifkan Ekstensi" had three steps; All Websites → Allow is a step of its own again, because the
+        // switch alone protects nothing and the app can't read that setting before Shoo has run on a page
+        // (usability test 20 Nov 2026). A page load before iOS 26.2 still shows as a note outside onboarding (#135).
+        return [first, .switchOn, .allowEveryWebsite, .comeBack]
     }
 
     /// Bundle ID of the Safari extension: the app's own ID + ".extension" (ios/project.yml). Never hardcoded (L0).
@@ -66,6 +70,7 @@ extension ExtensionSetup.Step {
         case .openSettingsModern: "Open Settings › Apps › Safari › Extensions."
         case .openSettingsLegacy: "Open Settings › Safari › Extensions."
         case .switchOn: "Switch on the Shoo extension."
+        case .allowEveryWebsite: "Tap All Websites and choose Allow, not Ask."
         case .comeBack: "Come back to Shoo and get protected."
         }
     }
@@ -75,6 +80,7 @@ extension ExtensionSetup.Step {
         case .tapTurnOn: "hand.tap.fill"
         case .openSettingsModern, .openSettingsLegacy: "gearshape.fill"
         case .switchOn: "switch.2"
+        case .allowEveryWebsite: "checkmark.circle.fill"
         case .comeBack: "arrow.uturn.backward.circle.fill"
         }
     }

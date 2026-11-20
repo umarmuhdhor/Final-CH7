@@ -273,9 +273,10 @@ final class ProfileUITests: XCTestCase {
         let row = app.buttons["profile.notifications"]
         reveal(row, in: app)
         row.tap()
-        let warning = app.switches["notifications.warning"]
-        XCTAssertTrue(warning.waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(app.switches["notifications.family"].exists)
+        XCTAssertTrue(app.switches["notifications.family"].waitForExistence(timeout: 5), app.debugDescription)
+        // No push about a device's own scans (20 Nov 2026): no "Dangerous sites" / "Blocked sites" switches.
+        XCTAssertFalse(app.switches["notifications.warning"].exists)
+        XCTAssertFalse(app.switches["notifications.blocked"].exists)
         XCTAssertTrue(app.switches["notifications.protectionOff"].exists)
         let summary = app.switches["notifications.summary"]
         reveal(summary, in: app)
@@ -286,7 +287,8 @@ final class ProfileUITests: XCTestCase {
         let personal = openProfile(mode: "guardian", familyMode: false)
         reveal(personal.buttons["profile.notifications"], in: personal)
         personal.buttons["profile.notifications"].tap()
-        XCTAssertTrue(personal.switches["notifications.blocked"].waitForExistence(timeout: 5))
+        XCTAssertTrue(personal.switches["notifications.summary"].waitForExistence(timeout: 5), personal.debugDescription)
+        XCTAssertFalse(personal.switches["notifications.blocked"].exists)
         XCTAssertFalse(personal.switches["notifications.family"].exists)
     }
 

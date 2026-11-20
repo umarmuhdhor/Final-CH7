@@ -10,7 +10,7 @@ import { clientIp, hit, hitLight, limits } from "../http/rateLimit";
 import { maxRequestBytes } from "../http/bodyLimit";
 import { DOMAIN, DOMAIN_MESSAGE, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 import { deliverPush } from "../services/push/deliver";
-import { guardianPush, ownPush } from "../services/push/notify";
+import { guardianPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
 import { attachFavicon, faviconUrl } from "../services/favicons";
 import { attachFragments } from "../services/fragments";
@@ -225,14 +225,12 @@ scans.post("/scans", async (c) => {
   if (push) {
     try {
       const scan = { id, status: body.status, score: body.score };
-      // PF-01: the guardian's push, then the device's own ("Situs berbahaya" / "Situs diblokir").
+      // Only the guardian of a protected device gets a push (Alief, 20 Nov 2026): no push to the device
+      // about its own scan, it already saw the popup or block page (plan/alief/proposal/push-copy.md).
       const guardian = await guardianPush(sql, principal, scan);
-      const messages = [guardian, await ownPush(sql, principal, scan)];
-      const sender = pushSender(c.env);
-      for (const message of messages) {
-        if (!message) continue;
-        if (message === guardian) notified = { name: guardian.guardianName };
-        const delivery = deliverPush(sql, sender, message).catch((err) =>
+      if (guardian) {
+        notified = { name: guardian.guardianName };
+        const delivery = deliverPush(sql, pushSender(c.env), guardian).catch((err) =>
           // Name only: a DB error can quote values (D-alief-40).
           console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
         );
