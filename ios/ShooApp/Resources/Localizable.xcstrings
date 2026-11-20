@@ -452,12 +452,22 @@
         }
       }
     },
-    "Shoo no longer blocks or warns %@ on this link." : {
+    "Shoo no longer blocks or warns anyone in your family on this link." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shoo tidak lagi memblokir atau memperingatkan %@ di link ini."
+            "value" : "Shoo tidak lagi memblokir atau memperingatkan siapa pun di keluargamu di link ini."
+          }
+        }
+      }
+    },
+    "This link becomes safe on every phone in your family." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link ini jadi aman di semua HP keluargamu."
           }
         }
       }

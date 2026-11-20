@@ -761,9 +761,13 @@ exactly like a screenshot link.
 ## Verdicts
 
 A **verdict** is the Guardian's decision on a flagged page (warning or blocked): `safe` ("Aman") or
-`not_safe` ("Bahaya"). It applies per owner and **link** (#241): origin + path, without query or fragment
-(`shareableUrl` in the extension). A `safe` opens only that link; a `not_safe` also covers the other links
-of the domain, except on a shared host.
+`not_safe` ("Bahaya"). It applies per **link** (#241): origin + path, without query or fragment
+(`shareableUrl` in the extension), for the **whole family** of the scan's owner (plan/alief/family-safe.md,
+issue #632): the Guardian and its connected Protected members, whichever member's scan it was made on. A
+`safe` opens only that link; a `not_safe` also covers the other links of the domain for that owner only,
+except on a shared host. A family is read when asked (`public.verdict_family`), so it never reaches another
+family, and a member who leaves stops getting it at once. Rows are not copied: one decision is one row, so
+the admin learning and the global review queue still count it once.
 
 ### `POST /verdicts`
 
@@ -799,11 +803,13 @@ confirmation step.
   to the admin label and archive row (`admin.mask_note`).
 - A Guardian can decide on its own scans and on its members' scans, warning or blocked (Figma "Detail
   Aktivitas Waspada"; before GD-07 warning scans answered `409`).
-- Every scan of that owner then carries it by the lookup rule below, warning or blocked.
+- Every scan of that link in the owner's family then carries it by the lookup rule below, warning or blocked.
 - **Safe lock (#476):** a `safe` verdict cannot change until Shoo's weekly AI review has read it: the
   first Sunday 18:00 UTC after `decidedAt` (the shoo-admin review cron acts on Mondays in WITA). Until
   then any new verdict on that link, `safe` or `not_safe`, answers `409 verdict_locked`. A `not_safe`
-  is never locked: blocking more is the safe side. The lock is per link; other pages of the site are free.
+  is never locked: blocking more is the safe side. The lock is per link and per family: while the family's
+  newest verdict on the link is a locked `safe`, a verdict on any member's scan of it answers `409`. Other
+  pages of the site are free.
   While locked, the `Verdict` carries `lockedUntil` (ISO), here, in `GET /verdicts` and on a scan.
 - A `not_safe` on a connected member's scan also queues the domain for **manual** review before it can
   enter the global blocklist (at most 10 new domains per Guardian per 24 h). Government, education and bank domains, and
@@ -839,8 +845,8 @@ adaptive schedule (every 2 s for the first 2 minutes, every 5 s up to 10 minutes
 ```
 
 Lookup, first match wins:
-1. A verdict on exactly this link, `safe` or `not_safe`.
-2. A `not_safe` by this owner on another link of the same domain, unless **either** link is on a shared
+1. The newest verdict on exactly this link made in this device's family, `safe` or `not_safe`.
+2. A `not_safe` by this owner (never another member's: its link is that member's browsing) on another link of the same domain, unless **either** link is on a shared
    host: its host is on, or under, an `admin.domain_lists` row with `hosting = 'host_path'` (`docs.google.com`,
    `sites.google.com`, `bit.ly`), or the domain itself has `hosting = 'subdomains'` (`vercel.app`). Either
    link means the one asked about and the one the `not_safe` was made on (#495): a scam Google Form filed
@@ -854,7 +860,8 @@ Every `Verdict` (here, in `POST /verdicts` and on a scan) carries `url`: the lin
 A `safe` verdict that is still locked (#476) also carries `lockedUntil`, the ISO time it can change
 again. The field is absent on `not_safe` and once the weekly review has passed.
 
-When a member disconnects or is removed, the old Guardian's verdicts for that member are deleted.
+When a member disconnects or is removed, the old Guardian's verdicts for that member are deleted, so they
+stop counting for the rest of the family too; the member stops getting the family's verdicts at once.
 
 **Log (fase 25 K7):** when the verdict was decided at most 120 s ago, the Worker logs one line
 `{"event":"verdict_seen","ageMs":…,"value":"safe"}`: the time from the Guardian's tap to this poll,

@@ -23,7 +23,7 @@ struct DetailFooterTests {
         #expect(DetailFooter.fadeHeight < DetailFooter.topPadding, "the fade must end above the question")
         let footer = DetailFooter(
             verdict: nil, viewerDeviceId: nil, canValidate: true, failure: failure,
-            ownerName: nil, isBlocked: isBlocked, onDecide: { _ in }
+            isBlocked: isBlocked, onDecide: { _ in }
         )
         .frame(width: 375)
         .environment(\.dynamicTypeSize, .large)

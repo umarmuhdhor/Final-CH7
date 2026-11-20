@@ -10,8 +10,6 @@ struct DetailFooter: View {
     let canValidate: Bool
     /// Why the last verdict was not saved (BH-27); nil when it was, or none was sent.
     let failure: DetailModel.VerdictError?
-    /// The person who opened the site, when it isn't the viewer (the note under a safe verdict).
-    let ownerName: String?
     /// Blocked sites ask "Apakah situs ini berbahaya?", warnings "Apakah situs ini benar penipuan?".
     var isBlocked = false
     /// "Ubah" pressed: the buttons are back. Owned by Detail, so it survives the footer moving between the bottom
@@ -81,9 +79,10 @@ struct DetailFooter: View {
                     canChange: canValidate && lockedUntil == nil,
                     onChange: { isChanging = true }
                 )
-                if verdict.value == .safe, let ownerName {
-                    // #369: "Aman" vouches for this link on both phones: no block, card or sheet while it stands.
-                    Text("Shoo no longer blocks or warns \(ownerName) on this link.")
+                if verdict.value == .safe, canValidate {
+                    // #369, plan/alief/family-safe.md: "Aman" vouches for this link on every phone of the family
+                    // (the Guardian's own and each member's): no block, card or sheet while it stands.
+                    Text("Shoo no longer blocks or warns anyone in your family on this link.")
                         .activityFont(13, rounded: true)
                         .foregroundStyle(DetailStyle.secondary)
                         // Figma: centred, 140 % line height.

@@ -603,7 +603,9 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
     expect((await decide(g, a, "safe")).status).toBe(200);
     expect(await lookupLink(p, "https://sites.example/a?utm=1#x", "sites.example")).toMatchObject({ value: "safe", byName: "Adhella" });
     expect(await lookupLink(p, "https://sites.example/b", "sites.example")).toBeNull();
-    expect(await lookupLink(g, "https://sites.example/a", "sites.example")).toBeNull(); // another owner
+    // plan/alief/family-safe.md: the same link is safe for the whole family, the guardian's own phone included.
+    expect(await lookupLink(g, "https://sites.example/a", "sites.example")).toMatchObject({ value: "safe" });
+    expect(await lookupLink(g, "https://sites.example/b", "sites.example")).toBeNull();
   });
 
   it("not_safe on one link covers the other links of the domain; an exact verdict wins", async () => {
