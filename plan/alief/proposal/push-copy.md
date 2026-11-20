@@ -1,7 +1,21 @@
 # Usulan: teks push peringatan yang lebih jelas
 
-Status: **usulan, belum ada kode yang diubah.** Alief memilih satu opsi dulu, baru dibangun.
+Status: **diputuskan Alief, 20 Nov 2026. Dibangun di branch `fix/GD-06-push-copy`.**
 Tanggal: 20 Nov 2026 · Area: GD-06 (push ke Guardian), PF-01 (push untuk scan sendiri) · Pemilik: Team App (`backend/`)
+
+## Keputusan
+
+Kata Alief: "untuk notif, persentase nya ilangin aja", "kalo misalnya guardian buka website lalu dia dapet warning, gk usah push notif ke diri sendiri", "jadi notif nya itu cuman muncul ke guardian kalo protected device nge detect".
+
+1. **Opsi A dipilih** (bagian 5 dan 6): kata tingkat di depan, satu tindakan, isi saja (payload tidak berubah).
+2. **Persen dihapus dari semua push.** Skor tetap ada di Detail.
+3. **Push hanya ke Guardian, dan hanya kalau perangkat Protected mendeteksi situs berisiko atau diblokir.** Push untuk scan sendiri (bagian 5.4 dan 5.5) **dihapus**:
+   - Guardian tidak dapat push untuk situs yang dia buka sendiri. Dia sudah melihat popup di Safari.
+   - Protected tetap tidak dapat push untuk scan miliknya (memang sudah begitu).
+   - Sakelar "Situs berbahaya" dan "Situs diblokir" di Profil → Notifikasi tidak berguna lagi, jadi disembunyikan dari app. Field `notifications.warning` / `notifications.blocked` di API tetap diterima (tidak memecah app lama), tapi tidak dipakai lagi.
+4. Sumber push "diri sendiri" yang dicek: hanya `ownPush` di `backend/api/src/services/push/notify.ts`. Tidak ada notifikasi lokal di `ios/ShooApp/` atau `ios/ShooExtension/`.
+
+Teks yang dibangun: tabel "Teks lengkap Opsi A", tiga baris Guardian saja.
 
 ## 1. Kenapa
 
@@ -166,6 +180,8 @@ Shoo sudah menutup halaman. Anggota aman, dan layar blokirnya bilang "Link terki
 
 ### 5.4 Diri sendiri (perangkat Guardian) · **peringatan** (30–79)
 
+> **Dihapus (keputusan Alief):** tidak ada push untuk scan sendiri. Teks di 5.4 dan 5.5 disimpan sebagai catatan saja.
+
 Ini push yang dilihat penguji. Penerima baru saja melihat popup di Safari, jadi push ini pengingat dan catatan. Kata tingkat harus sama dengan popup yang barusan dia lihat.
 
 **Opsi A**
@@ -216,7 +232,7 @@ Ini push yang dilihat penguji. Penerima baru saja melihat popup di Safari, jadi 
 | `interruption-level: time-sensitive` untuk push Diblokir ke Guardian | Butuh capability baru di `ios/project.yml` (milik lead) dan ubah payload. Bisa diusulkan terpisah nanti kalau push blokir sering terlewat |
 | `thread-id` per anggota (push dikelompokkan per orang) | Ubah payload. Manfaatnya kecil karena push sudah dibatasi per situs |
 
-## 6. Rekomendasi: **Opsi A**
+## 6. Rekomendasi: **Opsi A** (dipilih)
 
 Alasan:
 
@@ -241,13 +257,16 @@ Opsi B lebih rapi (judul tebal), tapi butuh ubah payload dan menunggu lead. Bisa
 
 Extension Safari hanya punya teks Indonesia (`_locales/id`). Label EN mengikuti `chrome/README.md` ("Be careful" untuk Waspada). "High risk" untuk 50–79 adalah usulan; cek dengan label EN di app saat membangun.
 
-### Kalau Opsi A dipilih: yang dibangun
+Baris "Sendiri" di tabel ini **tidak dibangun** (keputusan nomor 3).
 
-1. `messages.ts`: ganti `TEXT` dan `OWN` dengan teks di atas. Kunci baru: `warning1` (30–49), `warning2` (50–79), `blocked`. Persen tidak dipakai lagi.
-2. `notify.ts`: pilih tingkat dari `status` + `score` (`warning` dan skor < 50 → `warning1`, `warning` dan skor ≥ 50 → `warning2`, `blocked` → `blocked`).
-3. Tes: `backend/api/test/push-messages.test.ts`, `push-apns.test.ts`, `push-deliver.test.ts`, `settings.test.ts`; `backend/API.md`; cek juga `routes/support.ts` dan `ios/ShooApp/UITests/LivePushUITests.swift` yang menyebut teks push lama.
-4. Cek di simulator: teks terpotong di mana pada layar kunci, dengan ukuran teks standar dan besar, dan dengan nama anggota yang panjang. Lampirkan screenshot sebelum/sesudah di PR.
-5. Satu branch, satu PRD ID: mis. `fix/GD-06-push-copy`.
+### Yang dibangun
+
+1. `messages.ts`: ganti `TEXT` dengan tiga teks Guardian di atas, hapus `OWN`. Kunci baru: `warning1` (30–49), `warning2` (50–79), `blocked`. Persen tidak dipakai lagi.
+2. `notify.ts`: pilih tingkat dari `status` + `score` (`warning` dan skor < 50 → `warning1`, `warning` dan skor ≥ 50 → `warning2`, `blocked` → `blocked`). Hapus `ownPush`; `routes/scans.ts` hanya mengirim push Guardian.
+3. App: sembunyikan bagian "Peringatan" (sakelar "Situs berbahaya" dan "Situs diblokir") di Profil → Notifikasi.
+4. Tes: `backend/api/test/push-messages.test.ts`, `push-apns.test.ts`, `push-deliver.test.ts`, `settings.test.ts`; `backend/API.md`; cek juga `routes/support.ts` dan `ios/ShooApp/UITests/LivePushUITests.swift` yang menyebut teks push lama.
+5. Cek di simulator: teks terpotong di mana pada layar kunci, dengan ukuran teks standar dan besar, dan dengan nama anggota yang panjang. Lampirkan screenshot sebelum/sesudah di PR.
+6. Branch: `fix/GD-06-push-copy`.
 
 ## 7. Issue yang perlu dibuka (belum dibuka)
 
