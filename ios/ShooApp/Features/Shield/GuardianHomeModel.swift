@@ -165,9 +165,9 @@ final class GuardianHomeModel {
 
     /// Pribadi that has never been Guardian ("Pribadi/Home kalau belum setting guardian or protected" 1382:10567, card
     /// 2366:10994): "Jadi Penjaga · Lindungi orang terdekat", until it is closed. This Home has no ⇆ yet, so the card is
-    /// the way to Guardian. Closing it also closes Profile's Guardian card: one "not now" for both.
+    /// the way to Guardian. Closing it hides only this card: Profile's Guardian card stays (Alief, 21 Nov 2026).
     var showsGuardianCard: Bool {
-        scope == .personal && state == .loaded && !settings.guardianIntroSeen && !settings.guardianCardDismissed
+        scope == .personal && state == .loaded && !settings.guardianIntroSeen && !settings.homeGuardianCardDismissed
     }
 
     /// Pribadi back from Guardian with nobody to look after: the "Mode Terawasi" card, until it is closed. Unknown
@@ -228,9 +228,9 @@ final class GuardianHomeModel {
         personalMembersKnown = true
     }
 
-    /// X on the "Mode Terawasi" card: gone for good on this iPhone.
+    /// X on the "Jadi Penjaga" card: gone for good from this Home on this iPhone.
     func dismissGuardianCard() {
-        settings.guardianCardDismissed = true
+        settings.homeGuardianCardDismissed = true
     }
 
     func dismissSupervisedCard() {

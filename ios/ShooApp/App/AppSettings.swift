@@ -39,6 +39,7 @@ final class AppSettings {
 
         static let dismissedHomeScanIds = "settings.dismissedHomeScanIds"
         static let guardianCardDismissed = "settings.guardianCardDismissed"
+        static let homeGuardianCardDismissed = "settings.homeGuardianCardDismissed"
         static let supervisedCardDismissed = "settings.supervisedCardDismissed"
         static let guardianIntroSeen = "settings.guardianIntroSeen"
         static let guardianSwitchTipSeen = "settings.guardianSwitchTipSeen"
@@ -47,7 +48,7 @@ final class AppSettings {
             language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, dataConsent,
             inviteRegistrationPending, largeText,
             theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
-            dismissedHomeScanIds, guardianCardDismissed, supervisedCardDismissed, guardianIntroSeen, guardianSwitchTipSeen,
+            dismissedHomeScanIds, guardianCardDismissed, homeGuardianCardDismissed, supervisedCardDismissed, guardianIntroSeen, guardianSwitchTipSeen,
             demoMode, demoReturn,
         ]
     }
@@ -138,6 +139,11 @@ final class AppSettings {
         didSet { defaults.set(guardianCardDismissed, forKey: Keys.guardianCardDismissed) }
     }
 
+    /// Pribadi Home's "Jadi Penjaga" card was closed with X. Its own flag: Profile's Guardian card stays (Alief, 21 Nov 2026).
+    var homeGuardianCardDismissed: Bool {
+        didSet { defaults.set(homeGuardianCardDismissed, forKey: Keys.homeGuardianCardDismissed) }
+    }
+
     /// Home's "Mode Terawasi" card (Pribadi without family, protected without a guardian) was closed with X.
     var supervisedCardDismissed: Bool {
         didSet { defaults.set(supervisedCardDismissed, forKey: Keys.supervisedCardDismissed) }
@@ -184,6 +190,7 @@ final class AppSettings {
         readAloud = defaults.bool(forKey: Keys.readAloud)
         dismissedHomeScanIds = defaults.stringArray(forKey: Keys.dismissedHomeScanIds) ?? []
         guardianCardDismissed = defaults.bool(forKey: Keys.guardianCardDismissed)
+        homeGuardianCardDismissed = defaults.bool(forKey: Keys.homeGuardianCardDismissed)
         supervisedCardDismissed = defaults.bool(forKey: Keys.supervisedCardDismissed)
         guardianIntroSeen = defaults.bool(forKey: Keys.guardianIntroSeen)
         // An install from before the tip that was Guardian already knows ⇆.
@@ -304,6 +311,7 @@ final class AppSettings {
         demoMode = false
         dismissedHomeScanIds = []
         guardianCardDismissed = false
+        homeGuardianCardDismissed = false
         supervisedCardDismissed = false
         guardianIntroSeen = false
         guardianSwitchTipSeen = false

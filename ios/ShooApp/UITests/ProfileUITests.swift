@@ -92,6 +92,25 @@ final class ProfileUITests: XCTestCase {
         XCTAssertFalse(again.descendants(matching: .any)["profile.guardianCard"].exists)
     }
 
+    /// Alief, 21 Nov 2026: X on Home's "Jadi Penjaga" card closes only that card; Profile's Guardian card stays.
+    @MainActor
+    func testClosingHomesGuardianCardKeepsProfiles() {
+        let app = XCUIApplication.mock([
+            "-settings.onboardingCompleted", "YES", "-settings.onboardingConnectPassed", "YES",
+            "-settings.mode", "guardian", "-settings.language", "en", "-settings.familyModeOn", "NO",
+            "-settings.guardianIntroSeen", "NO", "-settings.guardianCardDismissed", "NO",
+            "-settings.homeGuardianCardDismissed", "NO", "-mock.scenario", "empty",
+            "-UITestNotifications", "granted", "-UITestExtensionActive", "YES",
+        ])
+        let close = app.buttons["home.guardianCard.close"]
+        XCTAssertTrue(close.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        close.tapWhenHittable()
+        XCTAssertTrue(app.descendants(matching: .any)["home.guardianCard"].waitForNonExistence(timeout: 5))
+        app.buttons["profileButton"].tapWhenHittable()
+        let card = app.descendants(matching: .any)["profile.guardianCard"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+    }
+
     @MainActor
     func testDeleteAccountStartsOnboardingOver() {
         let app = openProfile(mode: "guardian")

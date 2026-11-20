@@ -114,7 +114,7 @@ struct GuardianHomeModelTests {
     }
 
     /// Alief, 20 Nov 2026: a Pribadi Home that has never been Guardian has no ⇆; "Jadi Penjaga" (2366:10994) is the way
-    /// in, never next to "Mode Terawasi". Closing it closes Profile's Guardian card too.
+    /// in, never next to "Mode Terawasi". Closing it leaves Profile's Guardian card (Alief, 21 Nov 2026).
     @Test func neverGuardianHomeOffersTheGuardianCardUntilClosed() async throws {
         let settings = try settings()
         let model = model(repository: MockRepository(mode: .guardian, scenario: .homePribadiAlone, latency: .zero),
@@ -124,7 +124,8 @@ struct GuardianHomeModelTests {
         #expect(!model.showsSupervisedCard)
         model.dismissGuardianCard()
         #expect(!model.showsGuardianCard)
-        #expect(settings.guardianCardDismissed)
+        #expect(settings.homeGuardianCardDismissed)
+        #expect(!settings.guardianCardDismissed)
         #expect(!model.showsSupervisedCard)
     }
 

@@ -265,6 +265,15 @@ struct ProfileModelTests {
         #expect(!redesignModel(mode: .protected).showsGuardianCard)
     }
 
+    /// Alief, 21 Nov 2026: X on Home's "Jadi Penjaga" card leaves Profile's Guardian card.
+    @Test func closingHomesGuardianCardKeepsProfiles() {
+        let settings = settings(mode: .guardian)
+        settings.homeGuardianCardDismissed = true
+        let personal = ProfileModel(repository: MockRepository(mode: .guardian, latency: .zero), settings: settings,
+                                    notifications: nil, linked: linked(), now: { Self.start })
+        #expect(personal.showsGuardianCard)
+    }
+
     @Test func activeSinceIsTheRegistrationDay() async {
         let model = redesignModel(mode: .protected)
         await model.load()
