@@ -7654,16 +7654,6 @@
           }
         }
       }
-    },
-    "Allow in Private Browsing: optional." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Izinkan di Penelusuran Pribadi: opsional."
-          }
-        }
-      }
     }
   },
   "version" : "1.1"

@@ -151,7 +151,7 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(again.tabBars.buttons["Shield"].waitForExistence(timeout: 10), again.debugDescription)
     }
 
-    /// Usability test 20 Nov 2026: "All Websites → Allow" is a numbered step with a Private Browsing note, and when
+    /// Usability test 20 Nov 2026: "All Websites → Allow" is a numbered step, and when
     /// the extension has reported that it may read only some sites, onboarding says so and does not move on.
     @MainActor
     func testAllWebsitesStepAndWarningWhenShooCanReadOnlySomeSites() {
@@ -160,8 +160,6 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(app.staticTexts["Tap All Websites and choose Allow, not Ask."].exists, app.debugDescription)
         XCTAssertTrue(app.descendants(matching: .any)["extension.step.4"].exists, app.debugDescription)
-        let step3 = app.descendants(matching: .any)["extension.step.3"]
-        XCTAssertTrue(step3.label.contains("Allow in Private Browsing: optional."), step3.label)
         XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertFalse(app.buttons["extension.continue"].exists)
     }

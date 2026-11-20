@@ -81,7 +81,7 @@ struct TurnOnExtensionView: View {
                 // Once the switch is known to be on, the setup steps are done; only the callout is left.
                 if !showsStatusNote || nextStep?.opensSafariFirst != true {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                        OnboardingStepRow(number: index + 1, text: step.text, note: step.note)
+                        OnboardingStepRow(number: index + 1, text: step.text)
                             .accessibilityIdentifier("extension.step.\(index + 1)")
                     }
                 }
@@ -406,8 +406,6 @@ struct OnboardingTutorialLink: View {
 struct OnboardingStepRow: View {
     let number: Int
     let text: LocalizedStringKey
-    /// A short second line in grey, e.g. "Private Browsing: optional." under All Websites.
-    var note: LocalizedStringKey?
     @ScaledMetric(relativeTo: .subheadline) private var badgeSize: CGFloat = 40
 
     var body: some View {
@@ -421,20 +419,12 @@ struct OnboardingStepRow: View {
                 // Figma "Button": black 20%, y 2.7, blur 4.5 (its -2.7 spread has no SwiftUI equivalent).
                 .shadow(color: .black.opacity(0.2), radius: 2.3, y: 2.7)
                 .accessibilityLabel(Text("Step \(number)"))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(text)
-                    // Figma: 22 pt lines, the font's own.
-                    .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
-                    .foregroundStyle(OnboardingTheme.stepInk)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let note {
-                    Text(note)
-                        .onboardingFont(14, design: .rounded, relativeTo: .footnote)
-                        .foregroundStyle(OnboardingTheme.secondaryInk)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: badgeSize, alignment: .leading)
+            Text(text)
+                // Figma: 22 pt lines, the font's own.
+                .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
+                .foregroundStyle(OnboardingTheme.stepInk)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: badgeSize, alignment: .leading)
         }
         .accessibilityElement(children: .combine)
     }
