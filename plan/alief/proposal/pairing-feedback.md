@@ -93,7 +93,7 @@ Right after the tap:
 
 | Action | Toast (ID / EN) | Highlight |
 |---|---|---|
-| Intro "Mulai" / "Ganti ke Guardian" (#1–#3, #8) | "Mode Guardian aktif · Bagikan kode ini ke keluarga" / "Guardian mode on · Share this code with your family" | the code card |
+| Intro "Mulai" / "Ganti ke Guardian" (#1–#3, #8) | "Mode Guardian aktif · Bagikan kode ini ke keluarga" / "Guardian mode on · Share this code with your family", with an **"Undang"** button (see the decision below) | the code card + "Bagikan" |
 | "Ganti ke Pribadi" (#2, #8) | "Mode Pribadi aktif · Perlindunganmu tetap menyala" / "Personal mode on · Your protection stays on" | none |
 | Member joins while the invite sheet is open (#4, #5) | "Ibu sudah terhubung · Kamu sekarang ikut menjaga Ibu" / "Ibu is connected · You now help protect Ibu" | Ibu's avatar + "Baru terhubung" |
 | Pribadi inviter, member joins (#7) | same, and Home switches to Family (see decision 1) | the member |
@@ -150,6 +150,33 @@ Rough mock, drawn over the real screenshots. ① is the new toast, ② the one-t
 | Sheet closes by itself, Home shows Ibu with a green ring + "Baru terhubung" chip, toast "Ibu sudah terhubung", success haptic. | Profile / Mode akun closes, Home shows the teal Family Home, the code card glows once, toast "Mode Guardian aktif". | Home settles, the pill pulses once, toast "Terhubung dengan Ayah". |
 
 Toast details for whoever builds it: white card, 12 pt below the top bar, check icon in the mode colour (green for a connection, teal for Guardian). It slides down with the app's `StateMotion` and fades out after 3 s. VoiceOver reads the title and line once.
+
+### Decided (Alief, 20 Nov 2026): no automatic invite sheet after "Ganti ke Guardian"
+
+After switching to Guardian, no invite sheet opens by itself. An automatic sheet would cover the very change the user should see (the teal Home and the toast). It would also repeat the code card that the empty Guardian Home already shows, and it would push people who only wanted to look around. Instead, inviting is made one tap away:
+
+1. **"Bagikan" becomes the main button on the empty Guardian Home:** full width, under the code card, with the share icon. It glows once together with the code card. "Salin" becomes a text button, "Salin kode".
+2. **The "Mode Guardian aktif" toast gets an "Undang" button.**
+3. **Both open the iOS share sheet directly** (Messages, WhatsApp, Mail, Salin), carrying the invite link and the code. They do not go through the "Kirim Undangan" sheet from Profile. The Home "Share" button already works this way today: `ShareLink(item: FamilyCodeModel.inviteText(…))` (`Features/Shield/GuardianHomeView.swift:803`). So "Undang" reuses that, and "Bagikan" is a restyle, not new logic.
+4. Mode akun's button stays "Ganti ke Guardian".
+
+This adds to Option A's file list: `GuardianHomeView.swift` (`InviteCodeCard`: the button layout + the one-time glow on Bagikan) and `Components/HomeNotice.swift` (an optional action on the toast, here a `ShareLink`). It also adds 1–2 strings ("Undang", "Salin kode", EN + ID). Backend and `contracts/`: none.
+
+### Figma (flow screens, 20 Nov 2026)
+
+The Option A flows, plus the ⇆ decision and the share-sheet decision, are drawn in the Figma file *[CH7] Shoo Scam App*, page High Fidelity, section **"Alief Revishit Flow"** (`2364:3633`). Every frame there is a new copy of an existing frame, and the original frames are untouched. The section holds 7 flows:
+
+| # | Flow | Frames |
+|---|---|---|
+| 1 | First ⇆ tap → Mode akun → Guardian Home → iOS share sheet | `2364:3638` → `2364:3754` → `2364:3800` → `2364:12677` |
+| 2 | Profile "Menjadi Guardian" → To be guardian → Guardian Home → share sheet | `2364:3921` → `2364:4034` → `2364:4085` → `2364:12827` |
+| 3 | Mode akun → Guardian → Guardian Home → share sheet | `2364:4204` → `2364:4248` → `2364:12977` |
+| 4 | Mode akun → Pribadi | `2364:4366` → `2364:4410` |
+| 5 | Guardian: a member joins | `2364:4544` → `2364:4656` |
+| 6 | Protected: connected | `2364:4805` → `2364:4840` |
+| 7 | Guardian disconnects a member | `2364:4974` → `2364:5111` |
+
+The Figma frames use the names already in the file (Renatta, Putri, Syahnaz) instead of this doc's Ibu / Ayah.
 
 ### Decisions for Alief before building
 
