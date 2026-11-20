@@ -2,7 +2,7 @@ import type { Language } from "../../env";
 
 /**
  * The push level, the same words as the in-page popup (contracts/README.md thresholds): Waspada below
- * 50, Risiko tinggi from 50, Diblokir for a blocked scan. Usability test 20 Nov 2026: no percentage,
+ * 50, Risiko tinggi from 50, blocked for a blocked scan. Usability test 20 Nov 2026: no percentage,
  * it meant nothing to the tester (plan/alief/proposal/push-copy.md, option A).
  */
 export type PushLevel = "warning1" | "warning2" | "blocked";
@@ -13,18 +13,19 @@ export const SECOND_WARNING = 50;
 export const pushLevel = (status: "blocked" | "warning", score: number): PushLevel =>
   status === "blocked" ? "blocked" : score >= SECOND_WARNING ? "warning2" : "warning1";
 
-// Push text in the guardian's language (contracts/api.md "Push payloads", R3 §6): level word first,
-// what happened, one action. Never the URL or domain (SECURITY T9/P10).
+// Push text in the guardian's language (contracts/api.md "Push payloads", R3 §6): one short sentence of
+// what happened, warnings start with the level word (Alief, 20 Nov 2026: "buat lebih simplyfy aja").
+// Never the URL, the domain or the score (SECURITY T9/P10).
 const TEXT: Record<Language, Record<PushLevel, (name: string) => string>> = {
   en: {
-    warning1: (n) => `Be careful: ${n} opened a suspicious site. Remind ${n} not to enter personal details. Tap to see why.`,
-    warning2: (n) => `High risk: ${n} opened a site that may be a scam. Call ${n} and ask them not to enter a PIN or OTP. Tap for details.`,
-    blocked: (n) => `Blocked: Shoo closed a dangerous site ${n} opened. ${n} is safe. Tap to check it and decide if it's safe.`,
+    warning1: (n) => `Be careful: ${n} opened a suspicious site.`,
+    warning2: (n) => `High risk: ${n} opened a site that may be a scam.`,
+    blocked: (n) => `Shoo closed a dangerous site ${n} opened. ${n} is safe.`,
   },
   id: {
-    warning1: (n) => `Waspada: ${n} membuka situs mencurigakan. Ingatkan ${n} jangan isi data pribadi. Ketuk untuk lihat alasannya.`,
-    warning2: (n) => `Risiko tinggi: ${n} membuka situs yang mungkin penipuan. Telepon ${n}, minta jangan isi PIN atau OTP. Ketuk untuk detail.`,
-    blocked: (n) => `Diblokir: Shoo menutup situs berbahaya yang dibuka ${n}. ${n} aman. Ketuk untuk cek dan putuskan apakah situs ini aman.`,
+    warning1: (n) => `Waspada: ${n} membuka situs mencurigakan.`,
+    warning2: (n) => `Risiko tinggi: ${n} membuka situs yang mungkin penipuan.`,
+    blocked: (n) => `Shoo menutup situs berbahaya yang dibuka ${n}. ${n} aman.`,
   },
 };
 

@@ -1043,20 +1043,21 @@ Not an endpoint: `POST /scans` from a Protected device sends its Guardian this A
 from the Worker over HTTP/2 (GD-06):
 
 ```json
-{ "aps": { "alert": { "body": "Diblokir: Shoo menutup situs berbahaya yang dibuka Mom. Mom aman. Ketuk untuk cek dan putuskan apakah situs ini aman." }, "sound": "default" }, "scanId": "6f1c2a4e-…" }
+{ "aps": { "alert": { "body": "Shoo menutup situs berbahaya yang dibuka Mom. Mom aman." }, "sound": "default" }, "scanId": "6f1c2a4e-…" }
 ```
 
-- The text is in the Guardian's `language`, starts with the level word the in-page popup uses, says
-  what to do, and never contains the URL, the domain or the score (usability test 20 Nov 2026,
-  `plan/alief/proposal/push-copy.md`, option A). The level comes from `status` + `score`: below 50
-  Waspada, from 50 Risiko tinggi (the default second popup tier, contracts/README.md), `blocked`
-  Diblokir:
+- The text is in the Guardian's `language`: one short sentence of what happened (a blocked push adds
+  that the member is safe). A warning starts with the level word the in-page popup uses. It never
+  contains the URL, the domain or the score (usability test 20 Nov 2026,
+  `plan/alief/proposal/push-copy.md`, option A, shortened by Alief the same day). The level comes
+  from `status` + `score`: below 50 Waspada, from 50 Risiko tinggi (the default second popup tier,
+  contracts/README.md), `blocked`:
 
   | Level | `en` | `id` |
   |---|---|---|
-  | `warning` < 50 | `Be careful: Mom opened a suspicious site. Remind Mom not to enter personal details. Tap to see why.` | `Waspada: Mom membuka situs mencurigakan. Ingatkan Mom jangan isi data pribadi. Ketuk untuk lihat alasannya.` |
-  | `warning` ≥ 50 | `High risk: Mom opened a site that may be a scam. Call Mom and ask them not to enter a PIN or OTP. Tap for details.` | `Risiko tinggi: Mom membuka situs yang mungkin penipuan. Telepon Mom, minta jangan isi PIN atau OTP. Ketuk untuk detail.` |
-  | `blocked` | `Blocked: Shoo closed a dangerous site Mom opened. Mom is safe. Tap to check it and decide if it's safe.` | `Diblokir: Shoo menutup situs berbahaya yang dibuka Mom. Mom aman. Ketuk untuk cek dan putuskan apakah situs ini aman.` |
+  | `warning` < 50 | `Be careful: Mom opened a suspicious site.` | `Waspada: Mom membuka situs mencurigakan.` |
+  | `warning` ≥ 50 | `High risk: Mom opened a site that may be a scam.` | `Risiko tinggi: Mom membuka situs yang mungkin penipuan.` |
+  | `blocked` | `Shoo closed a dangerous site Mom opened. Mom is safe.` | `Shoo menutup situs berbahaya yang dibuka Mom. Mom aman.` |
 
 - Only the Guardian of a Protected device gets a scan push. No device gets a push about its own
   scan (Alief, 20 Nov 2026): not a Guardian or Personal device for the sites it opens (it already saw

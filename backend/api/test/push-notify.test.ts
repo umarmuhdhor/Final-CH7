@@ -24,7 +24,7 @@ describe("guardianPush (R4 §3)", () => {
     await call("/family/join", { method: "POST", token: p.token, json: { code } });
 
     expect(await guardianPush(sql, principal(p, "Mom", "protected"), scan)).toEqual({
-      toDeviceId: g.deviceId, apnsToken: TOKEN, body: "Diblokir: Shoo menutup situs berbahaya yang dibuka Mom. Mom aman. Ketuk untuk cek dan putuskan apakah situs ini aman.", scanId: scan.id,
+      toDeviceId: g.deviceId, apnsToken: TOKEN, body: "Shoo menutup situs berbahaya yang dibuka Mom. Mom aman.", scanId: scan.id,
       guardianName: "G",
     });
   });
