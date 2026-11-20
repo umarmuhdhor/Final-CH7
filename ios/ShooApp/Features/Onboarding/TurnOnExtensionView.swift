@@ -40,6 +40,8 @@ struct TurnOnExtensionView: View {
     /// back and Shoo is still not on (#135).
     @State private var leftForSettings = false
     @State private var cameBack = false
+    /// `OnboardingStepRow`'s badge, so the picture under step 3 lines up with the step's text.
+    @ScaledMetric(relativeTo: .subheadline) private var stepBadgeSize: CGFloat = 40
 
     /// A heartbeat can land a moment after the user is back from Safari: look again for this long (#135).
     private static let recheck = (times: 10, every: Duration.seconds(2))
@@ -58,7 +60,7 @@ struct TurnOnExtensionView: View {
             // Figma "stack": 16 between rows, 40 under the headline.
             VStack(alignment: .leading, spacing: 16) {
                 // The reason first, above the steps, so it is seen without scrolling (#135).
-                if let nextStep, showsStatusNote {
+                if let nextStep, showsStatusNote || showsAllSitesWarning {
                     Label { Text(nextStep.message) } icon: { Image(systemName: "info.circle.fill") }
                         .onboardingFont(15, design: .rounded, relativeTo: .subheadline)
                         .foregroundStyle(OnboardingTheme.ink)
@@ -75,6 +77,11 @@ struct TurnOnExtensionView: View {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                         OnboardingStepRow(number: index + 1, text: step.text)
                             .accessibilityIdentifier("extension.step.\(index + 1)")
+                        if step == .allowEveryWebsite {
+                            AllWebsitesAllowHint()
+                                .padding(.leading, stepBadgeSize + 12)
+                                .padding(.top, -6)
+                        }
                     }
                 }
                 if let consent, consent.failed, consent.limited {
@@ -173,6 +180,11 @@ struct TurnOnExtensionView: View {
     /// Only outside onboarding (Home "Turn on"). Onboarding always shows the Figma "Aktifkan Ekstensi" frame:
     /// the steps, the consent box, Turn on and the tutorial link, also after Settings.
     private var showsStatusNote: Bool { consent == nil }
+
+    /// Onboarding too: the extension has reported that Safari lets it read only some sites (`extension.allSites`
+    /// false). The one case the app can see; with Ask and no page loaded yet nothing reports in, so the step
+    /// above is what tells the user (usability test 20 Nov 2026).
+    private var showsAllSitesWarning: Bool { consent != nil && nextStep == .allowEveryWebsite }
 
     private func open(safariFirst: Bool) async {
         if let consent {
@@ -357,6 +369,51 @@ struct OnboardingTutorialLink: View {
                 + Text("Watch the tutorial").fontWeight(.semibold).foregroundStyle(OnboardingTheme.link)
         }
         .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .regular))
+    }
+}
+
+/// Under the "All Websites → Allow" step: the row as Safari's Shoo page shows it once set, so the user knows
+/// what to look for, and whether Private Browsing matters. Safari's labels are drawn in the app language
+/// (iOS uses the same words: "Semua Situs Web", "Izinkan", "Izinkan di Penelusuran Pribadi").
+private struct AllWebsitesAllowHint: View {
+    private static let allow = Color.dynamic(0x0B8A5B, dark: 0x3DD68C)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("All Websites")
+                    .onboardingFont(16, design: .rounded, tracking: -0.2, relativeTo: .callout)
+                    .foregroundStyle(OnboardingTheme.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Self.allow)
+                Text("Allow")
+                    .onboardingFont(16, weight: .semibold, relativeTo: .callout)
+                    .foregroundStyle(Self.allow)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(OnboardingTheme.placeholder)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Self.allow.opacity(0.6), lineWidth: 1.5)
+            }
+            // The step's own text says the same: VoiceOver reads it once.
+            .accessibilityHidden(true)
+            .accessibilityIdentifier("extension.allSitesPicture")
+
+            Text("Optional: also switch on Allow in Private Browsing, so private tabs are checked too.")
+                .onboardingFont(14, design: .rounded, relativeTo: .footnote)
+                .foregroundStyle(OnboardingTheme.secondaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("extension.privateBrowsing")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

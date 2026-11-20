@@ -124,6 +124,41 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(again.tabBars.buttons["Shield"].waitForExistence(timeout: 10), again.debugDescription)
     }
 
+    /// Usability test 20 Nov 2026: "All Websites → Allow" is a numbered step with a picture of the row, and when
+    /// the extension has reported that it may read only some sites, onboarding says so and does not move on.
+    @MainActor
+    func testAllWebsitesStepAndWarningWhenShooCanReadOnlySomeSites() {
+        let app = launch(extensionActive: false, extensionStatus: "someSitesOnly")
+        app.onboardName("Rina")
+        XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Tap All Websites and choose Allow, not Ask."].exists, app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["extension.step.4"].exists, app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["extension.privateBrowsing"].exists, app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.buttons["extension.continue"].exists)
+    }
+
+    /// `SHOO_SHOT_DIR` only: the new step 3 picture and step 4 scrolled into view, in Indonesian, for the PR.
+    @MainActor
+    func testAllWebsitesStepScreenshotForPR() throws {
+        guard let directory = ProcessInfo.processInfo.environment["SHOO_SHOT_DIR"] else {
+            throw XCTSkip("set SHOO_SHOT_DIR to keep the screenshot")
+        }
+        let app = XCUIApplication.mock([
+            "-settings.language", "id", "-UITestNotifications", "denied", "-debug.onboardingStep", "turnOnExtension",
+        ])
+        let note = app.descendants(matching: .any)["extension.privateBrowsing"]
+        let turnOn = app.buttons["extension.turnOn"]
+        XCTAssertTrue(turnOn.waitForExistence(timeout: 5), app.debugDescription)
+        let window = app.windows.firstMatch
+        for _ in 0..<6 where note.frame.maxY > turnOn.frame.minY - 140 {
+            let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
+            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -120)), withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        try XCUIScreen.main.screenshot().pngRepresentation
+            .write(to: URL(fileURLWithPath: directory).appendingPathComponent("on04-all-websites-scrolled.png"))
+    }
+
     /// QA 2026-11-11 #7: back from Settings with Shoo still off, the note above the steps pushes step 03 down
     /// behind the consent box. The footer hides what is under it (no text through text), and the step scrolls
     /// up clear of the box. `SHOO_SHOT_DIR` keeps the screen for the PR.

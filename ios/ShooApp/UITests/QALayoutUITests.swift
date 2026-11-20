@@ -75,7 +75,7 @@ final class QALayoutUITests: XCTestCase {
         XCTAssertTrue(consent.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         /// Where the footer starts, or the screen bottom while the footer is off screen (it scrolls with the page).
         func room() -> CGFloat { min(window.frame.maxY, consent.frame.minY) }
-        for number in 1...3 {
+        for number in 1...4 {
             let step = app.descendants(matching: .any)["extension.step.\(number)"]
             XCTAssertTrue(step.exists, app.debugDescription)
             XCTAssertLessThanOrEqual(step.frame.height, room(), "step \(number) \(step.frame) is taller than the room above the footer, from y \(room())")

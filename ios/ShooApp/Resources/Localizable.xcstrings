@@ -4907,7 +4907,6 @@
       }
     },
     "Tap All Websites and choose Allow, not Ask." : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -7642,6 +7641,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kode sekarang dan link undangan yang sudah kamu kirim tidak akan bisa dipakai lagi."
+          }
+        }
+      }
+    },
+    "All Websites" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua Situs Web"
+          }
+        }
+      }
+    },
+    "Allow" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izinkan"
+          }
+        }
+      }
+    },
+    "Optional: also switch on Allow in Private Browsing, so private tabs are checked too." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opsional: nyalakan juga Izinkan di Penelusuran Pribadi agar tab pribadi ikut diperiksa."
           }
         }
       }
