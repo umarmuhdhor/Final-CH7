@@ -164,11 +164,11 @@ This adds to Option A's file list: `GuardianHomeView.swift` (`InviteCodeCard`: t
 
 ### Figma (flow screens, 20 Nov 2026)
 
-The Option A flows, plus the ⇆ decision and the share-sheet decision, are drawn in the Figma file *[CH7] Shoo Scam App*, page High Fidelity, section **"Alief Revishit Flow"** (`2364:3633`). Every frame there is a new copy of an existing frame, and the original frames are untouched. The section holds 7 flows:
+The Option A flows, plus the ⇆ decision (no ⇆ before Guardian, then a one-time tip) and the share-sheet decision, are drawn in the Figma file *[CH7] Shoo Scam App*, page High Fidelity, section **"Alief Revishit Flow"** (`2364:3633`). Every frame there is a new copy of an existing frame, and the original frames are untouched. The section holds 7 flows:
 
 | # | Flow | Frames |
 |---|---|---|
-| 1 | First ⇆ tap → Mode akun → Guardian Home → iOS share sheet | `2364:3638` → `2364:3754` → `2364:3800` → `2364:12677` |
+| 1 | Pribadi Home without ⇆ (Alief's card) → "Menjadi Guardian" (+ To be guardian) → Guardian Home with the one-time ⇆ tip → tip closed: toast + Undang → iOS share sheet | `2368:13129` → `2368:13263` → `2364:3800` → `2364:12677` |
 | 2 | Profile "Menjadi Guardian" → To be guardian → Guardian Home → share sheet | `2364:3921` → `2364:4034` → `2364:4085` → `2364:12827` |
 | 3 | Mode akun → Guardian → Guardian Home → share sheet | `2364:4204` → `2364:4248` → `2364:12977` |
 | 4 | Mode akun → Pribadi | `2364:4366` → `2364:4410` |
@@ -177,6 +177,11 @@ The Option A flows, plus the ⇆ decision and the share-sheet decision, are draw
 | 7 | Guardian disconnects a member | `2364:4974` → `2364:5111` |
 
 The Figma frames use the names already in the file (Renatta, Putri, Syahnaz) instead of this doc's Ibu / Ayah.
+
+Notes on the ⇆ frames:
+- Flow 1's first frame is a copy of `1382:10567` with ⇆ hidden in the copy. Alief's card `2366:10994` and the original frame are untouched. The tip is the group `2368:13380` in `2368:13263`.
+- Flows 2 and 3 show the toast frame. For someone who becomes Guardian for the first time, the tip frame comes first, as in flow 1.
+- Flow 4's Pribadi Home keeps ⇆, because that user has already been Guardian.
 
 ### Decisions for Alief before building
 
@@ -190,40 +195,42 @@ Today:
 - Pribadi Home has only the **unlabelled ⇆ icon**, plus a "Mode Terawasi · Tidak yakin?" card that points the other way (become Protected, p01);
 - the only explainer is the "Mode Guardian · Lindungi orang terdekat" card on **Profile** (m02), which one tap on X hides for good.
 
-### Decided (Alief, 20 Nov 2026): the first ⇆ tap opens the choice page
+### Decided (Alief, 20 Nov 2026): ⇆ appears only after the user has been Guardian once
 
-Alief: *"pas pertama kali dia klik ⇆, arahin dlu ke page yang nampilin pilihan pribadi ama guardian"*.
+Alief: *"pertama kali, tombol ⇆ gk ada, itu baru muncul setelah dia udah jadi guardian"*. This replaces the earlier decision that the first ⇆ tap opens Mode akun. That flow is dropped.
 
-The **first** time a user taps ⇆ on Home, the mode does not flip. Instead, a page opens that shows the two choices, Pribadi and Guardian, each with a short line on what it means, and the user picks one. Every later ⇆ tap works as it does today (instant switch). This replaces the earlier idea of a "Keluarga" text label on ⇆.
+<img src="img/pairing-feedback/figma-flow-1.jpg" width="700">
 
-**The page: the existing Mode akun page (m06), reused almost as-is.** It already has the two cards, each with a subtitle and three feature lines ("Lindungi dirimu sendiri" / "Lindungi orang terdekatmu"), the current mode marked "Saat ini", and a "Ganti ke …" button once the other card is picked (`ModePage`, `Features/Profile/ProfilePages.swift:182-300`). Home's "Hubungkan" card already opens it the same way (`router.show(.profilePage(.mode))`, `GuardianHomeView.swift:254`). It opens on the Shield stack, so Back returns to Home.
+*Figma flow 1, left to right: Pribadi Home without ⇆ (Alief's card) → Guardian Home with the one-time ⇆ tip → the same Home after the tip closes (toast + Undang) → iOS share sheet.*
 
-| Today: Mode akun, Pribadi current (c01) | Mock: first ⇆ tap, Guardian picked |
-|---|---|
-| <img src="img/pairing-feedback/c01-mode-personal.jpg" width="220"> | <img src="img/pairing-feedback/mock-4-first-switch-choice.jpg" width="220"> |
+1. **No ⇆ on Pribadi Home until the user has been Guardian once.** Someone who never was Guardian has nothing to switch to, so the icon only confused (row #8). The avatar stays top right. `HomeTopBar` already hides ⇆ when `onSwitch` is `nil` (`Features/Shield/HomeChrome.swift:338-339`, used that way for protected/Home), so Home passes `nil` while the flag below is false.
+2. **Pribadi Home gets Alief's card** "Jadi Penjaga · Lindungi orang terdekat" (Figma `2366:10994`, in the HOME frame `1382:10567`), under "Anda Terlindungi!". It is used as designed. "Menjadi Guardian" calls `env.requestFamilyMode()`, the same as Profile's card: the first time, "To be guardian" shows, and "Mulai" lands on Guardian Home (`App/AppEnvironment.swift:505-519`). The card shows only while the user has never been Guardian; after that, ⇆ takes its place. **Recommendation, not yet confirmed:** "Tutup" (×) uses the same `guardianCardDismissed` flag as Profile's card, so one "not now" hides both.
+3. **On the first arrival at Guardian Home, a tip points at the ⇆ that just appeared.** It follows Alief's reference: a white rounded card right under ⇆ with a small pointer, a teal tile with a white ⇆, a bold "Mode Penjaga" and a grey "Riwayat link dari keluarga". The English source strings are "Guardian mode" / "Link history from your family" (2 strings, EN + ID).
+   - **How it closes:** a tap anywhere on the screen, ⇆ included. That tap only closes the tip. It does not switch the mode or press what is underneath, the same as an iOS popover tip, so a tap aimed at the tip never flips the user straight back to Pribadi. There is no dim background and no timer, so the tip stays until it is seen. VoiceOver reads it once when it appears, and the escape gesture also closes it.
+   - **Shown once:** a new `AppSettings` Bool `guardianSwitchTipSeen` (key `settings.guardianSwitchTipSeen`, UserDefaults on the device), set to `true` when the tip closes.
+     - Installs that already have `guardianIntroSeen == true` start as seen, because they already know ⇆.
+     - The demo starts with it `true` and saves and restores it like `guardianIntroSeen` (`DemoReturn`, `App/AppSettings.swift:190-233`). `reset()` clears it (`AppSettings.swift:290-292`).
+     - Nothing goes to the server, and nothing changes in `contracts/`.
+   - **Every path counts:** Home card (flow 1), Profile card (flow 2), Mode akun (flow 3). All three end in `startGuardian()`, which sets a router flag for the tip when `guardianSwitchTipSeen` is false.
+   - **Why not TipKit:** TipKit (iOS 17+) does popover tips and remembers "seen" itself. But it draws the system popover, not Alief's white card with the teal tile, and it keeps its own datastore that `reset()` and the demo restore would also have to clear. One small overlay and one flag match how the app already stores its first-time flags.
+4. **Order with the toast: the tip first, the toast after the tip closes.** Both sit at the top, so they never show together. While the tip is up, the "Mode Guardian aktif" toast (with "Undang") and the one-time glow on the code card and "Bagikan" wait. A tap closes the tip, and then they run as in Option A. Why this order:
+   - The tip waits for a tap, while the toast leaves by itself after 3 s. With the toast first, the tip would appear about 3 s later. By then the user may be reading the code card or may have tapped "Undang", and a tip that pops up late feels like an interruption.
+   - Nothing is silent while the tip is up: the teal Home and "Mode Penjaga" already show that the mode changed.
+   - Rejected: showing both at once with the toast moved lower, because the two cards compete and the toast covers the code card. Also rejected: no toast the first time, because it loses the "Undang" shortcut, which is the next step.
+   - Every later switch (⇆, Mode akun, Profile) has no tip, and the toast shows right away.
+5. **Unchanged:** "Bagikan" is the main button, "Undang" and "Bagikan" open the iOS share sheet, and no invite sheet opens by itself.
 
-What changes, numbered as in the mock:
-1. **Copy (optional, 1 string EN + ID).** When the page is opened from ⇆, the line under the title becomes "Shoo bisa menjaga kamu saja, atau juga keluargamu. Pilih salah satu." / "Shoo can protect just you, or your family too. Pick one." From Profile it keeps today's "Pilih cara kamu memakai Shoo. Kamu bisa menggantinya kapan saja." The page title stays "Mode akun". Nothing changes in the layout.
-2. **The cards: no change.** Pribadi is marked "Saat ini", and tapping Guardian selects it, as today. "Punya kode undangan?" stays: being protected is a valid third answer to "who is this for?".
-3. **"Ganti ke Guardian" must end on Home.** Today the user stays on Mode akun and only the "Saat ini" chip moves (m07 → m08, row #2 above). On this route that would repeat the test problem on the very first tap. Two behaviour changes:
-   - Opened from ⇆, the button switches at once and goes back to Home. With Option A, it also shows the "Mode Guardian aktif" toast and the code-card highlight (mock 2). Without Option A, it is at least a pop back to Home, where the teal Family Home is the visible change.
-   - The "To be guardian" intro is skipped on this route: the choice page has just explained Guardian, so a second explainer page before anything happens is one too many. This sets `guardianIntroSeen` too. **Recommendation, not yet confirmed by Alief.**
-4. **Back, or "Ganti ke Pribadi" / staying on Pribadi:** nothing changes and the user is back on Home. This still counts as the first time, so the next ⇆ tap flips as today.
+**Storing "has been Guardian once":** reuse `guardianIntroSeen`, no new flag. It is set only by `startGuardian()` (the "Mulai" on "To be guardian") and by the demo (`AppEnvironment.swift:515-519`, `AppSettings.swift:215`). So it is already `true` exactly when the user has turned Guardian on at least once. Closing "To be guardian" without "Mulai" leaves it `false`, and ⇆ stays hidden, which is correct. The Activity tab's "Family: Off" toggle (`FamilyModeToggle`, `Features/Main/MainTabView.swift:129-157`) is the same switch in text form. It should follow the same rule and stay hidden until then (recommendation).
 
-**How "first time" is stored:**
-- A new `AppSettings` Bool, e.g. `modeChoiceSeen` (key `settings.modeChoiceSeen`). It lives in UserDefaults on the device, like `guardianIntroSeen` (`App/AppSettings.swift:144-147`). Nothing goes to the server and nothing changes in `contracts/`.
-- It is set to `true` when the page opens from ⇆, whatever the user picks.
-- It is also set whenever the mode is switched any other way (Profile's "Menjadi Guardian" card, Mode akun from Profile). Someone who already chose is never asked again.
-- Existing installs with `guardianIntroSeen == true` count as seen, so a user who already became Guardian is not interrupted.
-- It is cleared in `reset()` (fresh start / delete account) like the other card flags (`AppSettings.swift:290-292`). It is saved and restored with the demo (`DemoReturn`, `AppSettings.swift:190-233`), the same way as `guardianIntroSeen`.
-- Where: `requestFamilyMode()` (`App/AppEnvironment.swift:505`) gets a branch: Pribadi, flag not set, call from ⇆ → set the flag and `router.show(.profilePage(.mode))` with a "from ⇆" note for the copy and the pop-to-Home. Other callers (Profile card, Mode akun) keep today's path.
-- The Activity tab's "Family: Off" toggle (`Features/Main/MainTabView.swift:129-157`) is the same switch in text form. It should follow the same first-time rule, on the Activity stack.
+Effort: S–M. Files:
+- `App/AppSettings.swift` (the tip flag);
+- `App/AppEnvironment.swift` (`startGuardian()` sets the tip flag);
+- `App/Router.swift` (tip presented);
+- `Features/Shield/GuardianHomeView.swift` (`onSwitch: nil` while never Guardian, the new card, the tip overlay, the toast waiting for the tip);
+- `Features/Main/MainTabView.swift` (the toggle);
+- `Resources/Localizable.xcstrings`.
 
-Effort: S. Files: `App/AppSettings.swift`, `App/AppEnvironment.swift`, `Features/Profile/ProfilePages.swift` (`ModePage`: copy + end-on-Home), `Features/Shield/GuardianHomeView.swift` and `Features/Main/MainTabView.swift` (toggle callers), `Resources/Localizable.xcstrings`. The UI tests that flip ⇆ on a fresh install (`becomeGuardian()` in `UITests/UITestSupport.swift:155-161`, used by `LivePairingUITests` and others) need the extra page step.
-
-### Still open (smaller)
-
-Show the existing `GuardianModeCard` ("Lindungi orang terdekat" + "Menjadi Guardian") on **Pribadi Home** as well, under the Mode Terawasi card, with the same dismiss rule. People see Home first, not Profile. Its button could open the same choice page. A bigger alternative is a last onboarding question, "Mau jaga keluarga juga?". It costs one more onboarding step, so it is better tested after the ⇆ change.
+UI tests that turn Guardian on from ⇆ on a fresh install (`becomeGuardian()`, `UITests/UITestSupport.swift:155-161`, used by `LivePairingUITests` and others) must tap the Home card's "Menjadi Guardian" instead and close the tip with one tap. A `-settings.guardianSwitchTipSeen YES` launch argument can skip the tip where a test doesn't care about it.
 
 ## Not covered
 
