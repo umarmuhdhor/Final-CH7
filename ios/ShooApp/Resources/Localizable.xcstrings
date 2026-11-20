@@ -7645,42 +7645,22 @@
         }
       }
     },
-    "All Websites" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Semua Situs Web"
-          }
-        }
-      }
-    },
-    "Allow" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Izinkan"
-          }
-        }
-      }
-    },
-    "Optional: also switch on Allow in Private Browsing, so private tabs are checked too." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opsional: nyalakan juga Izinkan di Penelusuran Pribadi agar tab pribadi ikut diperiksa."
-          }
-        }
-      }
-    },
     "Tick the box above first to continue." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Centang kotak di atas dulu untuk lanjut."
+          }
+        }
+      }
+    },
+    "Allow in Private Browsing: optional." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izinkan di Penelusuran Pribadi: opsional."
           }
         }
       }

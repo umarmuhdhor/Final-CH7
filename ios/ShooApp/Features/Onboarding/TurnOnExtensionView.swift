@@ -43,8 +43,6 @@ struct TurnOnExtensionView: View {
     @State private var cameBack = false
     /// Taps on the grey button before the box was ticked; "tick the box first" shows under the box from the first.
     @State private var consentNudges = 0
-    /// `OnboardingStepRow`'s badge, so the picture under step 3 lines up with the step's text.
-    @ScaledMetric(relativeTo: .subheadline) private var stepBadgeSize: CGFloat = 40
 
     /// A heartbeat can land a moment after the user is back from Safari: look again for this long (#135).
     private static let recheck = (times: 10, every: Duration.seconds(2))
@@ -61,10 +59,12 @@ struct TurnOnExtensionView: View {
             onBack: onBack
         ) {
             // Figma "image 1" at y 72.5, the headline right under it at 373.
-            OnboardingHeroImage(name: "ExtensionIllustration", top: 10.5, bottom: 0.5)
+            // Figma 110:4440 has it 10.5 lower; with four steps that is the room step 04 needs above the box.
+            OnboardingHeroImage(name: "ExtensionIllustration", top: 0, bottom: 0.5)
         } content: {
-            // Figma "stack": 16 between rows, 40 under the headline.
-            VStack(alignment: .leading, spacing: 16) {
+            // Figma "stack" had 16 between rows and 40 under the headline for three steps; 12 and 20 fit all four
+            // above the consent box on a 402 × 874 iPhone without scrolling (Alief, 20 Nov 2026).
+            VStack(alignment: .leading, spacing: 12) {
                 // The reason first, above the steps, so it is seen without scrolling (#135).
                 if let nextStep, showsStatusNote || showsAllSitesWarning {
                     Label { Text(nextStep.message) } icon: { Image(systemName: "info.circle.fill") }
@@ -81,13 +81,8 @@ struct TurnOnExtensionView: View {
                 // Once the switch is known to be on, the setup steps are done; only the callout is left.
                 if !showsStatusNote || nextStep?.opensSafariFirst != true {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                        OnboardingStepRow(number: index + 1, text: step.text)
+                        OnboardingStepRow(number: index + 1, text: step.text, note: step.note)
                             .accessibilityIdentifier("extension.step.\(index + 1)")
-                        if step == .allowEveryWebsite {
-                            AllWebsitesAllowHint()
-                                .padding(.leading, stepBadgeSize + 12)
-                                .padding(.top, -6)
-                        }
                     }
                 }
                 if let consent, consent.failed, consent.limited {
@@ -101,11 +96,10 @@ struct TurnOnExtensionView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 40)
+            .padding(.top, 20)
         } footer: {
             if let consent, consent.showsCheckbox {
-                // Figma: 24 under the steps' area, 55 above the button.
-                // Figma: the checkbox block ends 55 above the button (footer rows are 12 apart).
+                // Figma 110:4440: the box sits right above the button (Alief: lower it so every step shows).
                 VStack(alignment: .leading, spacing: 8) {
                     ConsentCheckbox(isChecked: consent.$isChecked) { isDataSheetPresented = true }
                     if showsConsentHint {
@@ -115,7 +109,7 @@ struct TurnOnExtensionView: View {
                             .accessibilityIdentifier("extension.consentHint")
                     }
                 }
-                .padding(.bottom, showsConsentHint ? 23 : 43)
+                .padding(.bottom, showsConsentHint ? 4 : 12)
             }
             if let onSkipCheck, status != nil, nextStep == nil || (consent != nil && status?.isActive == true) {
                 // Shoo is already on (Back from Safari Default, or switched on before): nothing left to do here.
@@ -408,55 +402,12 @@ struct OnboardingTutorialLink: View {
     }
 }
 
-/// Under the "All Websites → Allow" step: the row as Safari's Shoo page shows it once set, so the user knows
-/// what to look for, and whether Private Browsing matters. Safari's labels are drawn in the app language
-/// (iOS uses the same words: "Semua Situs Web", "Izinkan", "Izinkan di Penelusuran Pribadi").
-private struct AllWebsitesAllowHint: View {
-    private static let allow = Color.dynamic(0x0B8A5B, dark: 0x3DD68C)
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Text("All Websites")
-                    .onboardingFont(16, design: .rounded, tracking: -0.2, relativeTo: .callout)
-                    .foregroundStyle(OnboardingTheme.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 8)
-                Image(systemName: "checkmark")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Self.allow)
-                Text("Allow")
-                    .onboardingFont(16, weight: .semibold, relativeTo: .callout)
-                    .foregroundStyle(Self.allow)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(OnboardingTheme.placeholder)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Self.allow.opacity(0.6), lineWidth: 1.5)
-            }
-            // The step's own text says the same: VoiceOver reads it once.
-            .accessibilityHidden(true)
-            .accessibilityIdentifier("extension.allSitesPicture")
-
-            Text("Optional: also switch on Allow in Private Browsing, so private tabs are checked too.")
-                .onboardingFont(14, design: .rounded, relativeTo: .footnote)
-                .foregroundStyle(OnboardingTheme.secondaryInk)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("extension.privateBrowsing")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
 /// White 40 pt badge "01" + one instruction (Figma "row").
 struct OnboardingStepRow: View {
     let number: Int
     let text: LocalizedStringKey
+    /// A short second line in grey, e.g. "Private Browsing: optional." under All Websites.
+    var note: LocalizedStringKey?
     @ScaledMetric(relativeTo: .subheadline) private var badgeSize: CGFloat = 40
 
     var body: some View {
@@ -470,12 +421,20 @@ struct OnboardingStepRow: View {
                 // Figma "Button": black 20%, y 2.7, blur 4.5 (its -2.7 spread has no SwiftUI equivalent).
                 .shadow(color: .black.opacity(0.2), radius: 2.3, y: 2.7)
                 .accessibilityLabel(Text("Step \(number)"))
-            Text(text)
-                // Figma: 22 pt lines, the font's own.
-                .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
-                .foregroundStyle(OnboardingTheme.stepInk)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, minHeight: badgeSize, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(text)
+                    // Figma: 22 pt lines, the font's own.
+                    .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
+                    .foregroundStyle(OnboardingTheme.stepInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let note {
+                    Text(note)
+                        .onboardingFont(14, design: .rounded, relativeTo: .footnote)
+                        .foregroundStyle(OnboardingTheme.secondaryInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: badgeSize, alignment: .leading)
         }
         .accessibilityElement(children: .combine)
     }

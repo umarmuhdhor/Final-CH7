@@ -75,6 +75,11 @@ extension ExtensionSetup.Step {
         }
     }
 
+    /// Under All Websites: Private Browsing is a separate switch on the same page, and normal tabs don't need it.
+    var note: LocalizedStringKey? {
+        self == .allowEveryWebsite ? "Allow in Private Browsing: optional." : nil
+    }
+
     var systemImage: String {
         switch self {
         case .tapTurnOn: "hand.tap.fill"
