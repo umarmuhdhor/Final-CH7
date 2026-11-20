@@ -107,7 +107,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
     function rdapFor(c) {
         const kv = c.env?.RDAP_KV;
         if (!rdap || typeof kv?.get !== "function" || typeof kv?.put !== "function") return rdap;
-        const requestCache = createTieredCache({ memory: memoryCache, kv: createKvCache(kv), budget: kvBudget, waitUntil: waitUntilOf(c) });
+        const requestCache = createTieredCache({ memory: memoryCache, kv: createKvCache(kv, { now }), budget: kvBudget, waitUntil: waitUntilOf(c) });
         return { lookup: (host) => rdap.lookup(host, { cache: requestCache }) };
     }
     const blocklist = createBlocklist({ source: blocklistSource, now });
