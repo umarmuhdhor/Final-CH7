@@ -105,7 +105,7 @@ final class SessionStore: @unchecked Sendable {
     }
 
     /// The person's answer (`DataConsent`). The extension calls `/analyze` only with `aiBaseURL`, so without
-    /// the key no page leaves the phone for a check and nothing reaches DeepSeek. No new contract key needed.
+    /// the key no page leaves the phone for a check. No new contract key needed.
     func setOnlineCheck(allowed: Bool) {
         lock.withLock {
             _onlineCheckAllowed = allowed

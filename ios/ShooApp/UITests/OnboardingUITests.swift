@@ -81,9 +81,9 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(hint.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertEqual(app.state, .runningForeground)
         app.buttons["extension.dataSent"].tap()
-        XCTAssertTrue(app.staticTexts["AI check by DeepSeek"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Without the online check"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["dataSent.done"].tap()
-        XCTAssertTrue(app.staticTexts["AI check by DeepSeek"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Without the online check"].waitForNonExistence(timeout: 5))
         app.buttons["extension.consent"].tap()
         XCTAssertTrue(hint.waitForNonExistence(timeout: 5), app.debugDescription)
         // Nothing saved yet: Back still reaches the name.

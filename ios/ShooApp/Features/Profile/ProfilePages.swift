@@ -1513,7 +1513,7 @@ private struct AboutPage: View {
                 ProfileToggleRow(
                     symbol: nil,
                     title: Text("Online check"),
-                    subtitle: Text("Sends pages to Shoo's server and suspicious-page summaries to DeepSeek"),
+                    subtitle: Text("Sends pages to Shoo's server for a closer check"),
                     style: .settings,
                     isOn: Binding(
                         get: { env.settings.dataConsent == .granted },

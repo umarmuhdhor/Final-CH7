@@ -2,7 +2,8 @@ import Foundation
 import Observation
 
 /// Apple 5.1.1(ii), 5.1.2(i): the person's answer to the online check. It covers `/analyze`: page text sent
-/// to Shoo's server, and the summary of a suspicious page sent to DeepSeek. Until they answer, nothing goes.
+/// to Shoo's server. No page or page summary goes to an AI provider (layer 4 off since 19 Nov 2026). Until they
+/// answer, nothing goes.
 enum DataConsent: String {
     case granted
     case declined

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Apple 5.1.1(ii) and 5.1.2(i): says what leaves the phone, and that a third-party AI gets some of it, and
-/// asks before the first check. Shown once in onboarding, and to a device registered before the question
+/// Apple 5.1.1(ii) and 5.1.2(i): says what leaves the phone (no page goes to an AI provider since layer 4 was
+/// turned off, 19 Nov 2026) and asks before the first check. Shown once in onboarding, and to a device registered before the question
 /// existed. `DataConsent` holds the answer; Profile changes it later.
 struct DataConsentView: View {
     /// `nil` for a registered device: there is no step to go back to.
@@ -26,10 +26,6 @@ struct DataConsentView: View {
                 row(
                     "exclamationmark.shield", title: "Risky pages",
                     text: "Shoo keeps the address, a copy of the page and the flagged parts. You and your Guardian can see them. Some of this stays after you delete your account."
-                )
-                row(
-                    "sparkles", title: "AI check by DeepSeek",
-                    text: "With the online check on, Shoo's server may send DeepSeek, an AI company in China, a short summary of a suspicious page: site name, page title and form field names."
                 )
                 Button("Read the privacy policy") {
                     openURL(AppConfig.legalPage("privacy", language: AppLanguage(locale: locale)))

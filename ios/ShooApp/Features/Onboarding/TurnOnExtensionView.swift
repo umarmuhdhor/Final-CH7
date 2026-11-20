@@ -351,8 +351,6 @@ struct DataSentSheet: View {
                         title: "Pages you open", text: "Page text, form field names and the address. What you type is not sent.")
                     row("exclamationmark.shield", tint: 0xD23B3B, fill: 0xFDECEC,
                         title: "Risky pages", text: "The address and a copy are kept. Some of it stays after the account is deleted.")
-                    row("sparkles", tint: 0x0D8F93, fill: 0xE2F6F4,
-                        title: "AI check by DeepSeek", text: "A summary of a suspicious page is sent to DeepSeek, an AI from China.")
                     row("iphone", tint: 0x5B616C, fill: 0xEEF0F3,
                         title: "Without the online check", text: "Shoo checks on your iPhone only, with less protection.")
                 }
