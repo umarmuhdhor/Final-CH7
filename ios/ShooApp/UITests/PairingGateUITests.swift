@@ -56,7 +56,7 @@ final class PairingGateUITests: XCTestCase {
                     language: language, size: size
                 )
                 XCTAssertTrue(app.tabBars.buttons.firstMatch.waitForExistence(timeout: 10), app.debugDescription)
-                let notNow = app.alerts.buttons.firstMatch
+                let notNow = app.buttons["reminder.notNow"]
                 if notNow.waitForExistence(timeout: 2) { notNow.tap() }
                 app.open(URL(string: "shoo://join?code=111111")!)
                 let openPrompt = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Open"]

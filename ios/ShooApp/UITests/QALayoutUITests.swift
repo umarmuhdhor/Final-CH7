@@ -285,9 +285,9 @@ final class QALayoutUITests: XCTestCase {
         let danger = app.buttons["home.verdict.notSafe"]
         XCTAssertTrue(danger.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         // GD-01: the "Notifications are off" popup covers Home; its button is "Nanti saja" in Bahasa Indonesia.
-        let notNow = app.alerts.buttons.matching(NSPredicate(format: "label IN %@", ["Not now", "Nanti saja"])).firstMatch
+        let notNow = app.buttons["reminder.notNow"]
         if notNow.waitForExistence(timeout: UITestTimeout.optional) { notNow.tap() }
-        XCTAssertTrue(app.alerts.firstMatch.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertTrue(notNow.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
         for _ in 0..<2 where !danger.isHittable { app.swipeUp(velocity: .slow) }
         danger.tapWhenHittable()
         let notice = app.descendants(matching: .any)["home.verdictError"]

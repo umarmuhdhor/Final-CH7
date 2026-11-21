@@ -152,9 +152,11 @@ final class AppEnvironment {
         var extensionStatus: () async -> ExtensionStatus = { await ExtensionStatus.load() }
         #if DEBUG
         // UI tests: no system alert, and the extension counts as on without a real heartbeat.
+        // Past onboarding the question was already asked, so the answer shows at once (no reminder when granted).
+        let asked = Self.value(after: "-settings.onboardingCompleted", in: arguments) == "YES"
         switch Self.value(after: "-UITestNotifications", in: arguments) {
-        case "granted": notifications = FixedNotificationPermission(answer: .authorized)
-        case "denied": notifications = FixedNotificationPermission(answer: .denied)
+        case "granted": notifications = FixedNotificationPermission(answer: .authorized, asked: asked)
+        case "denied": notifications = FixedNotificationPermission(answer: .denied, asked: asked)
         default: break
         }
         if Self.value(after: "-UITestExtensionActive", in: arguments) == "YES" {

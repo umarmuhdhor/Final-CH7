@@ -152,9 +152,11 @@ final class ProfileUITests: XCTestCase {
     @MainActor
     func testFailedLanguageSaveSaysSoOnTheLanguagePage() {
         let app = openProfile(mode: "guardian", extra: ["-mock.fail", "updateMe"])
-        // Profile's own load may resend the language and fail first: close that alert.
-        if app.alerts.firstMatch.waitForExistence(timeout: UITestTimeout.optional) {
-            app.alerts.firstMatch.buttons.firstMatch.tap()
+        // Profile's own load may resend the language and fail first: close that error dialog.
+        let ok = app.buttons["shooDialog.ok"]
+        if ok.waitForExistence(timeout: UITestTimeout.optional) {
+            ok.tap()
+            XCTAssertTrue(ok.waitForNonExistence(timeout: 5), app.debugDescription)
         }
         let language = app.buttons["profile.language"]
         reveal(language, in: app)
@@ -162,12 +164,11 @@ final class ProfileUITests: XCTestCase {
         let indonesian = app.buttons["language.id"]
         XCTAssertTrue(indonesian.waitForExistence(timeout: 5), app.debugDescription)
         indonesian.tap()
-        let alert = app.alerts.firstMatch
-        XCTAssertTrue(alert.waitForExistence(timeout: 5), app.debugDescription)
-        alert.buttons.firstMatch.tap()
+        XCTAssertTrue(ok.waitForExistence(timeout: 5), app.debugDescription)
+        ok.tap()
         XCTAssertTrue(app.buttons["language.en"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["language.en"].tap()
-        if alert.waitForExistence(timeout: 5) { alert.buttons.firstMatch.tap() }
+        if ok.waitForExistence(timeout: 5) { ok.tap() }
     }
 
     @MainActor
