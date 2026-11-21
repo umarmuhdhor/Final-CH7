@@ -6,9 +6,17 @@ import UIKit
 
 /// Orange capsule on the Protected profile card (Figma "Bagikan Undangan" → "Terhubung").
 struct ConnectedPillButtonStyle: ButtonStyle {
-    /// V4 (goldfish 21 Nov): blue, the app's button colour. Figma's orange-to-salmon (455:10289) read as a warning,
-    /// since orange means "Waspada" everywhere else, and white text on it was under 3:1.
-    static let gradient = OnboardingTheme.buttonGradient
+    static let gradient = LinearGradient(
+        stops: [
+            .init(color: Color(hex: 0xF5B94D), location: 0),
+            .init(color: Color(hex: 0xFC9C7F), location: 0.37),
+            .init(color: Color(hex: 0xFD8F7F), location: 0.68),
+            .init(color: Color(hex: 0xFF6F5B), location: 0.99),
+        ],
+        // Figma's transform stretches the gradient to 2.67 × the pill (x scale 0.374): only its
+        // orange-to-salmon start shows.
+        startPoint: .leading, endPoint: UnitPoint(x: 1 / 0.37387, y: 0.5)
+    )
 
     @Environment(\.shooReduceMotion) private var reduceMotion
 
