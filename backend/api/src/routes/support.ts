@@ -17,6 +17,7 @@ const points = (...s: string[]) => `<ul>${s.map((x) => `<li>${x}</li>`).join("")
 const TEXT: Record<"en" | "id", LegalText> = {
   en: {
     title: "Shoo support",
+    description: "How to use Shoo: turn on the Safari extension, protect your family as a Guardian, what warnings and blocks mean, and fixes for common problems.",
     updated: "Last updated: 19 November 2026",
     lead: `A short guide to Shoo on iPhone. Can't find your answer? Email us at ${contactLink}.`,
     sections: [
@@ -120,6 +121,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
   },
   id: {
     title: "Bantuan Shoo",
+    description: "Panduan memakai Shoo: menyalakan ekstensi Safari, melindungi keluarga sebagai Guardian, arti peringatan dan blokir, serta solusi masalah umum.",
     updated: "Terakhir diperbarui: 19 November 2026",
     lead: `Panduan singkat memakai Shoo di iPhone. Jawabanmu tidak ada di sini? Email kami di ${contactLink}.`,
     sections: [

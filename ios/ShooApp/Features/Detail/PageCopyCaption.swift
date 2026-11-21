@@ -14,7 +14,7 @@ enum PageCopyState: Equatable {
     case rateLimited
 }
 
-/// One line above the evidence cards: "Copy of the page · Today 10.42 WIB", "Copied from …",
+/// One line under the evidence cards (C12): "Copy of the page · Today 10.42 WIB", "Copied from …",
 /// "Page cut short", or why there is no copy. Plain text only (K4).
 struct PageCopyCaption: View {
     let state: PageCopyState
@@ -56,7 +56,7 @@ struct PageCopyCaption: View {
         case .rateLimited:
             return [L10n.string("Couldn't show the copy of the page. Try again later.", language: language)]
         case .none, .unavailable:
-            return hasScreenshot ? [] : [L10n.string("No copy of this page", language: language)]
+            return hasScreenshot ? [] : [L10n.string("Page copy: not available", language: language)]
         case .shown:
             let captured = ReplicaMeta.capturedAt(meta, detectedAt: scan.detectedAt)
             let when = Formatters.dayAndTime(captured, now: now, language: language)

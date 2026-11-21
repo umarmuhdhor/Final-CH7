@@ -227,12 +227,12 @@
         }
       }
     },
-    "The address and a copy are kept. Some of it stays after the account is deleted." : {
+    "The address and a copy of the page are kept for 14 days. After you delete your data (Profile › Delete Account), the site's address and score stay, without your name." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alamat dan salinannya disimpan. Sebagian tetap ada setelah akun dihapus."
+            "value" : "Alamat dan salinan halaman disimpan 14 hari. Setelah kamu menghapus datamu (Profil › Hapus Akun), alamat situs dan skornya tetap ada, tanpa namamu."
           }
         }
       }
@@ -3182,6 +3182,26 @@
         }
       }
     },
+    "Invite code · valid for %lld more min" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode undangan · berlaku %lld menit lagi"
+          }
+        }
+      }
+    },
+    "Invite code · valid for %lld more sec" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode undangan · berlaku %lld detik lagi"
+          }
+        }
+      }
+    },
     "Invite family" : {
       "localizations" : {
         "id" : {
@@ -3229,6 +3249,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apakah situs ini benar penipuan?"
+          }
+        }
+      }
+    },
+    "Do you think this site is safe?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menurutmu situs ini aman?"
           }
         }
       }
@@ -3587,13 +3617,12 @@
         }
       }
     },
-    "No copy of this page" : {
-      "extractionState" : "stale",
+    "Page copy: not available" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidak ada salinan halaman ini"
+            "value" : "Salinan halaman: tidak tersedia"
           }
         }
       }
@@ -5853,6 +5882,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Berlaku %@ lagi"
+          }
+        }
+      }
+    },
+    "Valid for %lld more min" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku %lld menit lagi"
+          }
+        }
+      }
+    },
+    "Valid for %lld more sec" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku %lld detik lagi"
           }
         }
       }

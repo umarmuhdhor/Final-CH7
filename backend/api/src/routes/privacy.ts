@@ -22,6 +22,7 @@ type Section = { h: string; items: string[] };
 const TEXT: Record<"en" | "id", LegalText> = {
   en: {
     title: "Shoo privacy policy",
+    description: "What Shoo stores when it checks pages in Safari, how long it keeps it, who processes it, and how to delete everything.",
     updated: "Last updated: 21 November 2026",
     lead: "Shoo blocks scam websites on iPhone and lets a family member (the Guardian) help. We keep as little as we can, only to make that work.",
     sections: [
@@ -96,6 +97,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
   },
   id: {
     title: "Kebijakan privasi Shoo",
+    description: "Data apa yang disimpan Shoo saat memeriksa halaman di Safari, berapa lama disimpan, siapa yang memprosesnya, dan cara menghapus semuanya.",
     updated: "Terakhir diperbarui: 21 November 2026",
     lead: "Shoo memblokir situs penipuan di iPhone dan membiarkan anggota keluarga (Guardian) membantu. Kami menyimpan sesedikit mungkin, hanya supaya itu berjalan.",
     sections: [
@@ -176,7 +178,12 @@ main{max-width:640px;margin:0 auto}h2{font-size:20px;margin-top:28px}li{margin:6
 ol,li>ul{padding-left:22px;margin:6px 0}li>span{display:block;margin-top:4px}
 @media (prefers-color-scheme:dark){body{color:#f2f2f2;background:#000}.muted{color:#aaa}a{color:#5eaaf0}}`;
 
-export type LegalText = { title: string; updated: string; lead: string; sections: Section[] };
+export type LegalText = { title: string; description: string; updated: string; lead: string; sections: Section[] };
+
+/** The public site: shoo.ai.id passes /privacy, /support and /terms through to this Worker, and its sitemap
+ * lists them there. Canonical and hreflang links always name this host, so the copy on the API host is not
+ * indexed as a duplicate. */
+const SITE = "https://shoo.ai.id";
 
 /** ?lang=en|id, else Accept-Language, else English. */
 export const pageLanguage = (c: Context<AppEnv>): "en" | "id" => {
@@ -189,8 +196,14 @@ export function legalPage(c: Context<AppEnv>, lang: "en" | "id", t: LegalText) {
   const sections = t.sections
     .map((s) => `<h2>${s.h}</h2><ul>${s.items.map((i) => `<li>${i}</li>`).join("")}</ul>`)
     .join("\n");
+  // One URL per language (?lang=id, ?lang=en); the bare path picks the language from Accept-Language,
+  // so it is the x-default.
+  const page = `${SITE}${c.req.path}`;
+  const seo = `<meta name="description" content="${t.description}"><link rel="canonical" href="${page}?lang=${lang}">`
+    + `<link rel="alternate" hreflang="id" href="${page}?lang=id"><link rel="alternate" hreflang="en" href="${page}?lang=en">`
+    + `<link rel="alternate" hreflang="x-default" href="${page}">`;
   const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>${t.title}</title>${ICON_LINKS}
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>${t.title}</title>${seo}${ICON_LINKS}
 <style>${STYLE}</style></head><body><main><h1>${t.title}</h1><p class="muted">${t.updated}</p>
 <p>${t.lead}</p>${sections}
 <p class="muted"><a href="?lang=${lang === "en" ? "id" : "en"}">${lang === "en" ? "Bahasa Indonesia" : "English"}</a></p></main></body></html>`;
