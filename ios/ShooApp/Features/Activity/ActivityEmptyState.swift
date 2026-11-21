@@ -6,7 +6,7 @@ enum ActivityEmptyKind: Equatable {
     case all
     case warning
     case blocked
-    /// Nothing to show *because* nothing is checked: grey shield and one button to turn Shoo on.
+    /// Nothing to show *because* nothing is checked: Shoo asleep and one button to turn Shoo on.
     case protectionOff
 
     /// Off wins over the filter: an empty list with the extension off says nothing about safety.
@@ -17,6 +17,25 @@ enum ActivityEmptyKind: Equatable {
         case .all: return .all
         case .warning: return .warning
         case .blocked: return .blocked
+        }
+    }
+
+    /// Figma "alief notif" section 9: sitting and waiting (Semua, Alief's pick), thumbs up (Waspada), hero
+    /// (Diblokir), asleep (off).
+    var pose: Mascot {
+        switch self {
+        case .all: .sit
+        case .warning: .thumbsUp
+        case .blocked: .hero
+        case .protectionOff: .sleep
+        }
+    }
+
+    /// Figma draws the standing poses 120 pt tall and the sitting one 100; here 1.2x that, the old shield's weight.
+    var poseHeight: CGFloat {
+        switch self {
+        case .all, .protectionOff: 120
+        case .warning, .blocked: 144
         }
     }
 
@@ -69,8 +88,9 @@ enum ActivityEmptyText {
     }
 }
 
-/// Figma "Empty State" (480:5500 / 5530 / 5560 / 5590): shield, title, message, then a status pill,
-/// or the "Aktifkan ekstensi" button with "Mati sejak …" when protection is off.
+/// Figma "Empty State" (480:5500 / 5530 / 5560 / 5590): Shoo, title, message, then a status pill,
+/// or the "Aktifkan ekstensi" button with "Mati sejak …" when protection is off. Shoo replaces the shield since
+/// fase 29g (Figma "alief notif" section 9, 2431:12760), in the old shield's slot so the words stay where they were.
 struct ActivityEmptyState: View {
     let kind: ActivityEmptyKind
     /// nil hides the pill (Family Activity: this iPhone's extension says nothing about the members).
@@ -80,7 +100,8 @@ struct ActivityEmptyState: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HalftoneShield(isOn: kind != .protectionOff)
+            MascotImage(pose: kind.pose, height: kind.poseHeight)
+                .frame(height: HalftoneShield.size.height, alignment: .bottom)
             VStack(spacing: 8) {
                 Text(title)
                     .activityFont(22, .semibold, tracking: -0.22)
