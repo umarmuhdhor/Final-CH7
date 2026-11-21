@@ -24,15 +24,15 @@
 
 <table align="center">
 <tr>
-<td><img src=".github/readme/screen-splash.png" width="170" alt="Splash: the Shoo shield logo on a blue gradient" /></td>
-<td><img src=".github/readme/screen-safari-warning.jpg" width="170" alt="Safari: a fake BSI page at 45% with the Be careful card at the bottom" /></td>
-<td><img src=".github/readme/screen-detail.jpg" width="170" alt="App Detail: bca-verifikasi.site/login blocked at 92%, with Safe and Danger buttons for the Guardian" /></td>
-<td><img src=".github/readme/screen-guardian.jpg" width="170" alt="Guardian home: Family protected, three members and their recent activity" /></td>
-<td><img src=".github/readme/screen-protected.jpg" width="170" alt="Protected home: You are protected, connected to a Guardian, with blocked and warning counts" /></td>
+<td><img src=".github/readme/screen-safari-warning.jpg" width="170" alt="Safari: the Situs Mencurigakan! sheet at 37/100 on a look-alike page, with a plain-language reason and Leave page / Continue anyway" /></td>
+<td><img src=".github/readme/screen-guardian.jpg" width="170" alt="Guardian home: Keluarga Dalam Ancaman, with the blocked page of Syahnaz at 92/100 and Safe / Danger buttons" /></td>
+<td><img src=".github/readme/screen-detail.jpg" width="170" alt="App Detail: bca-verifikasi.site/login at 92/100, a one-line summary, the per-layer score bar and Safe / Danger buttons" /></td>
+<td><img src=".github/readme/screen-activity.jpg" width="170" alt="Activity: every family member's warned and blocked pages, filtered by All, Warning and Danger" /></td>
+<td><img src=".github/readme/screen-protected.jpg" width="170" alt="Protected home: You are protected, connected to a Guardian, and the latest blocked page waiting for the Guardian" /></td>
 </tr>
 </table>
 
-<p align="center"><sub>Shoo opens on its shield. Safari warns on a look-alike bank page, the Guardian sees the blocked page in the app and decides, and the Protected person sees what was stopped.</sub></p>
+<p align="center"><sub>Safari warns on a look-alike page in plain words. The Guardian sees the blocked page on Home, opens it and decides, and follows the whole family in Activity. The Protected person sees that the Guardian will check it. (Screens in Bahasa Indonesia, the app's default language.)</sub></p>
 
 </div>
 
@@ -44,7 +44,8 @@
 | **Platforms** | iPhone (iOS 17.0+) with the Safari Web Extension; a Chrome (MV3) build for desktop runs layers 1–2 only |
 | **API** | Cloudflare Worker `shoo-api`, see [`backend/API.md`](backend/API.md) |
 | **Languages** | English and Bahasa Indonesia, in the app, the extension and every reason text |
-| **Status** | Team project, shipped to testers through TestFlight ([workflow](.github/workflows/testflight.yml)) |
+| **Get it** | [App Store (Indonesia)](https://apps.apple.com/id/app/id6826557107) · help page at [shoo.ai.id/support](https://shoo.ai.id/support) |
+| **Status** | Team project, on the App Store in Indonesia; new builds go to testers through TestFlight first ([workflow](.github/workflows/testflight.yml)) |
 
 > Team project. Detection weights are still being tuned, so some scam pages score low and some real pages score high. See [Limits](#limits).
 
@@ -82,31 +83,36 @@ Everyone starts in **Personal** mode: Shoo protects their own browsing. Turning 
 | Feature | How |
 |---|---|
 | **A live score on every page** | The extension scores the page as you browse. A small bubble shows the score and its colour in the corner of the page. |
-| **Warnings that match the risk** | At 30% a card says "Be careful" with the top reason. At 50% a sheet covers the page and sensitive form fields are struck through. |
+| **Warnings that match the risk** | From 30 a sheet says the site is suspicious, shows the score bar per layer and the top reason. From 50 sensitive form fields are struck through too. |
+| **Reasons in plain words** | Every reason reads like a sentence a parent understands ("This address looks like a scammer's address: …"), in Safari and on the app's Detail screen. Only the display text changed; signal ids stay the same. |
 | **A block with no bypass** | At 80% (the default; the thresholds come from `GET /config/public`) the tab moves to Shoo's own block page. Websites cannot script that page, so the block cannot be removed from the page. |
-| **The Guardian decides** | A blocked page is sent to the Guardian with a push. The Guardian sees the score, the reasons and a copy of the page, then taps **Safe** or **Danger**. |
-| **Safe opens the page again** | When the Guardian marks a page Safe, the block page opens it for the Protected person by itself. |
+| **The Guardian decides** | A warned or blocked page is sent to the Guardian with a short push ("Waspada: Ibu membuka situs mencurigakan."), with no URL, domain or score in it. The Guardian sees the score, the reasons and a copy of the page, then taps **Safe** or **Danger**. |
+| **Safe counts for the whole family** | When the Guardian marks a link Safe, on any member's scan or their own, every phone in that family treats that link as safe, and the block page opens it by itself. It never reaches another family or the global list. |
 | **Join with a code or a link** | The Guardian shares a 6-digit code, a QR code or an invite link (WhatsApp, Messages). If the app is not installed, the link opens an install page first. |
+| **Every change lands on Home** | Turning Family mode on, joining a Guardian or disconnecting ends on Home with a banner that says what changed. |
 | **Activity for the whole family** | The Guardian sees every member's warned and blocked pages, filtered by person and by status. |
+| **Setup that really turns Shoo on** | Onboarding walks through the Safari switch **and** "All Websites → Allow". Without the second step Safari asks per site and Shoo sees nothing. The online check is a separate, optional box. |
 | **Delete means gone** | Delete my data removes the device and its history right away. Scans auto-delete after 14 days. |
 
 | Score | Status | What the person sees |
 |---|---|---|
 | 0–29 | `normal` | Only the score bubble. Nothing is stored anywhere. |
-| 30–49 | `warning` | First card plus highlights on the risky parts |
-| 50–79 | `warning` | Second card, sensitive forms struck through |
+| 30–49 | `warning` | Warning sheet plus highlights on the risky parts |
+| 50–79 | `warning` | Warning sheet, sensitive forms struck through |
 | ≥ 80 | `blocked` | Block page until a Guardian marks it Safe |
 
 ## See it work
 
 <table>
 <tr>
-<td width="50%"><img src=".github/readme/screen-safari-form.jpg" alt="Safari: a fake free-quota page asking for a name and a Telegram number, scored 39% with a Be careful card" /></td>
-<td width="50%"><img src=".github/readme/screen-invite.jpg" alt="Send invite sheet: a QR code, the join code, a refresh timer, and share buttons for WhatsApp and Messages" /></td>
+<td width="33%"><img src=".github/readme/screen-onboarding.jpg" alt="Onboarding, Turn on the extension: four steps including Tap All Websites, then Allow, and an optional box for the online check" /></td>
+<td width="33%"><img src=".github/readme/screen-pribadi.jpg" alt="Personal home: Perlu Waspada! with a Become a Guardian card and the latest warned pages" /></td>
+<td width="33%"><img src=".github/readme/screen-toast.jpg" alt="Family home right after Family mode was turned on: a banner says Guardian mode is on, with an Invite button, above the invite code and QR" /></td>
 </tr>
 <tr>
-<td><b>Warning in Safari.</b> A fake "free 60 GB" page on free hosting asks for a phone number. Shoo scores it 39% and explains why in one line.</td>
-<td><b>Inviting family.</b> The Guardian shares a QR code, a code or a link. The code refreshes on its own.</td>
+<td><b>Setup.</b> Four short steps, including "All Websites → Allow". The online check is a separate box that can stay unticked.</td>
+<td><b>Personal mode.</b> Everyone starts here. Shoo guards their own Safari, and a card offers to become a Guardian.</td>
+<td><b>Family mode on.</b> The change lands on Home with a banner and an Invite button, next to the code and QR to invite family.</td>
 </tr>
 </table>
 
@@ -119,9 +125,10 @@ flowchart LR
   P["Page opens in Safari"] --> L1{"Layer 1<br/>on the blocklist?"}
   L1 -->|yes| B["Score 100<br/>blocked"]
   L1 -->|no| L2["Layer 2 (on device)<br/>look-alike domain · cheap TLD<br/>brand + bait word · link dissector"]
-  L2 --> L3["Layer 3 (server)<br/>PIN / OTP / card / KTP forms<br/>urgent text · off-site logo · domain age"]
-  L3 --> L4["Layer 4 (server)<br/>LLM reality check"]
-  L4 --> S["score = min(100, sum of signal weights)"]
+  L2 --> L3["Layer 3 (server)<br/>PIN / OTP / card / KTP forms<br/>urgent text · off-site logo · domain age<br/>Shoo's own impersonation model"]
+  L3 -.-> L4["Layer 4 (server)<br/>LLM reality check<br/>off in production"]
+  L3 --> S["score = min(100, sum of signal weights)"]
+  L4 -.-> S
   S --> UI{"Score band"}
   UI -->|"< 30"| N["Bubble only"]
   UI -->|"30–79"| W["Warning card / sheet"]
@@ -129,7 +136,9 @@ flowchart LR
 ```
 
 - **Layers 1–2 run on the phone** ([`detector/`](detector/README.md)), in under 50 ms, with no network call. If the server is down, they still run.
-- **Layers 3–4 run on the server** ([`ai/`](ai/README.md), `POST /analyze`). The page content sent there is never stored.
+- **Layers 3–4 run on the server** ([`ai/`](ai/README.md), `POST /analyze`), only when the person ticked the online check. The page content sent there is never stored.
+- **Layer 3 includes Shoo's own impersonation model** (TF-IDF + logistic regression judges with gradient-boosted combiners, `SHOO_L3_MODEL = "impersonation"`, on since 19 Nov 2026). It runs inside the Worker: no third party sees the page.
+- **Layer 4 (the LLM reality check) is off in production** since 19 Nov 2026 (`SHOO_L4 = "off"` in [`ai/wrangler.toml`](ai/wrangler.toml)). The code stays and can be switched back on.
 - The score is recomputed every time a layer returns, so it can rise while the page loads. A blocklist match ends the scan at 100.
 
 Rules and weights: [`contracts/detector-interface.md`](contracts/detector-interface.md). Blocklist design: [`docs/design/blocklist.md`](docs/design/blocklist.md).
@@ -153,6 +162,8 @@ sequenceDiagram
   X->>X: block page opens the site
 ```
 
+A Safe verdict is saved for the link across the whole family, so every member's block page on that link opens, not only the one whose scan the Guardian looked at.
+
 Only pages that reach 30 are ever stored by the backend. The verdict lookup also starts only at 30. The running score stays on the phone, in the in-page bubble.
 
 ## Architecture
@@ -171,7 +182,7 @@ flowchart LR
   subgraph CF["Cloudflare"]
     direction TB
     API["Worker shoo-api<br/>Hono · zod · postgres.js"]
-    AI["Worker shoo-ai<br/>POST /analyze · /public-blocklist"]
+    AI["Worker shoo-ai<br/>POST /analyze (layer 3 rules + model)<br/>/public-blocklist"]
     HD["Hyperdrive"]
     R2[("R2<br/>page replicas · favicons")]
     R2A[("R2 archive<br/>evidence for review")]
@@ -276,7 +287,7 @@ CI runs the matching checks on every pull request ([`.github/workflows/`](.githu
 | App | Swift 5 mode, SwiftUI, iOS 17+, String Catalog (EN + ID), Keychain, App Group |
 | Extension | Safari Web Extension (plain JavaScript content scripts), native messaging to the app |
 | Detection on device | Plain JavaScript, built into one script, data in JSON |
-| Detection on server | Cloudflare Worker, Hono, plain JavaScript (ESM + JSDoc), RDAP, LLM reality check |
+| Detection on server | Cloudflare Worker, Hono, plain JavaScript (ESM + JSDoc), RDAP, Shoo's own impersonation model (layer 3); LLM reality check (layer 4, off in production) |
 | Backend | Cloudflare Worker (Hono, zod, postgres.js), Hyperdrive, R2, Cron Triggers, APNs |
 | Database | Supabase Postgres, pgTAP |
 | Chrome | Manifest V3, same pipeline and UI as Safari |
@@ -284,7 +295,8 @@ CI runs the matching checks on every pull request ([`.github/workflows/`](.githu
 
 ## Privacy and safety
 
-- **Low-score browsing is never stored.** Below a score of 30 nothing reaches the Shoo backend. With online checking on (asked during setup), each public page's text and form layout (never what was typed) goes to `POST /analyze` for layers 3–4 and is not stored. With it off, only layers 1–2 run, on the phone.
+- **Low-score browsing is never stored.** Below a score of 30 nothing reaches the Shoo backend. With online checking on (an optional box during setup; Shoo works without it), each public page's text and form layout (never what was typed) goes to `POST /analyze` for layer 3 and is not stored. With it off, only layers 1–2 run, on the phone.
+- **No page goes to an outside AI provider.** Layer 4 (LLM) is off in production; layer 3's model runs inside Shoo's own Worker.
 - **Page content sent for analysis is never stored.** `POST /analyze` reads it and forgets it.
 - **What you type never leaves the page.** The page copy kept as evidence is the page's own HTML, never the values in its fields.
 - **The full URL never leaves the browser.** Only a shareable form of it is sent.
@@ -299,7 +311,9 @@ Threat model and secret rules: [`plan/alief/SECURITY.md`](plan/alief/SECURITY.md
 - **Weights are estimates.** Signal weights are tuned against an eval set, not real traffic. Some scam pages score under 30, and some real pages score above it.
 - **No Dynamic Island.** A Safari extension cannot start a Live Activity itself; the push route (path C, #49) was built and then dropped on 17 Nov 2026 (#555). The running score lives only in the in-page bubble ([spike](docs/spikes/dynamic-island.md)).
 - **Chrome runs layers 1–2 only**, with no pairing and no Guardian.
-- **If the AI service is down,** layers 3–4 are skipped and the score comes from layers 1–2 alone.
+- **If the AI service is down,** layer 3 is skipped and the score comes from layers 1–2 alone.
+- **Layer 4 is switched off.** Pages that only an LLM would catch (a reasonable-looking page asking for something unreasonable) are now left to layer 3's model.
+- **Safari needs "All Websites → Allow".** If a person leaves Shoo on "Ask", Safari hides pages from it; the app shows Shoo as off until it is fixed.
 - **Hoax detection is Phase 2**, not part of this version.
 
 ## Working rules
