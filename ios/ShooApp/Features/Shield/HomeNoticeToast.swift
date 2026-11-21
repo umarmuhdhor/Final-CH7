@@ -1,25 +1,15 @@
 import SwiftUI
 
 /// Option A (plan/alief/proposal/pairing-feedback.md): the toast on Home after a role or pairing change. Since fase 29g
-/// it follows Figma "alief notif" section 2 (2431:12760, Alief chose B on 22 Nov 2026): a gradient card in the change's
-/// colour with Shoo peeking over its left edge in a pose that fits, 16 pt from the edges and 8 pt under the status bar
-/// (Shoo's head included), over ⇆ and the avatar while it shows. The title with at most two lines under it, and a small
-/// "Undang" when Home has an invite ready. Slides in from the top and leaves upwards (a fade with Reduce Motion);
-/// closes by itself, with a tap, or swiped up; VoiceOver reads it once.
+/// it is a `ShooToast` (Figma "alief notif" section 2, 2431:12760; Alief chose B on 22 Nov 2026): a gradient card in the
+/// change's colour with Shoo in a pose that fits, over ⇆ and the avatar while it shows, and a small "Undang" when Home
+/// has an invite ready.
 struct HomeNoticeToast: View {
     let notice: HomeNotice
     /// "Undang": only for "Mode Guardian aktif" while Home's invite code is ready.
     let onInvite: (() -> Void)?
     let onClose: () -> Void
     @Environment(\.locale) private var locale
-    @Environment(\.shooReduceMotion) private var reduceMotion
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @State private var drag: CGFloat = 0
-
-    /// Figma (drawn at 2x): Shoo 86 pt tall, 8 pt in from the card's left edge, 22 pt over its top; the text starts at 96.
-    private static let mascotHeight: CGFloat = 86
-    private static let mascotOverhang: CGFloat = 22
-    private static let textInset: CGFloat = 96
 
     /// Long enough to read; longer with a button to reach, and much longer while VoiceOver reads (WCAG 2.2.1).
     static func duration(hasAction: Bool, voiceOver: Bool) -> Duration {
@@ -30,21 +20,13 @@ struct HomeNoticeToast: View {
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: title)
-                    .onboardingFont(16, weight: .semibold, relativeTo: .headline)
-                    .foregroundStyle(.white)
-                Text(verbatim: line)
-                    .onboardingFont(13, relativeTo: .subheadline)
-                    .foregroundStyle(.white.opacity(0.92))
-                    // Two lines keep the banner short; larger text sizes may wrap further (VoiceOver reads it all).
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
-            }
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("home.notice.text")
+        ShooToast(
+            title: title, line: line, colors: style.colors, pose: style.pose, identifier: "home.notice",
+            // "Mode Guardian aktif" may get "Undang" a moment later (the code loads), so it always stays longer.
+            duration: Self.duration(hasAction: notice == .guardianOn, voiceOver: UIAccessibility.isVoiceOverRunning),
+            staysOpen: staysOpenForScreenshots,
+            onClose: onClose
+        ) {
             if let onInvite {
                 Button(action: onInvite) {
                     Text("Invite")
@@ -61,50 +43,15 @@ struct HomeNoticeToast: View {
                 .accessibilityIdentifier("home.notice.invite")
             }
         }
-        .padding(.leading, Self.textInset)
-        .padding(.trailing, 12)
-        .padding(.vertical, 16)
-        .frame(minHeight: 85)
-        .background(
-            LinearGradient(colors: style.colors, startPoint: .leading, endPoint: .trailing),
-            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
-        )
-        // Figma: #0D1A33 at 18 %, blur 24, 8 down.
-        .shadow(color: Color(hex: 0x0D1A33, opacity: 0.18), radius: 12, y: 8)
-        // Shoo stands on the card's left part and peeks over its top edge.
-        .overlay(alignment: .topLeading) {
-            MascotImage(pose: style.pose, height: Self.mascotHeight)
-                .offset(x: 8, y: -Self.mascotOverhang)
-        }
-        .padding(.top, Self.mascotOverhang)
-        .environment(\.colorScheme, .light)
-        .padding(.horizontal, 16)
-        .offset(y: min(drag, 0))
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onClose)
-        .gesture(
-            DragGesture(minimumDistance: 8)
-                .onChanged { drag = $0.translation.height }
-                .onEnded { value in
-                    if value.translation.height < -24 { onClose() }
-                    withAnimation(reduceMotion ? nil : .snappy) { drag = 0 }
-                }
-        )
-        .accessibilityElement(children: .contain)
-        .accessibilityAction(.escape, onClose)
-        .accessibilityIdentifier("home.notice")
-        .task {
-            AccessibilityNotification.Announcement("\(title). \(line)").post()
-            #if DEBUG
-            // `-debug.homeNotice` screenshots: the toast stays until tapped.
-            if MainTabView.screenshotNotice != nil { return }
-            #endif
-            // "Mode Guardian aktif" may get "Undang" a moment later (the code loads), so it always stays longer.
-            let wait = Self.duration(hasAction: notice == .guardianOn, voiceOver: UIAccessibility.isVoiceOverRunning)
-            try? await Task.sleep(for: wait)
-            guard !Task.isCancelled else { return }
-            onClose()
-        }
+    }
+
+    /// `-debug.homeNotice` screenshots: the toast stays until tapped.
+    private var staysOpenForScreenshots: Bool {
+        #if DEBUG
+        MainTabView.screenshotNotice != nil
+        #else
+        false
+        #endif
     }
 
     /// Figma "alief notif" section 2: the card's gradient (light on the left), Shoo's pose, and the "Undang" text colour.
