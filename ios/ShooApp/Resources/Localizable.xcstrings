@@ -2355,7 +2355,17 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ekstensi mati"
+            "value" : "Ekstensi tidak aktif"
+          }
+        }
+      }
+    },
+    "Extension on" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstensi aktif"
           }
         }
       }
@@ -2366,7 +2376,17 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ekstensi mati sejak %@"
+            "value" : "Ekstensi tidak aktif sejak %@ lalu"
+          }
+        }
+      }
+    },
+    "Not active" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak aktif"
           }
         }
       }
@@ -5615,7 +5635,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saat ekstensi mereka nonaktif"
+            "value" : "Saat ekstensi mereka tidak aktif"
           }
         }
       }
@@ -7042,7 +7062,67 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ekstensi Safari mati"
+            "value" : "Ekstensi Safari tidak aktif"
+          }
+        }
+      }
+    },
+    "No word yet from Shoo on %@'s phone." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada kabar dari Shoo di HP %@."
+          }
+        }
+      }
+    },
+    "No word from Shoo on %@'s phone for %@." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada kabar dari Shoo di HP %1$@ sejak %2$@ lalu."
+          }
+        }
+      }
+    },
+    "To check on %@'s phone" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yang perlu dicek di HP %@"
+          }
+        }
+      }
+    },
+    "Settings › Apps › Safari › Extensions › Shoo is on, with “Allow” for every website." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengaturan › App › Safari › Ekstensi › Shoo menyala, dan “Izinkan” untuk semua situs."
+          }
+        }
+      }
+    },
+    "Safari is used to open sites. Shoo only sends word while Safari is in use." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari dipakai membuka situs. Shoo baru mengirim kabar saat Safari dipakai."
+          }
+        }
+      }
+    },
+    "The phone is online, and the Shoo app is still installed." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HP tersambung internet, dan aplikasi Shoo masih terpasang."
           }
         }
       }

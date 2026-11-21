@@ -1038,7 +1038,7 @@ private struct NotificationsPage: View {
                         .accessibilityIdentifier("notifications.family")
                         ProfileDivider()
                         ProfileToggleRow(
-                            symbol: ProfileStyle.extensionSymbol, title: Text("Protection off"), subtitle: Text("When their extension is off"),
+                            symbol: ProfileStyle.extensionSymbol, title: Text("Extension off"), subtitle: Text("When their extension is off"),
                             style: .settings, isOn: binding(\.protectionOff) { NotificationSettingsUpdate(protectionOff: $0) }
                         )
                         .accessibilityIdentifier("notifications.protectionOff")
