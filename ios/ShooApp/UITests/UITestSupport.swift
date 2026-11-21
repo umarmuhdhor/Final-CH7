@@ -22,6 +22,9 @@ extension XCUIApplication {
         app.launchArguments += ["-UITestMock", "YES", "-UITestReduceMotion", "YES"]
         if reset { app.launchArguments += ["-UITestReset", "YES"] }
         if !splash { app.launchArguments += ["-UITestSkipSplash", "YES"] }
+        // The "Notifications are off" reminder is a Shoo dialog (29b), which XCUITest does not dismiss on its own
+        // like a system alert: tests that want it say "denied".
+        if !arguments.contains("-UITestNotifications") { app.launchArguments += ["-UITestNotifications", "granted"] }
         app.launchArguments += arguments
         app.launch()
         return app
@@ -31,9 +34,11 @@ extension XCUIApplication {
     /// It can cover the screen or swallow a tap, so close it when it shows.
     @MainActor
     func dismissNotificationsReminder(timeout: TimeInterval = UITestTimeout.optional, file: StaticString = #filePath, line: UInt = #line) {
-        let notNow = alerts.buttons["Not now"].firstMatch
+        // A Shoo dialog (29b), not a system alert.
+        let notNow = buttons["reminder.notNow"].firstMatch
         if notNow.waitForExistence(timeout: timeout) { notNow.tap() }
-        // No other alert may cover the screen either.
+        XCTAssertTrue(notNow.waitForNonExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
+        // No alert may cover the screen either.
         XCTAssertTrue(alerts.firstMatch.waitForNonExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
     }
 

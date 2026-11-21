@@ -45,10 +45,11 @@ struct SystemNotificationPermission: NotificationPermission {
 @MainActor
 final class FixedNotificationPermission: NotificationPermission {
     let answer: NotificationAuthorization
-    private var asked = false
+    private var asked: Bool
 
-    init(answer: NotificationAuthorization) {
+    init(answer: NotificationAuthorization, asked: Bool = false) {
         self.answer = answer
+        self.asked = asked
     }
 
     func status() async -> NotificationAuthorization { asked ? answer : .notDetermined }

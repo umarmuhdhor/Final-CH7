@@ -12,7 +12,9 @@ final class PairingUITests: XCTestCase {
         var arguments = [
             "-settings.language", language,
             "-UITestExtensionActive", "YES",
-            "-UITestNotifications", "denied",
+            // Not "denied": the "Notifications are off" Shoo dialog (29b) shows again each time an invite link brings
+            // the app back, and XCUITest doesn't dismiss it like it did the system alert.
+            "-UITestNotifications", "granted",
             "-settings.familyModeOn", "YES",
         ] + extra
         if onboarded {
@@ -131,7 +133,6 @@ final class PairingUITests: XCTestCase {
     func testInviteLinkOnPribadiShowsTheHomeNotice() {
         let app = launch(mode: "guardian", extra: ["-settings.familyModeOn", "NO", "-mock.scenario", "empty"])
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
-        app.dismissNotificationsReminder()
 
         openLink("shoo://join?code=482193", in: app)
         let notice = app.descendants(matching: .any)["invite.notice"].firstMatch
@@ -154,7 +155,6 @@ final class PairingUITests: XCTestCase {
     func testInviteLinkOnGuardianWithMembersPointsToProfile() {
         let app = launch(mode: "guardian")
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
-        app.dismissNotificationsReminder()
         openLink("shoo://join?code=482193", in: app)
         let profile = app.buttons["invite.notice.profile"]
         XCTAssertTrue(profile.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
@@ -246,7 +246,6 @@ final class PairingUITests: XCTestCase {
         let app = launch(mode: "guardian", extra: ["-mock.scenario", "empty"])
         let code = app.staticTexts["familyCode.code"]
         XCTAssertTrue(code.waitForExistence(timeout: 10), app.debugDescription)
-        app.dismissNotificationsReminder(timeout: UITestTimeout.screen)
         XCTAssertTrue(app.images["familyCode.qr"].exists)
         XCTAssertTrue(app.buttons["family.invite"].exists)
         let countdown = app.staticTexts["familyCode.countdown"]

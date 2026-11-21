@@ -212,14 +212,18 @@ struct InviteSheet: View {
                 .buttonStyle(OnboardingLinkButtonStyle(color: model.canReplace ? Self.refreshBlue : OnboardingTheme.secondaryInk, weight: .semibold, family: .display, tracking: 0))
                 .disabled(!model.canReplace)
                 .accessibilityIdentifier("invite.refresh")
-                .confirmationDialog("Make a new code?", isPresented: $confirmsRefresh, titleVisibility: .visible) {
-                    Button("Make new code", role: .destructive) {
-                        Task { await model.refreshCode(replace: true) }
-                    }
-                    .accessibilityIdentifier("invite.refresh.confirm")
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("The current code and the invite links you already sent will stop working.")
+                // Figma "Dialog Shoo · Ganti kode undangan?" (2428:12748), pose Mikir, a blue (neutral) button.
+                .shooDialog(isPresented: $confirmsRefresh) {
+                    ShooDialog(
+                        pose: .think,
+                        title: Text("Change the invite code?"),
+                        message: Text("The old code and links stop working right away. Family who haven't joined yet need the new code."),
+                        primary: .init(title: Text("Yes, change code"), identifier: "invite.refresh.confirm") {
+                            Task { await model.refreshCode(replace: true) }
+                        },
+                        secondary: .init(title: Text("Cancel"), identifier: "invite.refresh.cancel"),
+                        identifier: "invite.refreshDialog"
+                    )
                 }
                 Group {
                     // C8: "Berlaku 29 menit lagi", seconds only in the last minute.
