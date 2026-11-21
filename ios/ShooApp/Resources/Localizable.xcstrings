@@ -7976,7 +7976,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shoo tetap menyala di HP %1$@. Kamu tidak lagi melihat aktivitasnya, dan tanda Aman/Bahaya darimu dihapus. %2$@ akan diberi tahu."
+            "value" : "Shoo tetap menyala di HP %1$@. Kamu tidak lagi melihat aktivitasnya. Tanda Aman dan Bahaya darimu juga dihapus. %2$@ akan diberi tahu."
           }
         }
       }
