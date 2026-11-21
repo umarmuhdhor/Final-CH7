@@ -89,8 +89,23 @@ struct HomeNoticeToast: View {
         }
     }
 
-    /// Figma: a 40 pt tile, 11 pt corners, light-to-dark in the change's colour (the ⇆ tip's tile), a white glyph.
-    private var tile: some View {
+    /// A mode change shows a shield in the mode's colour, teal for Guardian and Home's blue for Pribadi (Alief,
+    /// 21 Nov 2026). Other changes keep the Figma tile: 40 pt, 11 pt corners, light-to-dark, a white glyph.
+    @ViewBuilder private var tile: some View {
+        if isModeChange {
+            Image(systemName: "checkmark.shield.fill")
+                .font(.system(size: 34, weight: .regular))
+                .foregroundStyle(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
+                .frame(width: 40, height: 40)
+                .accessibilityHidden(true)
+        } else {
+            plainTile
+        }
+    }
+
+    private var isModeChange: Bool { notice == .guardianOn || notice == .personalOn }
+
+    private var plainTile: some View {
         Image(systemName: isDisconnect ? "minus" : "checkmark")
             .font(.system(size: 17, weight: .bold))
             .foregroundStyle(.white)
@@ -107,11 +122,12 @@ struct HomeNoticeToast: View {
         return false
     }
 
-    /// Teal for Guardian (the tip's gradient), green for a connection, navy for Pribadi, grey for a disconnect.
+    /// Teal for Guardian (the tip's gradient), green for a connection, blue for Pribadi (Home's hero), grey for a
+    /// disconnect.
     private var colors: [Color] {
         switch notice {
         case .guardianOn: [Color(red: 0.42, green: 0.78, blue: 0.79), Color(red: 0.24, green: 0.60, blue: 0.64)]
-        case .personalOn: [Color(red: 0.43, green: 0.49, blue: 0.62), Color(red: 0.12, green: 0.22, blue: 0.42)]
+        case .personalOn: [HomeTheme.heroLight, HomeTheme.heroDark]
         case .memberJoined, .connected: [Color(red: 0.44, green: 0.76, blue: 0.62), Color(red: 0.13, green: 0.63, blue: 0.42)]
         case .disconnected: [Color(red: 0.64, green: 0.66, blue: 0.69), Color(red: 0.45, green: 0.48, blue: 0.53)]
         }

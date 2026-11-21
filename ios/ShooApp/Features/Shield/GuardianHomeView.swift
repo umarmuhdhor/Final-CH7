@@ -240,8 +240,9 @@ struct GuardianHomeView: View {
         case .loaded:
             if !isFamily {
                 // Figma 435:20058: the list, 35 pt, the scams; 1382:10567 puts a card first and 37 pt between the
-                // three: "Jadi Penjaga" (2366:10994) until the first time as Guardian, "Mode Terawasi" after that.
-                let showsCard = model.showsGuardianCard || model.showsSupervisedCard
+                // three: "Jadi Penjaga" (2366:10994) until the first time as Guardian, no card after that (Alief, 21 Nov
+                // 2026: "Mode Terawasi" is gone from this Home).
+                let showsCard = model.showsGuardianCard
                 VStack(spacing: 0) {
                     if model.refreshFailed {
                         refreshFailedNotice
@@ -251,15 +252,6 @@ struct GuardianHomeView: View {
                         // "Menjadi Guardian": the same way as Profile's card ("To be guardian" the first time).
                         SupervisedModeCard(kind: .guardian, onConnect: { env.requestFamilyMode() }) {
                             withAnimation(.easeOut(duration: 0.2)) { model.dismissGuardianCard() }
-                        }
-                        .padding(.top, 1)
-                        .padding(.bottom, 37)
-                        .transition(.opacity)
-                    } else if model.showsSupervisedCard {
-                        // "Hubungkan": joining a family as protected lives in Profile › Account mode
-                        // ("Have an invite code?"), which checks that nobody is looked after first.
-                        SupervisedModeCard(onConnect: { env.router.show(.profilePage(.mode)) }) {
-                            withAnimation(.easeOut(duration: 0.2)) { model.dismissSupervisedCard() }
                         }
                         .padding(.top, 1)
                         .padding(.bottom, 37)
