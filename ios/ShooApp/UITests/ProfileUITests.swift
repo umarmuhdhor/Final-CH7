@@ -137,7 +137,7 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Profil"].firstMatch.waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["profile.back"].firstMatch.tap()
         XCTAssertTrue(app.tabBars.buttons["Aktivitas"].waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(app.staticTexts["Anda Terlindungi!"].exists, app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Kamu Terlindungi!"].exists, app.debugDescription)
 
         // Back to English for the next run.
         app.buttons["profileButton"].tap()

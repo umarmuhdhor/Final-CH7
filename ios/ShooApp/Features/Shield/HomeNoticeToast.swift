@@ -107,7 +107,12 @@ struct HomeNoticeToast: View {
         }
     }
 
-    private var isModeChange: Bool { notice == .guardianOn || notice == .personalOn }
+    private var isModeChange: Bool {
+        switch notice {
+        case .guardianOn, .personalOn: true
+        default: false
+        }
+    }
 
     private var plainTile: some View {
         Image(systemName: isDisconnect ? "minus" : "checkmark")
@@ -151,7 +156,10 @@ struct HomeNoticeToast: View {
     var line: String {
         switch notice {
         case .guardianOn: L10n.string("You'll be told when your family opens a dangerous site.", language: language)
-        case .personalOn: L10n.string("Your protection stays on.", language: language)
+        case .personalOn(let keepsFamily):
+            keepsFamily
+                ? L10n.string("Your protection stays on. Your family stays connected.", language: language)
+                : L10n.string("Your protection stays on.", language: language)
         case .memberJoined(let name): L10n.string("You now help protect \(name).", language: language)
         case .connected(let guardian): L10n.string("\(guardian) will be told about dangerous sites.", language: language)
         case .disconnected: L10n.string("You no longer get their warnings.", language: language)

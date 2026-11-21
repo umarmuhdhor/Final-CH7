@@ -189,7 +189,7 @@ struct APIClientTests {
         }
         let failure = LoadFailure(try #require(thrown))
         #expect(L10n.string(failure.message(connection: "Check your connection."), language: .english) == "Check your connection.")
-        #expect(L10n.string(failure.message(connection: "Check your connection."), language: .indonesian) == "Periksa koneksi Anda.")
+        #expect(L10n.string(failure.message(connection: "Check your connection."), language: .indonesian) == "Periksa koneksimu.")
     }
 
     @Test func offlineIsANetworkError() async {
