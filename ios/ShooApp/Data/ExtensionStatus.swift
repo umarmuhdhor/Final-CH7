@@ -38,6 +38,12 @@ enum ExtensionStatus: Equatable, Sendable {
         return false
     }
 
+    /// On, but Safari lets it see only some websites (C10, goldfish 21 Nov): "Belum terlindungi penuh".
+    var isSomeSitesOnly: Bool {
+        if case .off(_, .someSitesOnly) = self { return true }
+        return false
+    }
+
     var lastSeen: Date? {
         switch self {
         case .active(let date): date

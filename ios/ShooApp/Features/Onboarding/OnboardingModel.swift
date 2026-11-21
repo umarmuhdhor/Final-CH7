@@ -89,6 +89,8 @@ final class OnboardingModel {
     /// The failure was the server's sign-up limit (429 `rate_limited`, 30 per network an hour): retrying
     /// at once can't help, so the screen says to wait instead of "check your connection" (EGM audit B9).
     private(set) var registrationLimited = false
+    /// F6: this launch resumed a registered device at ON-04; `resumeAfterRelaunch` checks the extension once.
+    private var resumesAtTurnOn = false
 
     @ObservationIgnored private let environment: AppEnvironment
 
@@ -97,13 +99,19 @@ final class OnboardingModel {
         let settings = environment.settings
         // Left by an older build that registered invite joins during onboarding: nothing uses it any more.
         if settings.inviteRegistrationPending { settings.inviteRegistrationPending = false }
-        // Registered earlier but onboarding not finished (app closed in between): Home shows what is still off
-        // (Figma note 141:6085). An older build's Protected registration carries on at ON-04: Protected has no
-        // Home reminder, so skipping it would leave Shoo off (fase 27d, F-A14).
-        switch settings.mode {
-        case nil: step = .splash
-        case .protected where !settings.onboardingCompleted: step = .turnOnExtension
-        default: step = .done
+        // F6 (goldfish 21 Nov 2026): registered earlier but onboarding not finished (iOS closed the app in
+        // Settings). It carries on at the first step not done, so Safari Default and the notification question
+        // are not lost: past Safari Default the success screen, otherwise ON-04, which moves on to Safari Default
+        // once Shoo is found on (`resumeAfterRelaunch`). An older build's Protected registration too (F-A14).
+        if settings.mode == nil {
+            step = .splash
+        } else if settings.onboardingCompleted {
+            step = .done
+        } else if settings.onboardingSafariDefaultPassed {
+            step = .extensionOn
+        } else {
+            step = .turnOnExtension
+            resumesAtTurnOn = true
         }
         consentChecked = settings.dataConsent == .granted
     }
@@ -206,9 +214,24 @@ final class OnboardingModel {
         step = .safariDefault
     }
 
-    /// Nothing can read the default browser, so this trusts the user.
+    /// F6: once per launch that resumed at ON-04. Shoo already on and checked in (switch on, every site
+    /// allowed), with the online check answered: straight on to Safari Default. Otherwise ON-04 stays, with
+    /// the step that is still missing.
+    func resumeAfterRelaunch() async {
+        guard resumesAtTurnOn else { return }
+        resumesAtTurnOn = false
+        guard step == .turnOnExtension, environment.settings.dataConsent != nil else { return }
+        let status = await environment.extensionStatus()
+        // The user may have tapped on while the status was read.
+        guard step == .turnOnExtension, !isWorking, status.nextStep == nil else { return }
+        movedBack = false
+        step = .safariDefault
+    }
+
+    /// Nothing can read the default browser, so this trusts the user. Saved, so a relaunch does not ask again (F6).
     func continueFromSafariDefault() {
         guard step == .safariDefault else { return }
+        environment.settings.onboardingSafariDefaultPassed = true
         movedBack = false
         step = .extensionOn
     }
@@ -254,6 +277,7 @@ final class OnboardingModel {
         keepsConsentCheckbox = step == .turnOnExtension
         avatarId = "avatar_05"
         movedBack = false
+        resumesAtTurnOn = false
         self.step = step
     }
     #endif

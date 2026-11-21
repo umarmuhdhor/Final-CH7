@@ -23,6 +23,7 @@ struct OnboardingFlow: View {
             #endif
             if model.step == .done { env.finishOnboarding() }
             self.model = model
+            Task { await model.resumeAfterRelaunch() }
         }
     }
 }

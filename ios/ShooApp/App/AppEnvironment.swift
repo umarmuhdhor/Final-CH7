@@ -514,12 +514,13 @@ final class AppEnvironment {
         }
     }
 
-    /// Family mode off (Guardian → Pribadi): Home with "Mode Pribadi aktif" (Option A).
+    /// Family mode off (Guardian → Pribadi): Home with "Mode Pribadi aktif" (Option A). `keepsFamily` when the caller
+    /// knows this guardian has members: the toast then says the family stays linked (F11, goldfish 21 Nov).
     @MainActor
-    func leaveFamilyMode() {
+    func leaveFamilyMode(keepsFamily: Bool = false) {
         guard settings.mode == .guardian, settings.familyModeOn else { return }
         settings.familyModeOn = false
-        router.landOnHome(saying: .personalOn)
+        router.landOnHome(saying: .personalOn(keepsFamily: keepsFamily))
     }
 
     /// Someone joined with the invite from Profile: Home shows them, with "<name> sudah terhubung" (Option A). A Pribadi

@@ -69,8 +69,11 @@ struct ExtensionStatusTests {
     }
 
     @Test func safariOpensFirstOnlyWhenTheSwitchIsKnownToBeOn() {
-        #expect(ExtensionStatus.NextStep.allowEveryWebsite.opensSafariFirst)
+        // F5 (goldfish 21 Nov 2026): some sites only is fixed in Settings, so Settings is the main button.
+        #expect(!ExtensionStatus.NextStep.allowEveryWebsite.opensSafariFirst)
+        #expect(ExtensionStatus.NextStep.allowEveryWebsite.switchIsOn)
         #expect(ExtensionStatus.NextStep.openAWebsite.opensSafariFirst)
+        #expect(!ExtensionStatus.NextStep.switchOnThenOpenAWebsite.switchIsOn)
         #expect(!ExtensionStatus.NextStep.switchOn.opensSafariFirst)
         #expect(!ExtensionStatus.NextStep.switchOnThenOpenAWebsite.opensSafariFirst)
         #expect(!ExtensionStatus.NextStep.switchOn.hasSecondAction)

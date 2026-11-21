@@ -97,8 +97,18 @@ extension ExtensionStatus.NextStep {
         }
     }
 
-    /// The main button opens Safari only when the switch is known to be on; otherwise Settings comes first.
+    /// The main button opens Safari only when the switch is on and nothing is known to be missing in Settings.
+    /// With some sites only, Settings comes first, as the note says (goldfish 21 Nov 2026, F5): a big "Open Safari"
+    /// was tapped before the settings were fixed.
     var opensSafariFirst: Bool {
+        switch self {
+        case .openAWebsite: true
+        case .allowEveryWebsite, .switchOn, .switchOnThenOpenAWebsite: false
+        }
+    }
+
+    /// Safari's switch for Shoo is known to be on, so the setup steps (open Settings, switch on) are done.
+    var switchIsOn: Bool {
         switch self {
         case .allowEveryWebsite, .openAWebsite: true
         case .switchOn, .switchOnThenOpenAWebsite: false
