@@ -82,6 +82,9 @@ final class OnboardingModel {
     /// The avatar from `POST /devices` (the pick, or random if the server did not keep it). The token is not kept here (fase 13 stores it in the Keychain).
     private(set) var avatarId: String?
     private(set) var isWorking = false
+    /// F6 (goldfish 21 Nov 2026): Shoo's "Turn on notifications?" dialog is up on the success screen, before
+    /// the one-time iOS prompt. The dialog sets this back to false when it closes.
+    var asksNotifications = false
     private(set) var registrationFailed = false
     /// The failure was the server's sign-up limit (429 `rate_limited`, 30 per network an hour): retrying
     /// at once can't help, so the screen says to wait instead of "check your connection" (EGM audit B9).
@@ -210,16 +213,35 @@ final class OnboardingModel {
         step = .extensionOn
     }
 
-    /// ON-05, from Next on the success screen: asks once; whatever the answer, onboarding ends (a Guardian
-    /// who said no gets the Home reminder).
+    /// Next on the success screen. iOS asks only once, so while the permission is undecided Shoo's dialog
+    /// explains it first (F6); otherwise onboarding ends straight away.
+    func continueFromSuccess() async {
+        guard step == .extensionOn, !isWorking, !asksNotifications else { return }
+        if await environment.notifications.status() == .notDetermined {
+            asksNotifications = true
+        } else {
+            await requestNotifications()
+        }
+    }
+
+    /// ON-05, "Turn on" in the dialog (or Next when the answer is already known): asks once; whatever the
+    /// answer, onboarding ends (a Guardian who said no gets the Home reminder).
     func requestNotifications() async {
         guard step == .extensionOn, !isWorking else { return }
         isWorking = true
         defer { isWorking = false }
+        asksNotifications = false
         if await environment.notifications.status() == .notDetermined {
             _ = await environment.notifications.request()
         }
         await environment.registerForPushIfAllowed()
+        finish()
+    }
+
+    /// "Not now" in the dialog: the iOS prompt stays unused, so Profile or the Home reminder can still ask later.
+    func skipNotifications() {
+        guard step == .extensionOn, !isWorking else { return }
+        asksNotifications = false
         finish()
     }
 

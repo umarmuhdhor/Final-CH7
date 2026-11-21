@@ -167,6 +167,16 @@
         }
       }
     },
+    "So Shoo can tell you when a dangerous site is blocked or your Guardian reminds you." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biar Shoo bisa kabari kamu saat situs berbahaya diblokir atau Guardian-mu mengingatkan."
+          }
+        }
+      }
+    },
     "Switch modes here" : {
       "localizations" : {
         "id" : {
@@ -183,6 +193,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Terlalu banyak perubahan dalam semenit. Tunggu sebentar, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Turn on notifications?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyalakan notifikasi?"
           }
         }
       }
@@ -5292,7 +5312,6 @@
       }
     },
     "Turn on" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
