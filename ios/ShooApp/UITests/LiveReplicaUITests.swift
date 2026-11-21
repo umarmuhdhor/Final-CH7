@@ -54,7 +54,7 @@ final class LiveReplicaUITests: XCTestCase {
         let caption = app.descendants(matching: .any)["detail.pageCopy"].firstMatch
         let shown = NSPredicate(
             format: "label CONTAINS %@ AND NOT (label CONTAINS %@) AND NOT (label CONTAINS %@)",
-            "Copy of the page", "No copy of this page", "Saving a copy of the page"
+            "Copy of the page", "Page copy: not available", "Saving a copy of the page"
         )
         let found = XCTNSPredicateExpectation(predicate: shown, object: caption)
         XCTAssertEqual(XCTWaiter().wait(for: [found], timeout: Self.copyTimeout), .completed,

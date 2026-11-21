@@ -292,6 +292,30 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertFalse(app.buttons["extension.openSafari"].exists)
         XCTAssertFalse(app.buttons["extension.settings"].exists)
         XCTAssertFalse(app.buttons["extension.skipCheck"].exists)
+        // F3 B: Shoo says which step is missing.
+        let toast = app.descendants(matching: .any)["extension.returnToast.text"].firstMatch
+        XCTAssertTrue(toast.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(toast.label.contains("Shoo is on for some sites only"), toast.label)
+        XCTAssertTrue(toast.label.contains("step 03"), toast.label)
+    }
+
+    /// F3 A (goldfish 21 Nov 2026): back from Settings with Shoo still off, a toast says so with the step to redo.
+    /// It is said once per return, and only after a trip to Settings (not when the screen first opens).
+    @MainActor
+    func testBackFromSettingsStillOffSaysSo() {
+        let app = launch(extensionActive: false, extensionStatus: "switchedOff")
+        app.onboardName("Rina")
+        XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["extension.returnToast"].exists)
+        app.passTurnOnExtension()
+        let toast = app.descendants(matching: .any)["extension.returnToast.text"].firstMatch
+        XCTAssertTrue(toast.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(toast.label.contains("Shoo isn't on yet"), toast.label)
+        XCTAssertTrue(toast.label.contains("step 02"), toast.label)
+        // A tap closes it; the screen under it is unchanged.
+        app.descendants(matching: .any)["extension.returnToast"].firstMatch.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["extension.returnToast"].waitForNonExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["extension.turnOn"].exists)
     }
 
     @MainActor

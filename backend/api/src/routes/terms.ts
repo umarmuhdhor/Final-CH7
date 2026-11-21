@@ -9,6 +9,7 @@ import { storeUrl } from "./join-page";
 const TEXT: Record<"en" | "id", LegalText> = {
   en: {
     title: "Shoo terms of use",
+    description: "The rules for using Shoo, the Safari guard for the family iPhone: what it does, what it cannot promise, and your part.",
     updated: "Last updated: 28 October 2026",
     lead: "Shoo is a free app that checks the websites you open in Safari and warns you about or blocks scams. By using Shoo you agree to these terms.",
     sections: [
@@ -38,6 +39,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
   },
   id: {
     title: "Syarat & ketentuan Shoo",
+    description: "Aturan memakai Shoo, pengaman Safari untuk iPhone keluarga: apa yang dilakukan Shoo, apa yang tidak bisa dijanjikan, dan bagianmu.",
     updated: "Terakhir diperbarui: 28 Oktober 2026",
     lead: "Shoo adalah app gratis yang memeriksa situs yang kamu buka di Safari dan memberi peringatan atau memblokir penipuan. Dengan memakai Shoo, kamu setuju dengan syarat ini.",
     sections: [

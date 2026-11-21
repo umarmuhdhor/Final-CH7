@@ -41,6 +41,8 @@ struct TurnOnExtensionView: View {
     /// back and Shoo is still not on (#135).
     @State private var leftForSettings = false
     @State private var cameBack = false
+    /// F3 (goldfish 21 Nov 2026): onboarding is back from Settings and Shoo is still not on everywhere.
+    @State private var returnToast: SettingsReturnToast?
     /// Taps on the grey button before the box was ticked; "tick the box first" shows under the box from the first.
     @State private var consentNudges = 0
 
@@ -166,12 +168,21 @@ struct TurnOnExtensionView: View {
         // times in case the heartbeat from Safari is still on its way (no app restart needed, #135).
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
-            if leftForSettings { cameBack = true }
+            let returned = leftForSettings
+            if returned {
+                cameBack = true
+                leftForSettings = false
+            }
             for attempt in 0..<Self.recheck.times {
                 if attempt > 0 {
                     do { try await Task.sleep(for: Self.recheck.every) } catch { return }
                 }
                 status = await refreshStatus()
+                // F3: said once per return, from the first read; gone as soon as Shoo is found on.
+                if consent != nil {
+                    if attempt == 0, returned { returnToast = status.flatMap(SettingsReturnToast.init) }
+                    if status?.isActive == true { returnToast = nil }
+                }
                 if status != nil, nextStep == nil { return }
                 // Onboarding never moves on by itself: back from Settings with the switch on, the screen keeps the
                 // consent box and turns the main button into Next, so the box is seen once more before leaving.
@@ -180,6 +191,21 @@ struct TurnOnExtensionView: View {
             }
         }
         .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: showsConsentHint)
+        // F3: where an iOS notification would be, Shoo's head 8 pt under the status bar.
+        .overlay(alignment: .top) {
+            if let returnToast {
+                ShooToast(
+                    title: L10n.string(returnToast.title, language: AppLanguage(locale: locale)),
+                    line: L10n.string(returnToast.line, language: AppLanguage(locale: locale)),
+                    colors: SettingsReturnToast.colors, pose: returnToast.pose, identifier: "extension.returnToast",
+                    duration: UIAccessibility.isVoiceOverRunning ? .seconds(10) : .seconds(6),
+                    onClose: { self.returnToast = nil }
+                )
+                .padding(.top, 8)
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: returnToast)
         .onChange(of: needsConsent) { _, needed in
             if !needed { consentNudges = 0 }
         }
@@ -254,6 +280,45 @@ struct TurnOnExtensionView: View {
                 isVideoPresented = true
             }
         )
+    }
+}
+
+/// F3 (Figma elephant–goldfish 2425:4545): ON-04 in onboarding is back from Settings with nothing changed. A: Shoo is
+/// still off (Tidur). B: it is on but Safari still asks per site (Tap di sini). Orange like a warning, step number
+/// included, so the user knows which step to redo.
+enum SettingsReturnToast: Equatable {
+    case stillOff
+    case someSitesOnly
+
+    init?(_ status: ExtensionStatus) {
+        switch status {
+        case .active: return nil
+        case .off(_, .someSitesOnly): self = .someSitesOnly
+        case .off(_, .switchedOff), .off(_, .notSeen): self = .stillOff
+        }
+    }
+
+    static let colors = [Color(hex: 0xF2B14C), Color(hex: 0xE0892B)]
+
+    var title: String.LocalizationValue {
+        switch self {
+        case .stillOff: "Shoo isn't on yet"
+        case .someSitesOnly: "Shoo is on for some sites only"
+        }
+    }
+
+    var line: String.LocalizationValue {
+        switch self {
+        case .stillOff: "Open Settings again and switch Shoo on (step 02)."
+        case .someSitesOnly: "Tap All Websites and choose Allow (step 03)."
+        }
+    }
+
+    var pose: Mascot {
+        switch self {
+        case .stillOff: .sleep
+        case .someSitesOnly: .tapHere
+        }
     }
 }
 
@@ -354,7 +419,9 @@ struct DataSentSheet: View {
                     row("doc.text.magnifyingglass", tint: 0x1E6FCB, fill: 0xE6F0FB,
                         title: "Pages you open", text: "Page text, form field names and the address. What you type is not sent.")
                     row("exclamationmark.shield", tint: 0xD23B3B, fill: 0xFDECEC,
-                        title: "Risky pages", text: "The address and a copy are kept. Some of it stays after the account is deleted.")
+                        title: "Risky pages",
+                        // C6 (goldfish 21 Nov): what stays, and after what, without the word "akun" seen nowhere before.
+                        text: "The address and a copy of the page are kept for 14 days. After you delete your data (Profile › Delete Account), the site's address and score stay, without your name.")
                     row("iphone", tint: 0x5B616C, fill: 0xEEF0F3,
                         title: "Without the online check", text: "Shoo checks on your iPhone only, with less protection.")
                 }

@@ -225,7 +225,13 @@ struct InviteSheet: View {
                         identifier: "invite.refreshDialog"
                     )
                 }
-                Text("Valid for \(model.timeLeft)")
+                Group {
+                    // C8: "Berlaku 29 menit lagi", seconds only in the last minute.
+                    switch model.remaining {
+                    case .minutes(let minutes): Text("Valid for \(minutes) more min")
+                    case .seconds(let seconds): Text("Valid for \(seconds) more sec")
+                    }
+                }
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)
                     .monospacedDigit()
                     .foregroundStyle(OnboardingTheme.secondaryInk)

@@ -252,7 +252,7 @@ struct ActivityView: View {
                 .transition(.opacity)
         case .failed:
             ActivityMessage(
-                systemImage: "wifi.exclamationmark", title: "Couldn't load activity",
+                systemImage: "wifi.exclamationmark", pose: .sorry, title: "Couldn't load activity",
                 message: Text(verbatim: L10n.string(model.loadFailure.message(connection: "Check your connection and try again."), language: language))
             ) {
                 Button { Task { await model.retry() } } label: {
@@ -305,7 +305,7 @@ struct ActivityView: View {
                     .accessibilityLabel(Text("Loading"))
             } else if model.loadMoreFailed {
                 Button { Task { await model.loadMore() } } label: {
-                    Label("Couldn't load more. Try again", systemImage: "arrow.clockwise")
+                    Label { Text("Couldn't load more. Try again") } icon: { MascotImage(pose: .sorry, height: 32) }
                         .activityFont(15, .medium)
                         .foregroundStyle(ActivityStyle.ink)
                         .frame(maxWidth: .infinity, minHeight: 44)
@@ -777,19 +777,25 @@ struct ActivityRow: View {
 /// Empty / error state in the Figma card look: grey icon circle, title, message, optional button.
 struct ActivityMessage<Action: View>: View {
     let systemImage: String
+    /// Shoo instead of the symbol (fase 29g, Figma "alief notif" section 7).
+    var pose: Mascot?
     let title: LocalizedStringKey
     let message: Text
     @ViewBuilder var action: Action
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .activityFont(20, .semibold)
-                .foregroundStyle(ActivityStyle.secondary)
-                .frame(width: 48, height: 48)
-                .background(ActivityStyle.iconFill, in: Circle())
-                .overlay(Circle().stroke(ActivityStyle.iconStroke))
-                .accessibilityHidden(true)
+            if let pose {
+                MascotImage(pose: pose, height: 92)
+            } else {
+                Image(systemName: systemImage)
+                    .activityFont(20, .semibold)
+                    .foregroundStyle(ActivityStyle.secondary)
+                    .frame(width: 48, height: 48)
+                    .background(ActivityStyle.iconFill, in: Circle())
+                    .overlay(Circle().stroke(ActivityStyle.iconStroke))
+                    .accessibilityHidden(true)
+            }
             VStack(spacing: 4) {
                 Text(title)
                     .activityFont(17, .semibold, tracking: -0.17)
@@ -815,15 +821,16 @@ struct ActivityMessage<Action: View>: View {
 }
 
 extension ActivityMessage where Action == EmptyView {
-    init(systemImage: String, title: LocalizedStringKey, message: Text) {
-        self.init(systemImage: systemImage, title: title, message: message) { EmptyView() }
+    init(systemImage: String, pose: Mascot? = nil, title: LocalizedStringKey, message: Text) {
+        self.init(systemImage: systemImage, pose: pose, title: title, message: message) { EmptyView() }
     }
 }
 
 /// Figma "Aktivitas · Gagal memperbarui" (1681:6347): over the rows the list still shows, an 80 pt grey tile with
 /// the circular "!", "Gagal memperbarui" and "Menampilkan data terakhir. **Coba Lagi**". The tile's symbol nudges
 /// when it arrives and spins in place of itself while the retry runs. Guardian Home shows the same notice over what it
-/// last loaded (D-alief-A12, fase 28a K1).
+/// last loaded (D-alief-A12, fase 28a K1). Fase 29g (Figma "alief notif" section 7): Shoo, nervous, instead of the
+/// symbol, with a short tilt in place of its wiggle; the tile comes back with the spinner while the retry runs.
 struct RefreshFailedNotice: View {
     var retryIdentifier = "activity.refreshRetry"
     let retry: () async -> Void
@@ -836,12 +843,13 @@ struct RefreshFailedNotice: View {
             ZStack {
                 if isRunning {
                     ProgressView().controlSize(.large).tint(Color(hex: 0x6A717E))
+                        .frame(width: 80, height: 80)
+                        .background(Color(hex: 0xF3F6F8), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 } else {
                     icon
                 }
             }
-            .frame(width: 80, height: 80)
-            .background(Color(hex: 0xF3F6F8), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .frame(height: 92)
             .accessibilityHidden(true)
             Text("Couldn't refresh")
                 .activityFont(17, .semibold, tracking: -0.43)
@@ -875,15 +883,20 @@ struct RefreshFailedNotice: View {
 
     @ViewBuilder
     private var icon: some View {
-        let image = Image(systemName: "exclamationmark.arrow.circlepath")
-            .font(.system(size: 43, weight: .regular))
-            .foregroundStyle(Color(hex: 0x6A717E))
+        let shoo = MascotImage(pose: .nervous, height: 92)
         if reduceMotion {
-            image
-        } else if #available(iOS 18, *) {
-            image.symbolEffect(.wiggle.byLayer, options: .nonRepeating, value: nudge)
+            shoo
         } else {
-            image.symbolEffect(.bounce, options: .nonRepeating, value: nudge)
+            // A short tilt when the failure arrives and after each failed retry.
+            shoo.keyframeAnimator(initialValue: 0.0, trigger: nudge) { view, angle in
+                view.rotationEffect(.degrees(angle), anchor: .bottom)
+            } keyframes: { _ in
+                KeyframeTrack {
+                    SpringKeyframe(-6, duration: 0.12)
+                    SpringKeyframe(5, duration: 0.14)
+                    SpringKeyframe(0, duration: 0.2)
+                }
+            }
         }
     }
 }
