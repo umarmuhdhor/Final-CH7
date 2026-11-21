@@ -243,9 +243,71 @@ struct OnboardingModelTests {
         #expect(!model.registrationLimited)
     }
 
-    @Test func personalRelaunchGoesHome() async {
+    /// F6: iOS closed the app in Settings with Shoo still off: the relaunch carries on at ON-04, not Home.
+    @Test func relaunchWithShooOffResumesAtTurnOn() async {
         _ = await registeredPersonal()
+        let relaunched = model()
+        #expect(relaunched.step == .turnOnExtension)
+        await relaunched.resumeAfterRelaunch()
+        #expect(relaunched.step == .turnOnExtension)
+        #expect(!settings.onboardingCompleted)
+    }
+
+    /// F6: Shoo was switched on in Settings before iOS closed the app: on to Safari Default.
+    @Test func relaunchWithShooOnResumesAtSafariDefault() async {
+        _ = await registeredPersonal()
+        box.status = .active(lastSeen: Date())
+        let relaunched = model()
+        await relaunched.resumeAfterRelaunch()
+        #expect(relaunched.step == .safariDefault)
+        // Only once per launch: Back from Safari Default stays on ON-04.
+        relaunched.goBack()
+        await relaunched.resumeAfterRelaunch()
+        #expect(relaunched.step == .turnOnExtension)
+    }
+
+    /// F6: the switch is on but Safari still asks per site (or no page has said): ON-04 shows what is missing.
+    @Test(arguments: [
+        ExtensionStatus.off(lastSeen: Date(), reason: .someSitesOnly),
+        .active(lastSeen: nil),
+        .off(lastSeen: nil, reason: .switchedOff),
+    ])
+    func relaunchWithoutEverySiteStaysOnTurnOn(status: ExtensionStatus) async {
+        _ = await registeredPersonal()
+        box.status = status
+        let relaunched = model()
+        await relaunched.resumeAfterRelaunch()
+        #expect(relaunched.step == .turnOnExtension)
+    }
+
+    /// F6: the online check was never answered (the box was the only place to answer it): ON-04 asks first.
+    @Test func relaunchWithoutAnAnswerStaysOnTurnOn() async {
+        _ = await registeredPersonal()
+        settings.dataConsent = nil
+        box.status = .active(lastSeen: Date())
+        let relaunched = model()
+        await relaunched.resumeAfterRelaunch()
+        #expect(relaunched.step == .turnOnExtension)
+        #expect(relaunched.showsConsentCheckbox)
+    }
+
+    /// F6: past Safari Default (it can't be read, so a flag says so): the success screen and its question.
+    @Test func relaunchAfterSafariDefaultResumesAtSuccess() async {
+        let first = await registeredPersonal()
+        await reachSuccess(first)
+        #expect(settings.onboardingSafariDefaultPassed)
+        let relaunched = model()
+        #expect(relaunched.step == .extensionOn)
+        await relaunched.requestNotifications()
+        #expect(settings.onboardingCompleted)
         #expect(model().step == .done)
+    }
+
+    @Test func resetForgetsSafariDefault() async {
+        let model = await registeredPersonal()
+        await reachSuccess(model)
+        settings.reset()
+        #expect(!settings.onboardingSafariDefaultPassed)
     }
 
     @Test func extensionOffStaysActiveContinues() async {
