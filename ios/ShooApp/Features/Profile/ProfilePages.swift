@@ -222,7 +222,7 @@ private struct ModePage: View {
                     .accessibilityIdentifier("mode.personal")
                 ModeCard(
                     title: Text("Guardian"), subtitle: Text("Protect the people close to you"),
-                    features: [Text("Everything in Personal"), Text("Look after up to 3 people"), Text("Confirm warnings for them")],
+                    features: [Text("Everything in Personal"), Text("Protect up to 3 people"), Text("Confirm warnings for them")],
                     isCurrent: current == .guardian, isSelected: choice == .guardian
                 ) {
                     AvatarStack(members: model.members)
@@ -270,7 +270,7 @@ private struct ModePage: View {
                 Button {
                     // Profile closes on Home, where the change shows, with a toast VoiceOver reads (Option A). The
                     // first Guardian switch opens "To be guardian" first.
-                    if choice == .guardian { env.requestFamilyMode() } else { env.leaveFamilyMode() }
+                    if choice == .guardian { env.requestFamilyMode() } else { env.leaveFamilyMode(keepsFamily: !model.members.isEmpty) }
                     selected = nil
                 } label: {
                     Text(choice == .guardian ? "Switch to Guardian" : "Switch to Personal")
@@ -1046,7 +1046,7 @@ private struct NotificationsPage: View {
                         .accessibilityIdentifier("notifications.family")
                         ProfileDivider()
                         ProfileToggleRow(
-                            symbol: ProfileStyle.extensionSymbol, title: Text("Protection off"), subtitle: Text("When their extension is off"),
+                            symbol: ProfileStyle.extensionSymbol, title: Text("Extension off"), subtitle: Text("When their extension is off"),
                             style: .settings, isOn: binding(\.protectionOff) { NotificationSettingsUpdate(protectionOff: $0) }
                         )
                         .accessibilityIdentifier("notifications.protectionOff")
@@ -1059,7 +1059,7 @@ private struct NotificationsPage: View {
                     // Hidden until the server sends that push (#183).
                     if LinkedAccountSettings.switchesAreLive {
                         @Bindable var linked = model.linked
-                        ProfileSection(title: "Connected account") {
+                        ProfileSection(title: "Linked account") {
                             ProfileToggleRow(
                                 symbol: "lock.fill", title: Text("Blocked link"), subtitle: Text("When the linked account verifies a link"),
                                 style: .settings, isOn: $linked.notifyLinkVerified

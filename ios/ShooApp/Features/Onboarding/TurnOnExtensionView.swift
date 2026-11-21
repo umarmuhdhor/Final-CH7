@@ -86,7 +86,7 @@ struct TurnOnExtensionView: View {
                         .accessibilityIdentifier("extension.offHint")
                 }
                 // Once the switch is known to be on, the setup steps are done; only the callout is left.
-                if !showsStatusNote || nextStep?.opensSafariFirst != true {
+                if !showsStatusNote || nextStep?.switchIsOn != true {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                         OnboardingStepRow(number: index + 1, text: text(for: step))
                             .accessibilityIdentifier("extension.step.\(index + 1)")
@@ -135,7 +135,7 @@ struct TurnOnExtensionView: View {
                     guard consentGiven() else { return }
                     Task { await open(safariFirst: step.opensSafariFirst) }
                 } label: {
-                    workingLabel(step.opensSafariFirst ? "Open Safari" : "Turn on the extension")
+                    workingLabel(mainTitle(for: step))
                 }
                 .buttonStyle(OnboardingCapsuleButtonStyle(looksDisabled: needsConsent))
                 .accessibilityHint(needsConsent ? Text("Tick the box above first to continue.") : Text(verbatim: ""))
@@ -227,6 +227,12 @@ struct TurnOnExtensionView: View {
         }
         leftForSettings = true
         if safariFirst { await ExtensionSetup.openSafari() } else { await ExtensionSetup.openSettings() }
+    }
+
+    /// The switch is on, but Safari still asks per site: the button goes where the fix is (F5).
+    private func mainTitle(for step: ExtensionStatus.NextStep) -> LocalizedStringKey {
+        if step.opensSafariFirst { return "Open Safari" }
+        return step.switchIsOn ? "Open Safari settings" : "Turn on the extension"
     }
 
     private func workingLabel(_ title: LocalizedStringKey) -> some View {

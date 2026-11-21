@@ -1006,7 +1006,14 @@ struct HomeNoticeTests {
         env.leaveFamilyMode()
         #expect(!env.settings.familyModeOn)
         #expect(env.router.selectedTab == .shield)
-        #expect(env.router.homeNotice == .personalOn)
+        #expect(env.router.homeNotice == .personalOn(keepsFamily: false))
+    }
+
+    /// F11 (goldfish 21 Nov): a guardian with members who switches to Pribadi is told the family stays linked.
+    @Test func switchingToPersonalWithMembersSaysTheFamilyStays() {
+        let env = environment(mode: .guardian, familyMode: true)
+        env.leaveFamilyMode(keepsFamily: true)
+        #expect(env.router.homeNotice == .personalOn(keepsFamily: true))
     }
 
     /// Decision 1: a Pribadi inviter now protects someone, so Family mode turns on and Home shows them.
@@ -1024,12 +1031,12 @@ struct HomeNoticeTests {
 
     @Test func theSameNoticeTwiceShowsAgain() {
         let router = Router()
-        router.show(.personalOn)
+        router.show(.personalOn(keepsFamily: false))
         let first = router.homeNoticeCount
         router.homeNotice = nil
-        router.show(.personalOn)
+        router.show(.personalOn(keepsFamily: false))
         #expect(router.homeNoticeCount == first + 1)
-        #expect(router.homeNotice == .personalOn)
+        #expect(router.homeNotice == .personalOn(keepsFamily: false))
     }
 
     @Test func undangClosesTheToastAndAsksForTheShareSheet() {

@@ -49,7 +49,7 @@ struct FamilyCardIllustration: View {
                 Text("Family")
                     .font(FigmaFont.font(size: 15.3, weight: .semibold))
                     .foregroundStyle(Color(hex: 0x191D2F))
-                Text("2 of 3")
+                Text("2 of 3 people")
                     .font(.system(size: 10.8, design: .rounded))
                     .foregroundStyle(OnboardingTheme.bodyInk)
                     .padding(.horizontal, 8.1)
@@ -60,7 +60,7 @@ struct FamilyCardIllustration: View {
             .padding(.horizontal, 1.8)
             .padding(.bottom, 1.8)
 
-            FamilyRow(avatarId: "avatar_01", name: "Mom", status: "Site blocked · 92%", statusColor: Color(hex: 0xE5483B), statusWeight: .semibold) {
+            FamilyRow(avatarId: "avatar_01", name: "Mom", status: "Site blocked", statusColor: Color(hex: 0xE5483B), statusWeight: .semibold) {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color(hex: 0x9AA1AE))

@@ -123,7 +123,7 @@ struct MemberDetailView: View {
                 symbol: ProfileStyle.extensionSymbol, title: Text("Safari extension"),
                 accessory: member.extensionActive
                     ? .value(L10n.string("Active", language: language), color: ProfileStyle.greenText, chevron: false)
-                    : .value(L10n.string("Off", language: language), color: ProfileStyle.red, chevron: false)
+                    : .value(L10n.string("Not active", language: language), color: ProfileStyle.red, chevron: false)
             )
             .accessibilityElement(children: .combine)
             if let device = deviceText(member) {
@@ -198,29 +198,52 @@ struct MemberDetailView: View {
         .padding(.top, 28)
     }
 
-    /// Figma "Pesan ekstensi mati" (1681:6718) and "Pengingat terkirim" (1681:6837): orange with **Ingatkan** while
-    /// the extension is off, green once a reminder went out. The swap cross-fades; the check bounces in.
+    /// Figma "Pesan ekstensi mati" (1681:6718) and "Pengingat terkirim" (1681:6837): orange while the extension is
+    /// off, green once a reminder went out. The swap cross-fades; the check bounces in.
+    /// C3 (goldfish 21 Nov, Figma "Usulan · detail anggota"): the server only knows Shoo on their phone sent no word
+    /// for 24 h, not why, so the card lists what to check on that phone, then a full-width "Ingatkan {nama}".
     private func offBanner(_ member: FamilyMember) -> some View {
         let sent = MemberText.recentlyReminded(member)
-        return HStack(spacing: 12) {
-            Image(systemName: sent ? "checkmark" : "exclamationmark.triangle.fill")
-                .font(.system(size: 21.67, weight: sent ? .semibold : .regular))
-                .foregroundStyle(sent ? Color(hex: 0x269E4A) : Color(hex: 0xEF871C))
-                .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
-                .frame(width: 40, height: 40)
-                .background(sent ? Color(hex: 0x34C759).opacity(0.14) : Color(hex: 0xEF871C).opacity(0.12),
-                            in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(sent ? "Reminder sent" : "Safari extension off")
-                    .profileFont(16, .semibold, tracking: -0.31)
-                    .foregroundStyle(Color(hex: 0x151617))
-                Text(sent ? "\(member.name) will get a notification." : "\(member.name) isn't protected yet.")
-                    .profileFont(13, rounded: true)
-                    .foregroundStyle(Color(hex: 0x6A717E))
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: sent ? "checkmark" : "exclamationmark.triangle.fill")
+                    .font(.system(size: 21.67, weight: sent ? .semibold : .regular))
+                    .foregroundStyle(sent ? Color(hex: 0x269E4A) : Color(hex: 0xEF871C))
+                    .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
+                    .frame(width: 40, height: 40)
+                    .background(sent ? Color(hex: 0x34C759).opacity(0.14) : Color(hex: 0xEF871C).opacity(0.12),
+                                in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(sent ? "Reminder sent" : "Safari extension off")
+                        .profileFont(16, .semibold, tracking: -0.31)
+                        .foregroundStyle(Color(hex: 0x151617))
+                    Text(verbatim: sent
+                        ? L10n.string("\(member.name) will get a notification.", language: language)
+                        : Self.quietText(member, language: language))
+                        .profileFont(13, rounded: true)
+                        .foregroundStyle(Color(hex: 0x6A717E))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
+
+            Rectangle().fill(Color(hex: 0xEF871C).opacity(0.2)).frame(height: 1)
+                .padding(.vertical, 14)
+                .accessibilityHidden(true)
+
+            Text("To check on \(member.name)'s phone")
+                .profileFont(13, .semibold)
+                .foregroundStyle(Color(hex: 0x151617))
+                .accessibilityAddTraits(.isHeader)
+            VStack(alignment: .leading, spacing: 12) {
+                checkItem(1, "Settings › Apps › Safari › Extensions › Shoo is on, with “Allow” for every website.")
+                checkItem(2, "Safari is used to open sites. Shoo only sends word while Safari is in use.")
+                checkItem(3, "The phone is online, and the Shoo app is still installed.")
+            }
+            .padding(.top, 12)
+
             if !sent {
                 Button {
                     Task {
@@ -231,32 +254,56 @@ struct MemberDetailView: View {
                     }
                 } label: {
                     ZStack {
-                        Text("Remind").opacity(model.isReminding ? 0 : 1)
-                        if model.isReminding { ProgressView().controlSize(.small).tint(ProfileStyle.link) }
+                        Text("Remind \(member.name)").opacity(model.isReminding ? 0 : 1)
+                        if model.isReminding { ProgressView().controlSize(.small).tint(.white) }
                     }
-                    .profileFont(15, .semibold, tracking: -0.23)
-                    .foregroundStyle(Color(hex: 0x136CB7))
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(PressScaleButtonStyle())
+                .buttonStyle(MemberRemindButtonStyle())
                 .disabled(model.isReminding)
-                .accessibilityLabel(Text("Remind \(member.name)"))
+                .padding(.top, 16)
                 .accessibilityHint(Text("Sends a notification to turn on Shoo in Safari"))
                 .accessibilityIdentifier("profile.remind.\(member.deviceId)")
                 .transition(.opacity)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .frame(minHeight: 72)
+        .padding(16)
         .background(sent ? Color(hex: 0xEBF8ED).opacity(0.9) : Color(hex: 0xF8F2EB).opacity(0.9))
         .overlay(alignment: .top) {
             Rectangle().fill(sent ? Color(hex: 0x1CEF1C).opacity(0.35) : Color(hex: 0xEF871C).opacity(0.35)).frame(height: 1)
         }
         .animation(.easeInOut(duration: 0.25), value: sent)
         .sensoryFeedback(.success, trigger: sent) { was, now in !was && now }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier(sent ? "member.reminded" : "member.off")
+    }
+
+    /// One numbered line of "Yang perlu dicek di HP {nama}" (Figma: 22 pt circle, 11 pt bold number, 13 pt text).
+    private func checkItem(_ number: Int, _ text: LocalizedStringKey) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(verbatim: "\(number)")
+                .profileFont(11, .bold)
+                .foregroundStyle(Color(hex: 0x6A717E))
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(.white))
+                .overlay(Circle().strokeBorder(Color(hex: 0xEF871C).opacity(0.35), lineWidth: 1))
+                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+                .accessibilityHidden(true)
+            Text(text)
+                .profileFont(13, rounded: true)
+                .foregroundStyle(Color(hex: 0x3C3C43))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "Belum ada kabar dari Shoo di HP Dad sejak 21 hari lalu." Without a last heartbeat: "… di HP Dad."
+    static func quietText(_ member: FamilyMember, now: Date = Date(), language: AppLanguage) -> String {
+        guard let seen = member.lastSeenAt else {
+            return L10n.string("No word yet from Shoo on \(member.name)'s phone.", language: language)
+        }
+        let span = MemberText.duration(from: seen, to: now, language: language)
+        return L10n.string("No word from Shoo on \(member.name)'s phone for \(span).", language: language)
     }
 
     private func activityRow(_ scan: ScanResult) -> some View {
@@ -287,7 +334,8 @@ struct MemberDetailView: View {
     private func statusPill(active: Bool) -> some View {
         HStack(spacing: 6) {
             Circle().fill(active ? ProfileStyle.green : ProfileStyle.offDot).frame(width: 8, height: 8)
-            Text(active ? "Protection on" : "Protection off")
+            // C3: the extension's state. The server only knows "no heartbeat for 24 h", not why.
+            Text(active ? "Extension on" : "Extension off")
                 .profileFont(14, .medium, tracking: -0.14)
                 .foregroundStyle(active ? ProfileStyle.greenText : ProfileStyle.secondary)
         }
@@ -363,4 +411,21 @@ struct MemberDetailView: View {
         MemberDetailView(deviceId: "dev_mom", repository: env.repository)
     }
     .environment(env)
+}
+
+/// "Ingatkan {nama}" under the checklist (Figma "Tombol · Ingatkan Dad"): full width, 44 pt, the app's blue capsule.
+private struct MemberRemindButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .profileFont(15, .semibold, tracking: -0.23)
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(Capsule().fill(OnboardingTheme.buttonGradient))
+            .opacity(isEnabled ? 1 : 0.6)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .contentShape(Capsule())
+    }
 }

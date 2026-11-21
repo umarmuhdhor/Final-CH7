@@ -9,7 +9,8 @@ struct GuardianIntroView: View {
     var body: some View {
         OnboardingFormPage(
             title: "Protect the people\nclosest to you",
-            message: "Protect them by double-checking what Shoo finds for the people closest to you!",
+            // C4 + F9 (goldfish 21 Nov): what the guardian sees, and that their own protection stays on.
+            message: "Help look after the people closest to you. You'll see the sites blocked or warned about on their phones. Your own protection stays on.",
             onBack: onBack
         ) {
             FamilyCardIllustration()

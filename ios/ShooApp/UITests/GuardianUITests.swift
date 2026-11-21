@@ -84,7 +84,7 @@ final class GuardianUITests: XCTestCase {
         XCTAssertTrue(row.exists, app.debugDescription)
         let people = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'family.member.'"))
         XCTAssertGreaterThan(people.count, 0, app.debugDescription)
-        XCTAssertTrue(people.firstMatch.label.contains("Active") || people.firstMatch.label.contains("Not connected"), people.firstMatch.label)
+        XCTAssertTrue(people.firstMatch.label.contains("Extension on") || people.firstMatch.label.contains("Extension off"), people.firstMatch.label)
     }
 
     @MainActor
@@ -137,6 +137,25 @@ final class GuardianUITests: XCTestCase {
         ])
         XCTAssertTrue(app.descendants(matching: .any)["home.status.off"].waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.buttons["home.turnOn"].exists)
+    }
+
+    /// F5 (goldfish 21 Nov 2026): Shoo is on but Safari still asks per site. The fix is in Safari settings, so
+    /// "Open Safari settings" is the big button and "Open Safari" the small link under it.
+    @MainActor
+    func testSomeSitesOnlySheetLeadsWithSafariSettings() {
+        let app = XCUIApplication.mock([
+            "-settings.onboardingCompleted", "YES",
+            "-settings.mode", "guardian",
+            "-settings.language", "en",
+            "-settings.familyModeOn", "NO",
+            "-UITestExtensionStatus", "someSitesOnly",
+        ])
+        app.buttons["home.turnOn"].tapWhenHittable()
+        let main = app.buttons["extension.turnOn"]
+        XCTAssertTrue(main.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(main.label, "Open Safari settings")
+        XCTAssertTrue(app.buttons["extension.openSafariLink"].exists, app.debugDescription)
+        XCTAssertFalse(app.buttons["extension.openSafari"].exists)
     }
 
     @MainActor

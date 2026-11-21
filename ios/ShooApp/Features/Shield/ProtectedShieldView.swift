@@ -77,7 +77,11 @@ struct ProtectedShieldView: View {
             guard model.state == .loaded else { return }
             if isActive { turnedOn += 1 }
             AccessibilityNotification.Announcement(
-                L10n.string(isActive ? "You're protected!" : "You're not protected yet", language: language)
+                L10n.string(
+                    isActive ? "You're protected!"
+                        : model.extensionStatus.isSomeSitesOnly ? "Not fully protected yet" : "You're not protected yet",
+                    language: language
+                )
             ).post()
         }
         // A push while this screen is open (new scan, verdict, member change): reload, as Guardian Home does (A-12).
@@ -141,7 +145,9 @@ struct ProtectedShieldView: View {
         let title: LocalizedStringKey = switch phase {
         case .checking: "Checking Shoo…"
         case .failed: "Status not available yet"
-        case .status: isActive ? "You're protected!" : "You're not protected yet"
+        // C10: on for some sites only is not the same as off.
+        case .status: isActive ? "You're protected!"
+            : model.extensionStatus.isSomeSitesOnly ? "Not fully protected yet" : "You're not protected yet"
         }
         let identifier = switch phase {
         case .checking: "shield.status.checking"

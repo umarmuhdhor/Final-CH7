@@ -39,6 +39,8 @@ enum HomeTheme {
     static let scamIconFill = Color(red: 0xFD / 255, green: 0xEC / 255, blue: 0xEA / 255)
     /// Figma "Aktif" under a family member: Labels/Secondary, #3C3C43 at 60 %.
     static let memberStatus = Color(red: 0x3C / 255, green: 0x3C / 255, blue: 0x43 / 255).opacity(0.6)
+    /// A member whose extension is off (C3): Figma #D9480F, darkened for 4.5:1 at 13 pt.
+    static let memberOff = Color(red: 0xC2 / 255, green: 0x41 / 255, blue: 0x0C / 255)
     /// Figma "icon/switch" stroke and the "Lihat Semua" glass button text.
     static let glassInk = Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1A / 255)
 }
@@ -635,7 +637,7 @@ struct SupervisedModeCard: View {
             }
             VStack(alignment: .leading, spacing: 0) {
                 // Figma: SF Pro Rounded Semibold 11, 13 pt lines, 0.06 tracking, #0D8F93.
-                Text(kind == .guardian ? "BECOME A GUARDIAN" : "SUPERVISED MODE")
+                Text(kind == .guardian ? "BECOME A GUARDIAN" : "PROTECTED MODE")
                     .onboardingFont(11, weight: .semibold, design: .rounded, tracking: 0.06, relativeTo: .caption2)
                     .figmaLineHeight(13, relativeTo: .caption2)
                     .foregroundStyle(Color(hex: 0x0D8F93))
