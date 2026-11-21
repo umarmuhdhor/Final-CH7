@@ -117,7 +117,11 @@ struct GuardianHomeView: View {
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
             guard model.state == .loaded, !isFamily else { return }
             AccessibilityNotification.Announcement(
-                L10n.string(isActive ? "You're protected!" : "You're not protected yet", language: language)
+                L10n.string(
+                    isActive ? "You're protected!"
+                        : model.extensionStatus.isSomeSitesOnly ? "Not fully protected yet" : "You're not protected yet",
+                    language: language
+                )
             ).post()
         }
         .sheet(
@@ -135,7 +139,7 @@ struct GuardianHomeView: View {
 
     /// The Home toast says (and VoiceOver reads) what changed; the first Guardian switch opens "To be guardian".
     private func switchSide() {
-        if isFamily { env.leaveFamilyMode() } else { env.requestFamilyMode() }
+        if isFamily { env.leaveFamilyMode(keepsFamily: !model.members.isEmpty) } else { env.requestFamilyMode() }
     }
 
     // MARK: Hero and status
@@ -153,7 +157,9 @@ struct GuardianHomeView: View {
             // Shoo being off outranks what it saw while it was on.
             let level = isActive && !isChecking ? model.level : .normal
             let title: LocalizedStringKey = isUnread ? "Checking Shoo…"
-                : isOff ? "You're not protected yet" : isChecking ? "Shoo is on" : level.title
+                // C10: on for some sites only is not the same as off.
+                : isOff ? (model.extensionStatus.isSomeSitesOnly ? "Not fully protected yet" : "You're not protected yet")
+                : isChecking ? "Shoo is on" : level.title
             let identifier = isUnread ? "home.status.extensionChecking"
                 : isOff ? "home.status.off" : isChecking ? "home.status.checking" : level.titleIdentifier
             HomeHero(
@@ -462,10 +468,12 @@ private struct MemberCell: View {
                     .figmaLineHeight(22, relativeTo: .body)
                     .foregroundStyle(HomeTheme.ink)
                     .lineLimit(1)
-                Text(member.isConnected ? "Active" : "Not connected")
-                    .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
+                // C3 (goldfish 21 Nov): the extension's state, not "Terhubung", which means "joined the family". Off is
+                // Figma's #D9480F darkened to #C2410C so 13 pt text keeps 4.5:1 on white.
+                Text(member.isConnected ? "Extension on" : "Extension off")
+                    .onboardingFont(13, weight: member.isConnected ? .regular : .semibold, design: .rounded, tracking: -0.08, relativeTo: .footnote)
                     .figmaLineHeight(18, glyphOffset: 1, relativeTo: .footnote)
-                    .foregroundStyle(HomeTheme.memberStatus)
+                    .foregroundStyle(member.isConnected ? HomeTheme.memberStatus : HomeTheme.memberOff)
                 if isNew {
                     Text("Just connected")
                         .onboardingFont(12, weight: .semibold, design: .rounded, relativeTo: .caption)
@@ -882,7 +890,12 @@ private struct InviteCodeCard: View {
                 .foregroundStyle(HomeTheme.secondaryInk)
         case .ready(let code):
             // Figma "Label": SF Pro Rounded 13, -0.08, 18 pt lines, #6A717E.
-            Text("Invite code · valid for \(model.timeLeft)")
+            Group {
+                switch model.remaining {
+                case .minutes(let minutes): Text("Invite code · valid for \(minutes) more min")
+                case .seconds(let seconds): Text("Invite code · valid for \(seconds) more sec")
+                }
+            }
                 .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
                 .figmaLineHeight(18, glyphOffset: 1, relativeTo: .footnote)
                 .monospacedDigit()
