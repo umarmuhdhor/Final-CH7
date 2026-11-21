@@ -127,6 +127,16 @@
         }
       }
     },
+    "Open Settings again and switch Shoo on (step 02)." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan lagi, lalu nyalakan Shoo (langkah 02)."
+          }
+        }
+      }
+    },
     "Opens the share sheet with your invite link" : {
       "localizations" : {
         "id" : {
@@ -167,12 +177,42 @@
         }
       }
     },
+    "Shoo is on for some sites only" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo baru aktif di sebagian situs"
+          }
+        }
+      }
+    },
+    "Shoo isn't on yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo belum menyala"
+          }
+        }
+      }
+    },
     "Switch modes here" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pindah mode di sini"
+          }
+        }
+      }
+    },
+    "Tap All Websites and choose Allow (step 03)." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk Semua Situs Web, lalu pilih Izinkan (langkah 03)."
           }
         }
       }
