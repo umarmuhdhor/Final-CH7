@@ -463,10 +463,12 @@ private struct MemberCell: View {
                     .figmaLineHeight(22, relativeTo: .body)
                     .foregroundStyle(HomeTheme.ink)
                     .lineLimit(1)
-                Text(member.isConnected ? "Active" : "Not connected")
-                    .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
+                // C3 (goldfish 21 Nov): the extension's state, not "Terhubung", which means "joined the family". Off is
+                // Figma's #D9480F darkened to #C2410C so 13 pt text keeps 4.5:1 on white.
+                Text(member.isConnected ? "Extension on" : "Extension off")
+                    .onboardingFont(13, weight: member.isConnected ? .regular : .semibold, design: .rounded, tracking: -0.08, relativeTo: .footnote)
                     .figmaLineHeight(18, glyphOffset: 1, relativeTo: .footnote)
-                    .foregroundStyle(HomeTheme.memberStatus)
+                    .foregroundStyle(member.isConnected ? HomeTheme.memberStatus : HomeTheme.memberOff)
                 if isNew {
                     Text("Just connected")
                         .onboardingFont(12, weight: .semibold, design: .rounded, relativeTo: .caption)

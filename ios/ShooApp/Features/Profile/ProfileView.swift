@@ -222,10 +222,11 @@ struct ProfileView: View {
                 // Pribadi (1115:14424): a green dot and "Terhubung" in green. Protected (455:10275): "Aktif" in grey.
                 // No chevron either way; while on, the row opens "Matikan Shoo".
                 accessory: extensionStatus.isActive
+                    // C9: "Aktif" / "Tidak aktif" on every variant; "Terhubung" only means joined to a family.
                     ? (model.variant == .protected
                         ? .value(L10n.string("Active", language: language), chevron: false)
-                        : .status(L10n.string("Connected", language: language), dot: ProfileStyle.green, color: ProfileStyle.greenText))
-                    : .value(L10n.string("Off", language: language), color: ProfileStyle.red)
+                        : .status(L10n.string("Active", language: language), dot: ProfileStyle.green, color: ProfileStyle.greenText))
+                    : .value(L10n.string("Not active", language: language), color: ProfileStyle.red)
             )
         }
         .buttonStyle(.plain)
@@ -406,11 +407,11 @@ struct RemindButton: View {
 
 /// Text built from a member (rows and the member detail).
 enum MemberText {
-    /// "Active · iPhone · Safari" / "Extension off for 2 days".
+    /// "Extension on · iPhone · Safari" / "Extension off for 2 days" (C3: the extension, not "connected").
     static func status(_ member: FamilyMember, now: Date, language: AppLanguage) -> String {
         if member.extensionActive {
             let device = member.deviceModel.map { $0.hasPrefix("iPad") ? "iPad" : "iPhone" }
-            return [L10n.string("Active", language: language), device, "Safari"].compactMap { $0 }.joined(separator: " · ")
+            return [L10n.string("Extension on", language: language), device, "Safari"].compactMap { $0 }.joined(separator: " · ")
         }
         guard let seen = member.lastSeenAt else { return L10n.string("Extension off", language: language) }
         return L10n.string("Extension off for \(duration(from: seen, to: now, language: language))", language: language)

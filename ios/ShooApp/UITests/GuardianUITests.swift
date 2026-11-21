@@ -84,7 +84,7 @@ final class GuardianUITests: XCTestCase {
         XCTAssertTrue(row.exists, app.debugDescription)
         let people = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'family.member.'"))
         XCTAssertGreaterThan(people.count, 0, app.debugDescription)
-        XCTAssertTrue(people.firstMatch.label.contains("Active") || people.firstMatch.label.contains("Not connected"), people.firstMatch.label)
+        XCTAssertTrue(people.firstMatch.label.contains("Extension on") || people.firstMatch.label.contains("Extension off"), people.firstMatch.label)
     }
 
     @MainActor

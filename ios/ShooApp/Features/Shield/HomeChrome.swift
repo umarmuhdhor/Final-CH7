@@ -39,6 +39,8 @@ enum HomeTheme {
     static let scamIconFill = Color(red: 0xFD / 255, green: 0xEC / 255, blue: 0xEA / 255)
     /// Figma "Aktif" under a family member: Labels/Secondary, #3C3C43 at 60 %.
     static let memberStatus = Color(red: 0x3C / 255, green: 0x3C / 255, blue: 0x43 / 255).opacity(0.6)
+    /// A member whose extension is off (C3): Figma #D9480F, darkened for 4.5:1 at 13 pt.
+    static let memberOff = Color(red: 0xC2 / 255, green: 0x41 / 255, blue: 0x0C / 255)
     /// Figma "icon/switch" stroke and the "Lihat Semua" glass button text.
     static let glassInk = Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1A / 255)
 }
