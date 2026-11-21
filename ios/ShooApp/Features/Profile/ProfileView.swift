@@ -90,13 +90,8 @@ struct ProfileView: View {
             JoinAnotherFamilySheet(name: model.profile?.name ?? "")
                 .environment(\.locale, locale)
         }
-        .deleteAccountSheet(model: model, isPresented: $isDeleteConfirming)
-        .alert(
-            Text(verbatim: model.actionError.map { L10n.string($0, language: language) } ?? ""),
-            isPresented: Binding(get: { model.actionError != nil }, set: { if !$0 { model.actionError = nil } })
-        ) {
-            Button("OK", role: .cancel) {}
-        }
+        // Its action errors show in the same Shoo dialog.
+        .deleteAccountDialog(model: model, isPresented: $isDeleteConfirming)
         // Names and the family list stay out of the app switcher snapshot (D-alief-A36).
         .privacyCover()
     }

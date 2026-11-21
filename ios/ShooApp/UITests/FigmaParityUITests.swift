@@ -284,8 +284,7 @@ final class FigmaParityUITests: XCTestCase {
         app.launch()
         settle()
         // GD-01 "Notifikasi mati" popup covers Home and Activity once per launch.
-        // An alert button keeps the alert's identifier, not its own: find it by its title too.
-        let notNow = app.alerts.buttons["Nanti saja"].exists ? app.alerts.buttons["Nanti saja"] : app.buttons["reminder.notNow"]
+        let notNow = app.buttons["reminder.notNow"]
         if notNow.exists {
             notNow.tap()
             settle()

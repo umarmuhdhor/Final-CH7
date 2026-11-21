@@ -127,6 +127,16 @@
         }
       }
     },
+    "Open Settings again and switch Shoo on (step 02)." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan lagi, lalu nyalakan Shoo (langkah 02)."
+          }
+        }
+      }
+    },
     "Opens the share sheet with your invite link" : {
       "localizations" : {
         "id" : {
@@ -167,12 +177,42 @@
         }
       }
     },
+    "Shoo is on for some sites only" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo baru aktif di sebagian situs"
+          }
+        }
+      }
+    },
+    "Shoo isn't on yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo belum menyala"
+          }
+        }
+      }
+    },
     "Switch modes here" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pindah mode di sini"
+          }
+        }
+      }
+    },
+    "Tap All Websites and choose Allow (step 03)." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk Semua Situs Web, lalu pilih Izinkan (langkah 03)."
           }
         }
       }
@@ -197,12 +237,22 @@
         }
       }
     },
-    "When a suspicious site shows up, you'll see it here." : {
+    "If a suspicious site shows up, you'll see it here." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nanti kalau ada web mencurigakan, akan muncul di sini."
+            "value" : "Kalau ada web mencurigakan, akan muncul di sini."
+          }
+        }
+      }
+    },
+    "Shoo is on watch" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo lagi berjaga"
           }
         }
       }
@@ -2588,7 +2638,6 @@
       }
     },
     "Disconnect from %@?" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -8357,6 +8406,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Centang kotak di bawah, lalu tekan Aktifkan Ekstensi."
+          }
+        }
+      }
+    },
+    "Yes, disconnect" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya, putuskan"
+          }
+        }
+      }
+    },
+    "Delete Shoo from this iPhone?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus Shoo dari HP ini?"
+          }
+        }
+      }
+    },
+    "Yes, delete" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya, hapus"
+          }
+        }
+      }
+    },
+    "Change the invite code?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganti kode undangan?"
+          }
+        }
+      }
+    },
+    "The old code and links stop working right away. Family who haven't joined yet need the new code." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode dan link lama langsung tidak berlaku. Keluarga yang belum bergabung perlu kode baru."
+          }
+        }
+      }
+    },
+    "Yes, change code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya, ganti kode"
+          }
+        }
+      }
+    },
+    "Shoo stays on on %@'s iPhone. You stop seeing their activity, and your Safe / Not safe marks are removed. %@ will be told." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo tetap menyala di HP %1$@. Kamu tidak lagi melihat aktivitasnya. Tanda Aman dan Bahaya darimu juga dihapus. %2$@ akan diberi tahu."
           }
         }
       }

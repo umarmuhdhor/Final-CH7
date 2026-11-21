@@ -23,17 +23,17 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
 
 ## 29a · Aset maskot
 
-- [ ] Export 23 rect `Maskot Shoo · <pose>` dari frame `2431:12759` sebagai PNG transparan.
+- [x] (PR #648) Export 23 rect `Maskot Shoo · <pose>` dari frame `2431:12759` sebagai PNG transparan.
   - Sumber cadangan: `owl/gen/fixed/<pose>.png` di scratchpad sesi 24386bf6. Folder ini bisa hilang.
-- [ ] Masukkan ke `Assets.xcassets/Mascot/`.
+- [x] (PR #648) Masukkan ke `Assets.xcassets/Mascot/`.
   - Perkecil ke tinggi maksimal sekitar 600 px supaya ukuran app tidak bengkak.
   - Cek total ukuran aset.
-- [ ] Pecah pose `peek` jadi 2 gambar: `peek` (badan) dan `peek-hands` (hanya jari, baris 812 ke bawah). Caranya ada di resep.
-- [ ] Beri nama yang jelas di Swift, misalnya `enum Mascot { case think, wave, … }`.
+- [x] (PR #648) Pecah pose `peek` jadi 2 gambar: `peek` (badan) dan `peek-hands` (hanya jari, baris 812 ke bawah). Caranya ada di resep.
+- [x] (PR #648) Beri nama yang jelas di Swift, misalnya `enum Mascot { case think, wave, … }`.
 
 ## 29b · Komponen dialog Shoo
 
-- [ ] Buat komponen `ShooDialog`:
+- [x] (PR #659) Buat komponen `ShooDialog`:
   - layar diredupkan;
   - maskot mengintip di atas kartu;
   - judul dan isi;
@@ -41,12 +41,12 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
   - tombol kedua dengan outline;
   - posisi di tengah layar;
   - VoiceOver dan Reduce Motion.
-- [ ] Ganti `alert`/`confirmationDialog` berikut. Figma: kartu `2428:12706` dan "alief notif" bagian 1.
-  - [ ] Putuskan koneksi (Kaget). Termasuk **F10**: isi dialog menjelaskan akibatnya. Cek dulu perilaku aslinya.
-  - [ ] Hapus akun (Nangis).
-  - [ ] Ganti kode undangan (Mikir).
-  - [ ] Notifikasi mati (Tidur).
-  - [ ] Semua error aksi di Profil: "Gagal menyimpan" (Maaf), satu tombol "Oke".
+- [x] (PR #659) Ganti `alert`/`confirmationDialog` berikut. Figma: kartu `2428:12706` dan "alief notif" bagian 1.
+  - [x] Putuskan koneksi (Kaget). Termasuk **F10**: isi dialog menjelaskan akibatnya. Cek dulu perilaku aslinya.
+  - [x] Hapus akun (Nangis).
+  - [x] Ganti kode undangan (Mikir).
+  - [x] Notifikasi mati (Tidur).
+  - [x] Semua error aksi di Profil: "Gagal menyimpan" (Maaf), satu tombol "Oke".
 
 ## 29c · Konfirmasi tandai aman dan gabung keluarga
 
@@ -103,8 +103,7 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
   - ikon 12 pt;
   - padding kiri-kanan 8 pt, jarak ikon-teks 4 pt;
   - radius 12 pt.
-- [ ] **V10**: Home kosong pakai maskot Detektif dengan teks "Shoo lagi berjaga. Kalau ada web mencurigakan, akan muncul di sini."
-  - Menunggu aset `magnifier` dari 29a masuk main. Dikerjakan di PR kecil setelah #663.
+- [x] **V10** (PR #668): Home kosong pakai maskot Detektif dengan teks "Shoo lagi berjaga. Kalau ada web mencurigakan, akan muncul di sini."
 - [x] **V1, V2, V6, V7, V9** (PR #663): perbaikan kecil sesuai kolom "Cara memperbaiki" di laporan.
   - V7 tanpa perubahan kode: di ujung scroll, isi Home sudah lewat bilah tab (bilah tab sistem masuk safe area).
 - **V4** tidak jadi (Alief, 22 Nov): pill "Terhubung" tetap oranye.
@@ -132,3 +131,4 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
 
 - 21 Nov 2026: dibuat dari sesi review Figma bersama Alief (sesi 24386bf6).
 - 22 Nov 2026: 29e di PR #653, #655, #656; 29h jadi issue #649, #650, #651; 29f di PR #663 (tanpa V10). V4 tidak jadi.
+- 22 Nov 2026: V10 di PR #668, setelah aset maskot 29a masuk main.

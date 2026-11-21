@@ -67,38 +67,42 @@ struct MemberDetailView: View {
         .onChange(of: env.pushesWhileOpen) { _, count in
             Task { await model.pushesWhileOpenChanged(to: count) }
         }
-        .sheet(isPresented: $isDisconnectConfirming) {
-            if let member = model.member {
-                ProfileConfirmSheet(
-                    title: L10n.string("Disconnect from \(member.name)?", language: language),
-                    message: L10n.string(
-                        "You will no longer get warnings from \(member.name)'s activity. To connect again, \(member.name) needs to enter a new invite code.",
-                        language: language
-                    ),
-                    confirmTitle: L10n.string("Disconnect", language: language),
-                    confirmIdentifier: "member.disconnect.confirm",
-                    isWorking: model.isWorking
-                ) {
-                    AvatarView(id: member.avatarId, size: 64)
-                } onConfirm: {
-                    Task {
-                        guard await model.disconnect() else { return }
-                        env.familyChanges += 1
-                        isDisconnectConfirming = false
-                        // Option A: back on Home, which says who is gone (neutral, no success tap).
-                        env.router.landOnHome(saying: .disconnected(name: member.name))
-                    }
-                }
-                .environment(\.locale, locale)
-            }
-        }
-        .alert(
-            Text(verbatim: model.actionError.map { L10n.string($0, language: language) } ?? ""),
-            isPresented: Binding(get: { model.actionError != nil }, set: { if !$0 { model.actionError = nil } })
-        ) {
-            Button("OK", role: .cancel) {}
+        // Figma "Dialog Shoo · Putuskan koneksi" (2428:12722), pose Kaget. F10: it says what happens to them.
+        // Action errors use the same dialog (one cover at a time): a failed disconnect turns into the error.
+        .shooDialog(isPresented: Binding(
+            get: { isDisconnectConfirming || model.actionError != nil },
+            set: { if !$0 { isDisconnectConfirming = false; model.actionError = nil } }
+        )) {
+            if let error = model.actionError { return ShooDialog.error(L10n.string(error, language: language)) }
+            let name = model.member?.name ?? ""
+            return ShooDialog(
+                pose: .shock,
+                title: Text("Disconnect from \(name)?"),
+                // DELETE /family/members: only the link goes; the member keeps Shoo, gets a push, and the
+                // guardian's Safe / Not safe marks on their sites are dropped (dropVerdicts).
+                message: Text("Shoo stays on on \(name)'s iPhone. You stop seeing their activity, and your Safe / Not safe marks are removed. \(name) will be told."),
+                tone: .danger,
+                primary: .init(title: Text("Yes, disconnect"), identifier: "member.disconnect.confirm", closes: false) {
+                    disconnect()
+                },
+                secondary: .init(title: Text("Cancel"), identifier: "profile.confirm.cancel"),
+                isWorking: model.isWorking,
+                identifier: "member.disconnectDialog"
+            )
         }
         .privacyCover()
+    }
+
+    private func disconnect() {
+        guard let member = model.member else { return }
+        Task {
+            // On failure `actionError` turns the open dialog into the error.
+            guard await model.disconnect() else { return }
+            env.familyChanges += 1
+            isDisconnectConfirming = false
+            // Option A: back on Home, which says who is gone (neutral, no success tap).
+            env.router.landOnHome(saying: .disconnected(name: member.name))
+        }
     }
 
     @ViewBuilder private func loaded(_ member: FamilyMember) -> some View {
