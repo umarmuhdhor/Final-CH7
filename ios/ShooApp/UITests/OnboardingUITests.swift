@@ -116,7 +116,7 @@ final class OnboardingUITests: XCTestCase {
 
     @MainActor
     func testPersonalOnboardingEndsOnHomeWithReminderWhenNotificationsDenied() {
-        // Nobody to look after yet: Home Pribadi shows the "Mode Terawasi" card only then (#364).
+        // Personal onboarding ends on Home Pribadi with the notifications reminder.
         let app = launch(notifications: "denied", scenario: "empty")
         app.onboardName("Rina")
         // Figma "Flow": no mode choice and no invite step.
