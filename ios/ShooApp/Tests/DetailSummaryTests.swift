@@ -74,7 +74,34 @@ struct DetailSummaryTests {
         #expect(text("warning-41") { editBrandSignal(&$0) { $0.host = nil } }
             == "Kami menemukan 3 tanda mencurigakan di halaman ini. Kami memberi peringatan sebelum halaman ini dibuka.")
         #expect(text("blocked-marked-safe", .english) { $0.signals.removeAll { $0.id == "asks_card" } }
-            == "We found 2 warning signs on this page. It was marked safe, so it can be opened.")
+            == "We found 2 warning signs on this page. Adhella marked it safe, so it can be opened.")
+    }
+
+    /// C1 (goldfish 21 Nov): a guardian reading Mom's scan sees "PIN Mom", not "PIN kamu".
+    @Test func someoneElsesScanNamesTheOwner() {
+        let summary = { (language: AppLanguage) in
+            DetailSummaryCard.text(FixtureLoader.scan("blocked-92"), owner: "Mom", language: language)
+        }
+        #expect(summary(.indonesian) == "Halaman BCA palsu yang meminta PIN Mom. Kami memblokir otomatis halaman ini.")
+        #expect(summary(.english) == "A fake BCA page that asks for Mom's PIN. We blocked this page automatically.")
+        var warned = FixtureLoader.scan("warning-63")
+        warned.signals.removeAll { $0.id == "brand_plus_keyword" }
+        #expect(DetailSummaryCard.text(warned, owner: "Mom", language: .indonesian)
+            == "Halaman ini meminta data KTP Mom. Kami memberi peringatan ke Mom sebelum halaman ini dibuka.")
+    }
+
+    /// C1: once marked safe it no longer says "fake … so it can be opened"; it says what Shoo thought, and who.
+    @Test func markedSafeSaysWhatShooThoughtAndWho() {
+        var scan = FixtureLoader.scan("blocked-92")
+        scan.verdict = Verdict(value: .safe, byDeviceId: "dev_budi", byName: "Budi", decidedAt: Date())
+        #expect(DetailSummaryCard.text(scan, owner: "Mom", viewerDeviceId: "dev_me", language: .indonesian)
+            == "Shoo mengira halaman ini meniru BCA. Budi menandainya aman, jadi bisa dibuka.")
+        #expect(DetailSummaryCard.text(scan, owner: "Mom", viewerDeviceId: "dev_budi", language: .english)
+            == "Shoo thought this page copied BCA. You marked it safe, so it can be opened.")
+        scan.signals = [Signal(id: "db_match", layer: 1, weight: 100, label: .init(en: "", id: ""),
+                               labelSimple: .init(en: "", id: ""))]
+        #expect(DetailSummaryCard.text(scan, language: .indonesian)
+            == "Halaman ini ada di daftar penipuan Shoo. Budi menandainya aman, jadi bisa dibuka.")
     }
 
     @Test func noSignalsLeavesOnlyTheOutcome() {

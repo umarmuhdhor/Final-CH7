@@ -7980,6 +7980,208 @@
           }
         }
       }
+    },
+    "detail.summary.fakeBrandAsksOf %@ %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A fake %1$@ page that asks for %3$@'s %2$@."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman %1$@ palsu yang meminta %2$@ %3$@."
+          }
+        }
+      }
+    },
+    "detail.summary.asksOf %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This page asks for %2$@'s %1$@."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman ini meminta %1$@ %2$@."
+          }
+        }
+      }
+    },
+    "detail.summary.thoughtBrand %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo thought this page copied %@."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo mengira halaman ini meniru %@."
+          }
+        }
+      }
+    },
+    "detail.summary.thoughtKnownScam" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo had this page on its list of known scams."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman ini ada di daftar penipuan Shoo."
+          }
+        }
+      }
+    },
+    "detail.summary.warnedOf %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We warned %@ before it opened."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kami memberi peringatan ke %@ sebelum halaman ini dibuka."
+          }
+        }
+      }
+    },
+    "detail.summary.markedSafeBy %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ marked it safe, so it can be opened."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ menandainya aman, jadi bisa dibuka."
+          }
+        }
+      }
+    },
+    "detail.summary.markedSafeByYou" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You marked it safe, so it can be opened."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu menandainya aman, jadi bisa dibuka."
+          }
+        }
+      }
+    },
+    "Applies to every phone in your family. You can't change it until %@." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku untuk semua HP keluargamu. Tidak bisa diubah sampai %@."
+          }
+        }
+      }
+    },
+    "Mark this site safe?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yakin tandai aman?"
+          }
+        }
+      }
+    },
+    "It will open on every phone in your family, and you can't change it until %@." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs ini akan terbuka di semua HP keluargamu, dan tidak bisa diubah sampai %@."
+          }
+        }
+      }
+    },
+    "Yes, mark safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya, tandai aman"
+          }
+        }
+      }
+    },
+    "Pick at least one reason" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih minimal satu alasan"
+          }
+        }
+      }
+    },
+    "Join this family?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gabung dengan keluarga ini?"
+          }
+        }
+      }
+    },
+    "Yes, join" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya, gabung"
+          }
+        }
+      }
+    },
+    "Your Guardian will see the sites Shoo blocks or warns you about on this phone (copies are kept 14 days). Only your Guardian can disconnect you." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardian-mu akan melihat situs yang diblokir atau diberi peringatan di HP ini (salinannya disimpan 14 hari). Hanya Guardian yang bisa memutus koneksi."
+          }
+        }
+      }
+    },
+    "Your history on this phone will be deleted." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riwayatmu di HP ini akan dihapus."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

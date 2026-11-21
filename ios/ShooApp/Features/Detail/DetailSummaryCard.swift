@@ -30,31 +30,53 @@ struct DetailSummaryCard: View {
     }
 
     /// "Halaman BCA palsu yang meminta PIN kamu. Kami memblokir otomatis halaman ini." Nil when there is nothing to say.
-    static func text(_ scan: ScanResult, language: AppLanguage) -> String? {
-        let parts = [finding(scan.signals, language: language), outcome(scan, language: language)]
+    /// C1 (goldfish 21 Nov): `owner` names whose scan it is when it is someone else's ("PIN Mom", not "PIN kamu"),
+    /// and once marked safe the page is what Shoo *thought* it was, then who marked it safe.
+    static func text(
+        _ scan: ScanResult, owner: String? = nil, viewerDeviceId: String? = nil, language: AppLanguage
+    ) -> String? {
+        let markedSafe = scan.verdict?.value == .safe
+        let parts = [
+            finding(scan.signals, owner: owner, markedSafe: markedSafe, language: language),
+            outcome(scan, owner: owner, viewerDeviceId: viewerDeviceId, language: language),
+        ]
         let text = parts.compactMap { $0 }.joined(separator: " ")
         return text.isEmpty ? nil : text
     }
 
     /// What the page is, from the strongest facts first: the brand it copies and the data it asks for, a known
     /// scam, else how many warning signs there were.
-    static func finding(_ signals: [Signal], language: AppLanguage) -> String? {
+    static func finding(
+        _ signals: [Signal], owner: String? = nil, markedSafe: Bool = false, language: AppLanguage
+    ) -> String? {
         let heaviestFirst = signals.enumerated()
             .sorted { ($0.element.weight, $1.offset) > ($1.element.weight, $0.offset) }
             .map(\.element)
         let brand = heaviestFirst.lazy.compactMap(SummaryBrand.name(of:)).first
         let asked = askedData(heaviestFirst, language: language)
-        switch (brand, asked) {
-        case let (brand?, asked?):
+        let knownScam = signals.contains { $0.id == "db_match" }
+        // Marked safe: no more "fake", only what Shoo thought.
+        if markedSafe, let brand {
+            return L10n.string("detail.summary.thoughtBrand \(brand)", language: language)
+        }
+        if markedSafe, knownScam {
+            return L10n.string("detail.summary.thoughtKnownScam", language: language)
+        }
+        switch (brand, asked, owner) {
+        case let (brand?, asked?, owner?):
+            return L10n.string("detail.summary.fakeBrandAsksOf \(brand) \(asked) \(owner)", language: language)
+        case let (brand?, asked?, nil):
             return L10n.string("detail.summary.fakeBrandAsks \(brand) \(asked)", language: language)
-        case let (brand?, nil):
+        case let (brand?, nil, _):
             return L10n.string("detail.summary.fakeBrand \(brand)", language: language)
-        case let (nil, asked?):
+        case let (nil, asked?, owner?):
+            return L10n.string("detail.summary.asksOf \(asked) \(owner)", language: language)
+        case let (nil, asked?, nil):
             return L10n.string("detail.summary.asks \(asked)", language: language)
-        case (nil, nil):
+        case (nil, nil, _):
             break
         }
-        if signals.contains(where: { $0.id == "db_match" }) {
+        if knownScam {
             return L10n.string("detail.summary.knownScam", language: language)
         }
         switch signals.count {
@@ -90,17 +112,32 @@ struct DetailSummaryCard: View {
     ]
 
     /// What happened to the page, by the same rules as the "Status situs" chip (`DetailView.statusKind`).
-    static func outcome(_ scan: ScanResult, language: AppLanguage) -> String {
+    static func outcome(
+        _ scan: ScanResult, owner: String? = nil, viewerDeviceId: String? = nil, language: AppLanguage
+    ) -> String {
         switch DetailView.statusKind(scan) {
         case .blocked:
             scan.verdict?.value == .notSafe
                 ? L10n.string("detail.summary.confirmedBlocked", language: language)
                 : L10n.string("detail.summary.autoBlocked", language: language)
         case .warning:
-            L10n.string("detail.summary.warned", language: language)
+            owner.map { L10n.string("detail.summary.warnedOf \($0)", language: language) }
+                ?? L10n.string("detail.summary.warned", language: language)
         case .unblocked, .markedSafe:
-            L10n.string("detail.summary.markedSafe", language: language)
+            markedSafe(scan.verdict, viewerDeviceId: viewerDeviceId, language: language)
         }
+    }
+
+    /// "Mom menandainya aman" / "Kamu menandainya aman"; no name known: the old passive line.
+    private static func markedSafe(_ verdict: Verdict?, viewerDeviceId: String?, language: AppLanguage) -> String {
+        guard let verdict else { return L10n.string("detail.summary.markedSafe", language: language) }
+        if let viewerDeviceId, verdict.byDeviceId == viewerDeviceId {
+            return L10n.string("detail.summary.markedSafeByYou", language: language)
+        }
+        let name = verdict.byName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty
+            ? L10n.string("detail.summary.markedSafe", language: language)
+            : L10n.string("detail.summary.markedSafeBy \(name)", language: language)
     }
 }
 

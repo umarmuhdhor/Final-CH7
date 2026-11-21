@@ -66,7 +66,10 @@ struct SafeReasonSheet: View {
     let onSubmit: @MainActor (String) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
     @Environment(\.shooReduceMotion) private var reduceMotion
+    /// F1 (goldfish 21 Nov): one more "are you sure?" before a family-wide safe mark that can't be undone for days.
+    @State private var isConfirming = false
     @State private var reasons: Set<SafeReason> = []
     @State private var note = ""
     @State private var isSaving = false
@@ -88,6 +91,11 @@ struct SafeReasonSheet: View {
     private static let submitID = "safeReason.submit"
 
     private var canSubmit: Bool { !reasons.isEmpty && !isSaving }
+
+    /// "Senin, 23 November": the first weekly review after a mark made now (`VerdictLock`).
+    private var lockDay: String {
+        VerdictLock.unlocksAt(decidedAt: Date()).formatted(.dateTime.weekday(.wide).day().month(.wide).locale(locale))
+    }
 
     var body: some View {
         // Scrolls once the keyboard leaves less room than the content needs; the header never clips.
@@ -129,6 +137,20 @@ struct SafeReasonSheet: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: failed)
         .sensoryFeedback(.error, trigger: failed) { _, now in now }
         .accessibilityIdentifier("safeReason.sheet")
+        // Figma "Dialog Shoo", pose Mikir: the last check before the family-wide mark.
+        .shooDialog(isPresented: $isConfirming) {
+            ShooDialog(
+                pose: .think,
+                title: Text("Mark this site safe?"),
+                message: Text("It will open on every phone in your family, and you can't change it until \(lockDay)."),
+                tone: .safe,
+                primary: .init(title: Text("Yes, mark safe"), identifier: "safeReason.confirm") {
+                    Task { await submit() }
+                },
+                secondary: .init(title: Text("Cancel"), identifier: "safeReason.confirm.cancel"),
+                identifier: "safeReason.confirmDialog"
+            )
+        }
     }
 
     private var content: some View {
@@ -157,6 +179,15 @@ struct SafeReasonSheet: View {
                 .foregroundStyle(DetailStyle.secondary)
             }
             if failed { errorBanner }
+            // V5: the reason it is grey, on screen and not only for VoiceOver.
+            if reasons.isEmpty {
+                Text("Pick at least one reason")
+                    .activityFont(13, rounded: true)
+                    .foregroundStyle(DetailStyle.secondary)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityHidden(true)
+                    .accessibilityIdentifier("safeReason.pickHint")
+            }
             submitButton
         }
         .padding(.horizontal, 24)
@@ -177,8 +208,8 @@ struct SafeReasonSheet: View {
                     .foregroundStyle(DetailStyle.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 // plan/alief/family-safe.md: one Guardian's "Aman" counts on every phone of the family, so nobody
-                // has to mark the same link again (usability test 20 Nov 2026).
-                Label("This link becomes safe on every phone in your family.", systemImage: "person.2.fill")
+                // has to mark the same link again (usability test 20 Nov 2026). F1: and the lock, before saving.
+                Label("Applies to every phone in your family. You can't change it until \(lockDay).", systemImage: "person.2.fill")
                     .activityFont(14, rounded: true)
                     .foregroundStyle(DetailStyle.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -291,7 +322,9 @@ struct SafeReasonSheet: View {
 
     private var submitButton: some View {
         Button {
-            Task { await submit() }
+            noteFocused = false
+            // "Try again" after a failed save: they already said yes.
+            if failed { Task { await submit() } } else { isConfirming = true }
         } label: {
             HStack(spacing: 8) {
                 if isSaving {
@@ -302,16 +335,19 @@ struct SafeReasonSheet: View {
                 Text(failed ? "Try again" : "Mark Safe")
             }
             .activityFont(17, .semibold)
-            .foregroundStyle(.white)
+            .foregroundStyle(reasons.isEmpty ? SafeReasonStyle.disabledText : .white)
             .frame(maxWidth: .infinity, minHeight: 56)
-            .background(
-                Capsule().fill(LinearGradient(
-                    colors: [SafeReasonStyle.buttonTop, SafeReasonStyle.buttonBottom], startPoint: .bottom, endPoint: .top
-                ))
-            )
-            .overlay(Capsule().strokeBorder(SafeReasonStyle.buttonTop, lineWidth: 1.5))
-            // Figma: the button fades until at least one reason is picked.
-            .opacity(reasons.isEmpty ? 0.35 : 1)
+            .background {
+                // V5: grey and flat while no reason is picked (pale green still read as enabled).
+                if reasons.isEmpty {
+                    Capsule().fill(SafeReasonStyle.disabledFill)
+                } else {
+                    Capsule().fill(LinearGradient(
+                        colors: [SafeReasonStyle.buttonTop, SafeReasonStyle.buttonBottom], startPoint: .bottom, endPoint: .top
+                    ))
+                    .overlay(Capsule().strokeBorder(SafeReasonStyle.buttonTop, lineWidth: 1.5))
+                }
+            }
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -342,6 +378,9 @@ enum SafeReasonStyle {
     static let buttonTop = DetailStyle.hex(0x1A7F37)
     static let buttonBottom = DetailStyle.hex(0x2DA44E)
     static let errorIcon = DetailStyle.hex(0xC81414)
+    /// V5 disabled button: #E3E7ED with #6B7280 text (WCAG exempts disabled controls from contrast).
+    static let disabledFill = DetailStyle.hex(0xE3E7ED)
+    static let disabledText = DetailStyle.hex(0x6B7280)
 }
 
 /// Left-aligned wrapping row (Figma auto layout "WRAP").

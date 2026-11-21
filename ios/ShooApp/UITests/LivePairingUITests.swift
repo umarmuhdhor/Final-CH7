@@ -115,6 +115,7 @@ final class LivePairingUITests: XCTestCase {
         field.tap()
         field.typeText(typed)
         app.buttons["connect.join"].tap()
+        app.confirmJoin()
         let title = app.staticTexts["protectedBy.title"]
         XCTAssertTrue(title.waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertTrue(title.label.contains("Rina"), title.label)
@@ -140,6 +141,7 @@ final class LivePairingUITests: XCTestCase {
         Thread.sleep(forTimeInterval: 2)
         XCTAssertFalse(app.staticTexts["protectedBy.title"].exists, "A link must never join without a tap")
         app.buttons["connect.join"].tap()
+        app.confirmJoin()
         let linkTitle = app.staticTexts["protectedBy.title"]
         XCTAssertTrue(linkTitle.waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertTrue(linkTitle.label.contains("Rina"), linkTitle.label)

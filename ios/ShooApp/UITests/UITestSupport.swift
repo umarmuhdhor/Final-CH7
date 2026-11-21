@@ -30,6 +30,22 @@ extension XCUIApplication {
         return app
     }
 
+    /// F2 (29c): "Hubungkan" asks "Gabung dengan keluarga ini?" in a Shoo dialog first.
+    @MainActor
+    func confirmJoin(file: StaticString = #filePath, line: UInt = #line) {
+        let confirm = buttons["connect.join.confirm"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
+        confirm.tap()
+    }
+
+    /// F1 (29c): "Tandai Aman" asks "Yakin tandai aman?" in a Shoo dialog first.
+    @MainActor
+    func confirmMarkSafe(file: StaticString = #filePath, line: UInt = #line) {
+        let confirm = buttons["safeReason.confirm"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
+        confirm.tap()
+    }
+
     /// GD-01: with notifications denied the Guardian gets a "Notifications are off" popup once per launch.
     /// It can cover the screen or swallow a tap, so close it when it shows.
     @MainActor

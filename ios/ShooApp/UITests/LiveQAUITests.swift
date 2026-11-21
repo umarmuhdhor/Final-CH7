@@ -61,6 +61,7 @@ final class LiveQAUITests: XCTestCase {
         field.tap()
         field.typeText(code)
         app.buttons["connect.join"].tap()
+        app.confirmJoin()
         XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["protectedBy.continue"].tapWhenHittable()
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 15), app.debugDescription)

@@ -397,7 +397,7 @@ struct JoinAnotherFamilySheet: View {
                     } else {
                         env.router.reset()
                     }
-                })
+                }, joinDeletesHistory: true)
             } else {
                 // An empty Group never appears, so `onAppear` below would never run.
                 Color(.systemBackground)

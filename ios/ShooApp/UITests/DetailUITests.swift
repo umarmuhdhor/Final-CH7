@@ -88,6 +88,7 @@ final class DetailUITests: XCTestCase {
         XCTAssertTrue(reason.waitForExistence(timeout: 5), app.debugDescription)
         reason.tap()
         app.buttons["safeReason.submit"].tap()
+        app.confirmMarkSafe()
         let header = app.descendants(matching: .any)["detail.header"]
         let marked = expectation(for: NSPredicate(format: "value CONTAINS 'Marked safe by you'"), evaluatedWith: header)
         wait(for: [marked], timeout: 5)
@@ -120,6 +121,7 @@ final class DetailUITests: XCTestCase {
         XCTAssertTrue(reason.waitForExistence(timeout: 5), app.debugDescription)
         reason.tap()
         app.buttons["safeReason.submit"].tap()
+        app.confirmMarkSafe()
         // The answer was lost: the sheet stays with "Try again".
         XCTAssertTrue(app.descendants(matching: .any)["safeReason.error"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["safeReason.submit"].tap()
