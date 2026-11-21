@@ -142,7 +142,7 @@ struct SafeReasonSheet: View {
             ShooDialog(
                 pose: .think,
                 title: Text("Mark this site safe?"),
-                message: Text("It will open on every phone in your family, and you can't change it until \(lockDay)."),
+                message: Text("It can then be opened on every phone in your family. You can change it again from \(lockDay)."),
                 tone: .safe,
                 primary: .init(title: Text("Yes, mark safe"), identifier: "safeReason.confirm") {
                     Task { await submit() }

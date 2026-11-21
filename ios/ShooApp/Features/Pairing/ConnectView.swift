@@ -204,7 +204,8 @@ struct ConnectView: View {
                 primary: .init(title: Text("Yes, join"), identifier: "connect.join.confirm") {
                     Task { await model.join() }
                 },
-                secondary: .init(title: Text("Cancel"), identifier: "connect.join.cancel"),
+                // Figma: a red way out, in case the code came from someone who isn't family.
+                secondary: .init(title: Text("Not my family"), identifier: "connect.join.cancel", warns: true),
                 identifier: "connect.joinDialog"
             )
         }

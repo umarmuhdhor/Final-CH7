@@ -15,6 +15,8 @@ struct ShooDialog {
         /// `false` keeps the dialog up (with a spinner while `isWorking`) until the caller closes it, for
         /// actions that can fail. `true` closes it first, then runs the action.
         var closes = true
+        /// Second button only: red outline for a way out that warns ("Not my family"), instead of grey.
+        var warns = false
         var run: () -> Void = {}
     }
 
@@ -192,7 +194,7 @@ private struct ShooDialogHost: View {
                     } label: {
                         secondary.title
                     }
-                    .buttonStyle(ShooDialogButtonStyle(kind: .outlined))
+                    .buttonStyle(ShooDialogButtonStyle(kind: .outlined(warns: secondary.warns)))
                     .disabled(dialog.isWorking)
                     .accessibilityIdentifier(secondary.identifier)
                 }
@@ -222,6 +224,8 @@ enum ShooDialogStyle {
     static let title = Color.dynamic(0x111827, dark: 0xF7F8FA, contrastLight: 0x000000)
     static let message = Color.dynamic(0x6B7280, dark: 0xA3AAB6, contrastLight: 0x3F4652)
     static let outline = Color.dynamic(0x6B7280, dark: 0x9EA6B4, contrastLight: 0x3F4652)
+    /// Figma "Bukan keluarga saya": #DC2626 text and stroke.
+    static let warningOutline = Color.dynamic(0xDC2626, dark: 0xF87171, contrastLight: 0xB91C1C)
 
     /// Figma main buttons run left to right.
     static func fill(_ tone: ShooDialog.Tone) -> LinearGradient {
@@ -238,7 +242,7 @@ enum ShooDialogStyle {
 private struct ShooDialogButtonStyle: ButtonStyle {
     enum Kind {
         case filled(ShooDialog.Tone)
-        case outlined
+        case outlined(warns: Bool)
     }
 
     let kind: Kind
@@ -260,7 +264,7 @@ private struct ShooDialogButtonStyle: ButtonStyle {
     private var ink: Color {
         switch kind {
         case .filled: .white
-        case .outlined: ShooDialogStyle.outline
+        case .outlined(let warns): warns ? ShooDialogStyle.warningOutline : ShooDialogStyle.outline
         }
     }
 
@@ -270,7 +274,7 @@ private struct ShooDialogButtonStyle: ButtonStyle {
             Capsule().fill(ShooDialogStyle.fill(tone))
                 .shadow(color: Color(hex: 0x1A3380, opacity: 0.18), radius: 7, y: 6)
         case .outlined:
-            Capsule().strokeBorder(ShooDialogStyle.outline, lineWidth: 1.5)
+            Capsule().strokeBorder(ink, lineWidth: 1.5)
                 .opacity(isEnabled ? 1 : 0.5)
         }
     }
