@@ -244,7 +244,7 @@ private struct ModePage: View {
                     }
                 } label: {
                     ProfileRow(
-                        symbol: ProfileStyle.extensionSymbol, title: Text("Have an invite code?"),
+                        symbol: ProfileStyle.inviteCodeSymbol, title: Text("Have an invite code?"),
                         subtitle: Text("Connect your account to a family guardian")
                     )
                 }
@@ -854,13 +854,20 @@ private struct ConnectionPage: View {
                     .accessibilityIdentifier("linked.shareWarnings")
             } else {
                 // Today the extension sends every check to the guardian, so both read on and can't change.
-                ProfileToggleRow(symbol: "paperplane.fill", title: Text("Send links automatically"), subtitle: Text("Coming soon"), isOn: .constant(true))
-                    .disabled(true)
-                    .accessibilityIdentifier("linked.autoSend")
+                // V1 (goldfish 21 Nov): off and grey, not a green "on" switch: "Segera hadir" must not read as already sharing.
+                ProfileToggleRow(
+                    symbol: "paperplane.fill", title: Text("Send links automatically"), subtitle: Text("Coming soon"),
+                    tint: ProfileStyle.secondary, isOn: .constant(false)
+                )
+                .disabled(true)
+                .accessibilityIdentifier("linked.autoSend")
                 ProfileDivider()
-                ProfileToggleRow(symbol: "clock", title: Text("Share caution history"), subtitle: Text("Coming soon"), isOn: .constant(true))
-                    .disabled(true)
-                    .accessibilityIdentifier("linked.shareWarnings")
+                ProfileToggleRow(
+                    symbol: "clock", title: Text("Share caution history"), subtitle: Text("Coming soon"),
+                    tint: ProfileStyle.secondary, isOn: .constant(false)
+                )
+                .disabled(true)
+                .accessibilityIdentifier("linked.shareWarnings")
             }
         }
         .padding(.horizontal, ProfileStyle.margin)

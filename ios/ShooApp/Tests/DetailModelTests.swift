@@ -327,7 +327,8 @@ struct DetailModelTests {
         #expect(DetailLook(scan: FixtureLoader.scan("blocked-verified-scam")) == .danger)
         var scan = FixtureLoader.scan("blocked-verified-scam")
         scan.verdict?.value = .safe
-        #expect(DetailLook(scan: scan) == .caution)
+        // V2 (goldfish 21 Nov): marked safe reads green, not orange.
+        #expect(DetailLook(scan: scan) == .safe)
         scan.verdict = nil
         scan.status = .warning
         #expect(DetailLook(scan: scan) == .caution)

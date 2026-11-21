@@ -467,6 +467,416 @@
         }
       }
     },
+    "Shows how this scam works" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan cara kerja modus ini"
+          }
+        }
+      }
+    },
+    "How this scam works" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begini modusnya"
+          }
+        }
+      }
+    },
+    "A message arrives" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pesan masuk"
+          }
+        }
+      }
+    },
+    "The link opens a fake site" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link membuka situs palsu"
+          }
+        }
+      }
+    },
+    "Unknown number" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nomor tidak dikenal"
+          }
+        }
+      }
+    },
+    "Fake" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palsu"
+          }
+        }
+      }
+    },
+    "How to stay safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cara tetap aman"
+          }
+        }
+      }
+    },
+    "Don't open links in messages you weren't expecting." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangan buka link dari pesan yang tidak kamu tunggu."
+          }
+        }
+      }
+    },
+    "Never type a PIN, OTP or password on a site you reached from a link." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangan pernah ketik PIN, OTP, atau kata sandi di situs yang kamu buka dari link."
+          }
+        }
+      }
+    },
+    "Shoo warns you or blocks sites like this when you open them." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo memperingatkan atau memblokir situs seperti ini saat kamu membukanya."
+          }
+        }
+      }
+    },
+    "BANK: Your account is blocked for now. Open this link to unlock it:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BANK: Akunmu diblokir sementara. Buka link ini untuk membukanya lagi:"
+          }
+        }
+      }
+    },
+    "Verify your account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verifikasi akun"
+          }
+        }
+      }
+    },
+    "m-banking PIN" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN m-banking"
+          }
+        }
+      }
+    },
+    "The site copies a bank. The PIN you type is used at once to empty your account." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs ini meniru bank. PIN yang kamu ketik langsung dipakai untuk menguras rekeningmu."
+          }
+        }
+      }
+    },
+    "Your e-wallet balance expires today. Claim it now:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saldo e-wallet kamu hangus hari ini. Klaim sekarang:"
+          }
+        }
+      }
+    },
+    "Claim your balance" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klaim saldo"
+          }
+        }
+      }
+    },
+    "OTP code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode OTP"
+          }
+        }
+      }
+    },
+    "The OTP code lets them sign in to your e-wallet and move the money out." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dengan kode OTP, penipu bisa masuk ke e-wallet kamu dan memindahkan saldonya."
+          }
+        }
+      }
+    },
+    "Your parcel is on hold. Pay the extra shipping of Rp9,000 here:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paketmu tertahan. Bayar ongkir tambahan Rp9.000 di sini:"
+          }
+        }
+      }
+    },
+    "Pay for shipping" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bayar ongkir"
+          }
+        }
+      }
+    },
+    "Card number" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nomor kartu"
+          }
+        }
+      }
+    },
+    "The shop is fake. The money or card details you send never come back." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tokonya palsu. Uang atau data kartu yang kamu kirim tidak akan kembali."
+          }
+        }
+      }
+    },
+    "Congratulations! You won Rp10,000,000. Claim your prize:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selamat! Kamu menang Rp10.000.000. Klaim hadiahmu:"
+          }
+        }
+      }
+    },
+    "Claim your prize" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klaim hadiah"
+          }
+        }
+      }
+    },
+    "There is no prize. You're asked for an \"admin fee\" or your bank details first." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hadiahnya tidak ada. Kamu diminta bayar \"biaya admin\" atau data rekening dulu."
+          }
+        }
+      }
+    },
+    "Triple your money in a month, guaranteed. Sign up here:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uang kembali 3 kali lipat dalam sebulan, dijamin. Daftar di sini:"
+          }
+        }
+      }
+    },
+    "Start investing" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai investasi"
+          }
+        }
+      }
+    },
+    "First deposit" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setoran awal"
+          }
+        }
+      }
+    },
+    "The big profit doesn't exist. The money you put in can't be taken out again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Untung besarnya tidak ada. Uang yang kamu setor tidak bisa ditarik lagi."
+          }
+        }
+      }
+    },
+    "Double bonus on your first deposit. Play now:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bonus 2 kali lipat untuk deposit pertama. Main sekarang:"
+          }
+        }
+      }
+    },
+    "Deposit" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deposit"
+          }
+        }
+      }
+    },
+    "Deposit amount" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jumlah deposit"
+          }
+        }
+      }
+    },
+    "Online gambling is illegal in Indonesia. The money you put in is almost always lost." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Judi online dilarang di Indonesia. Uang yang kamu setor hampir pasti hilang."
+          }
+        }
+      }
+    },
+    "Loan paid out in 5 minutes, no collateral. Apply here:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinjaman cair 5 menit, tanpa jaminan. Ajukan di sini:"
+          }
+        }
+      }
+    },
+    "Apply for a loan" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajukan pinjaman"
+          }
+        }
+      }
+    },
+    "ID card number" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nomor KTP"
+          }
+        }
+      }
+    },
+    "Illegal lenders take your data and contacts, then collect with threats." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinjol ilegal mengambil data dan kontakmu, lalu menagih dengan ancaman."
+          }
+        }
+      }
+    },
+    "Something on your account needs checking. Open this link:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada yang perlu dicek di akunmu. Buka link ini:"
+          }
+        }
+      }
+    },
+    "Sign in" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masuk"
+          }
+        }
+      }
+    },
+    "Password" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kata sandi"
+          }
+        }
+      }
+    },
+    "The site copies a service you know to steal what you type." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs ini meniru layanan yang kamu kenal untuk mencuri yang kamu ketik."
+          }
+        }
+      }
+    },
     "opened %@" : {
       "localizations" : {
         "id" : {

@@ -48,6 +48,10 @@ struct ConnectView: View {
     }
 
     private static let codeFieldID = "connect.codeField"
+    /// Goldfish V6: the boxes alone, a little short at the bottom. With only the keyboard up, the boxes need to sit
+    /// above the button, not above its fade: scrolling them clear of the fade too moved the page about 17 pt on a
+    /// 402 × 874 iPhone, and the title slid under the top edge on first open.
+    private static let codeBoxesID = "connect.codeBoxes"
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
@@ -56,7 +60,7 @@ struct ConnectView: View {
             title: "Connect your account",
             message: "Scan the QR or enter the invite code from your Guardian.",
             onBack: onBack.map { back in { if !model.isBusy { back() } } },
-            scrollTarget: codeFocused || model.problem != nil ? Self.codeFieldID : nil
+            scrollTarget: model.problem != nil ? Self.codeFieldID : codeFocused ? Self.codeBoxesID : nil
         ) {
             VStack(spacing: 0) {
                 // Figma: tabs at y 242, label at y 332.
@@ -107,6 +111,8 @@ struct ConnectView: View {
                                 onFocusChange: { codeFocused = $0 }
                             )
                             .modifier(ShakeOnProblem(trigger: problemsShown, isEnabled: !reduceMotion))
+                            // 16 of the footer's 24 pt fade: the boxes end 8 pt above the button.
+                            .background { Color.clear.id(Self.codeBoxesID).padding(.bottom, 16) }
                             problemLabel
                             // Figma "Kode salah" (1681:4712): "Ketik ulang kode" under the line empties the boxes.
                             if model.problem == .invalid {

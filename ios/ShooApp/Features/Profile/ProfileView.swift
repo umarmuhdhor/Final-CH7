@@ -13,6 +13,7 @@ struct ProfileView: View {
     /// Figma "Sheet · Matikan Shoo" (1681:5372): how to switch Shoo off, from the active extension row.
     @State private var isTurnOffPresented = false
     @State private var isInvitePresented = false
+    @State private var isJoinPresented = false
     @State private var isDeleteConfirming = false
     @State private var remindingId: String?
 
@@ -85,6 +86,10 @@ struct ProfileView: View {
             }) { isInvitePresented = false }
                 .environment(\.locale, locale)
         }
+        .sheet(isPresented: $isJoinPresented) {
+            JoinAnotherFamilySheet(name: model.profile?.name ?? "")
+                .environment(\.locale, locale)
+        }
         .deleteAccountSheet(model: model, isPresented: $isDeleteConfirming)
         .alert(
             Text(verbatim: model.actionError.map { L10n.string($0, language: language) } ?? ""),
@@ -147,6 +152,7 @@ struct ProfileView: View {
                 model.dismissGuardianCard()
             }
         }
+        if showsJoinCard { joinCard }
         if model.variant == .guardian { familySection }
         if model.variant == .protected { guardianSection }
         protectionSection
@@ -236,7 +242,29 @@ struct ProfileView: View {
     /// Figma: 32 pt under the profile card, 28 under the "Mode Guardian" card, 15 on the Protected profile.
     private var protectionTop: CGFloat {
         if model.variant == .protected { return model.profile?.guardian != nil ? sectionTop : 28 }
-        return model.showsGuardianCard ? 28 : 32
+        return model.showsGuardianCard || showsJoinCard ? 28 : 32
+    }
+
+    /// Goldfish F8: on Pribadi, "Bagikan undangan" sat at the top while joining with a code hid in Profil › Mode
+    /// akun. The way in now sits under the Mode Guardian card (and stays when that card is closed). Not while
+    /// members are connected: they must be disconnected first (Mode akun says so).
+    private var showsJoinCard: Bool {
+        model.variant == .personal && (model.membersFailed || model.canJoinAnotherFamily)
+    }
+
+    private var joinCard: some View {
+        ProfileCard {
+            Button { isJoinPresented = true } label: {
+                ProfileRow(
+                    symbol: ProfileStyle.inviteCodeSymbol, title: Text("Have an invite code?"),
+                    subtitle: Text("Connect your account to a family guardian")
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("profile.joinFamily")
+        }
+        .padding(.horizontal, ProfileStyle.margin)
+        .padding(.top, model.showsGuardianCard ? 16 : 32)
     }
 
     private var familySection: some View {

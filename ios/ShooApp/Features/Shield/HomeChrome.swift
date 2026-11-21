@@ -982,16 +982,32 @@ struct HomeStatusChip: View {
 
     private var title: LocalizedStringKey { badge == .warning ? "Caution" : badge.title }
 
+    /// Goldfish V8: "Ditandai aman" took the alert "!" of the warnings. It gets the tick Aktivitas uses, at the
+    /// fase 29 sizes: 24 pt tall (radius 12), 12 pt icon, 13 pt text, 8 pt sides, 4 pt between. The tick takes the
+    /// text's green: Aktivitas' brighter #34C759 is about 2:1 on this fill, under the 3:1 an icon needs.
+    private var isSafe: Bool { badge == .markedSafe && !large }
+
+    @ViewBuilder private var icon: some View {
+        if isSafe {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .frame(width: 12, height: 12)
+                .accessibilityHidden(true)
+        } else {
+            Image("HomeAlertCircle")
+                .resizable()
+                .frame(width: large ? 18.2 : 16, height: large ? 18.2 : 16)
+                .accessibilityHidden(true)
+        }
+    }
+
     var body: some View {
         let colors = colors
         // Figma "Button" (1128:18733): the exported 16 pt alert icon, 4 gap, SF Pro Rounded 13 (120 %, -0.04),
         // 8 × 6 padding, 0.75 inside stroke, 28 pt tall;
         // the large "Status Badge" on protected/Home: 14 pt semibold, 18 pt icon, 13.3 × 10 padding.
         HStack(spacing: large ? 6.6 : 4) {
-            Image("HomeAlertCircle")
-                .resizable()
-                .frame(width: large ? 18.2 : 16, height: large ? 18.2 : 16)
-                .accessibilityHidden(true)
+            icon
             Text(title)
                 .onboardingFont(large ? 14 : 13, weight: large ? .semibold : .regular, design: large ? .default : .rounded,
                                 tracking: -0.04, relativeTo: .footnote)
@@ -1000,7 +1016,8 @@ struct HomeStatusChip: View {
         }
         .foregroundStyle(colors.text)
         .padding(.horizontal, large ? 13.3 : 8)
-        .padding(.vertical, large ? 10 : 6)
+        .padding(.vertical, large ? 10 : isSafe ? 4 : 6)
+        .frame(minHeight: isSafe ? 24 : nil)
         .background(colors.fill, in: Capsule())
         .overlay(Capsule().strokeBorder(colors.stroke, lineWidth: large ? 1.24 : 0.75))
         // Its own width at the usual sizes. At accessibility sizes "Penipuan terverifikasi" is wider than the row,

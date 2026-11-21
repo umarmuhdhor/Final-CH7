@@ -6,11 +6,13 @@ import SwiftUI
 enum DetailLook: Equatable {
     case danger
     case caution
+    /// Marked safe by the Guardian (V2, goldfish 21 Nov): green, not the warning orange next to "Ditandai aman".
+    case safe
 
     init(scan: ScanResult) {
         switch scan.verdict?.value {
         case .notSafe: self = .danger
-        case .safe: self = .caution
+        case .safe: self = .safe
         // #493: an unknown verdict shows the detection status; an unknown status the warning look.
         case nil, .unknown: self = scan.status == .blocked ? .danger : .caution
         }
@@ -20,14 +22,18 @@ enum DetailLook: Equatable {
     var heroImage: String {
         switch self {
         case .danger: "DetailHeroRed"
-        case .caution: "DetailHeroAmber"
+        case .caution, .safe: "DetailHeroAmber"
         }
     }
+
+    /// The safe look turns the amber rings green (no third picture in the bundle).
+    var heroHue: Angle { self == .safe ? .degrees(100) : .zero }
 
     var shieldTint: HalftoneShield.Tint {
         switch self {
         case .danger: .red
         case .caution: .orange
+        case .safe: .teal
         }
     }
 
@@ -362,6 +368,7 @@ struct DetailHeroBackground: View {
             let breath = (1 - cos(time * 2 * .pi / Self.period)) / 2
             Image(look.heroImage)
                 .resizable()
+                .hueRotation(look.heroHue)
                 .frame(height: height)
                 .scaleEffect(1 + Self.breathScale * breath, anchor: UnitPoint(x: 0.5, y: Self.ringCenterY / height))
         }
