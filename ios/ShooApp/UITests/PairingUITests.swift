@@ -61,6 +61,20 @@ final class PairingUITests: XCTestCase {
         if open.waitForExistence(timeout: 3) { open.tap() }
     }
 
+    /// 29g (Figma "alief notif" section 8): Copy on the invite sheet shows Shoo's small "Copied" toast.
+    @MainActor
+    func testCopyOnTheInviteSheetShowsTheCopiedToast() {
+        let app = launch(mode: "guardian")
+        app.buttons["profileButton"].tapWhenHittable()
+        app.buttons["profile.invite"].tapWhenHittable()
+        XCTAssertTrue(app.descendants(matching: .any)["invite.code"].firstMatch.waitForExistence(timeout: UITestTimeout.screen))
+        app.buttons["invite.copy"].tapWhenHittable()
+        let toast = app.descendants(matching: .any)["miniToast"].firstMatch
+        XCTAssertTrue(toast.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertTrue(toast.label.contains("Copied"), toast.label)
+        XCTAssertTrue(toast.waitForNonExistence(timeout: 5), "Leaves by itself")
+    }
+
     /// PR-03: a new install opened from an invite link onboards as Pribadi like everyone else (no Connect step,
     /// no consent screen first). Once onboarding is done the join sheet has the code; nothing joins until the tap.
     /// `empty`: the new Pribadi protects nobody, so the mock lets the join through.
