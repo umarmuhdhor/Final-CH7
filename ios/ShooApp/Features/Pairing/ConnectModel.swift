@@ -57,8 +57,40 @@ final class ConnectModel {
             }
         }
 
+        /// The card's headline (Figma "alief notif" section 6, 2447:13849–13897).
+        var title: String.LocalizationValue {
+            switch self {
+            case .invalid: "Wrong code"
+            case .expired: "Code expired"
+            case .full: "Family full"
+            case .tooManyAttempts: "Too many tries"
+            case .signUpLimit: "Sign-up limit reached"
+            case .alreadyConnected: "Already connected"
+            case .hasMembers: "Still protecting someone"
+            case .offline: "No connection"
+            case .other: "Something went wrong"
+            }
+        }
+
+        /// Shoo's pose on the card, as in Figma section 6.
+        var pose: Mascot {
+            switch self {
+            case .invalid: .shock
+            case .expired, .other: .sorry
+            case .full: .pout
+            case .tooManyAttempts: .scared
+            case .signUpLimit: .nervous
+            case .alreadyConnected: .point
+            case .hasMembers: .here
+            case .offline: .cry
+            }
+        }
+
         /// The server holds every join for a while: the button counts down instead of "Connect".
         var isWait: Bool { self == .tooManyAttempts || self == .signUpLimit }
+
+        /// Nothing about the code was wrong: the same code can simply be sent again.
+        var canRetry: Bool { self == .offline || self == .other }
     }
 
     static let codeLength = DeepLink.codeLength

@@ -98,6 +98,12 @@ final class PairingUITests: XCTestCase {
         tapWhenSettled(join)
         XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen))
         XCTAssertTrue(error.label.contains("expired"), error.label)
+        // 29g: the card says it in a headline, and "Retype code" empties the boxes.
+        XCTAssertTrue(app.staticTexts["Code expired"].exists, app.debugDescription)
+        let retype = app.buttons["connect.retype"]
+        XCTAssertTrue(retype.exists, app.debugDescription)
+        retype.tap()
+        XCTAssertTrue(error.waitForNonExistence(timeout: UITestTimeout.screen), "Retype clears the card")
 
         enter("482193", in: app)
         tapWhenSettled(join)

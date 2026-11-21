@@ -57,12 +57,32 @@
         }
       }
     },
+    "Already connected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah terhubung"
+          }
+        }
+      }
+    },
     "BECOME A GUARDIAN" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "JADI GUARDIAN"
+          }
+        }
+      }
+    },
+    "Code expired" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode kedaluwarsa"
           }
         }
       }
@@ -83,6 +103,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ketuk dua kali untuk menutup"
+          }
+        }
+      }
+    },
+    "Family full" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga penuh"
           }
         }
       }
@@ -123,6 +153,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beralih antara Pribadi (dirimu) dan Guardian (keluargamu) kapan saja."
+          }
+        }
+      }
+    },
+    "No connection" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada koneksi"
           }
         }
       }
@@ -197,6 +237,36 @@
         }
       }
     },
+    "Sign-up limit reached" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Batas pendaftaran"
+          }
+        }
+      }
+    },
+    "Something went wrong" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada yang salah"
+          }
+        }
+      }
+    },
+    "Still protecting someone" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masih melindungi orang"
+          }
+        }
+      }
+    },
     "Switch modes here" : {
       "localizations" : {
         "id" : {
@@ -223,6 +293,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Terlalu banyak perubahan dalam semenit. Tunggu sebentar, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Too many tries" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak percobaan"
           }
         }
       }
@@ -453,6 +533,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keluarga Dalam Bahaya"
+          }
+        }
+      }
+    },
+    "Wrong code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode salah"
           }
         }
       }

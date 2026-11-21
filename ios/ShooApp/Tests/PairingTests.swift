@@ -220,6 +220,29 @@ struct ConnectModelTests {
         #expect(!english.isEmpty && !indonesian.isEmpty && english != indonesian)
     }
 
+    /// 29g: every error card has its own Bahasa headline (Figma "alief notif" section 6) and a pose.
+    @Test func cardTitlesMatchFigma() {
+        let titles: [(ConnectModel.Problem, String, Mascot)] = [
+            (.invalid, "Kode salah", .shock), (.expired, "Kode kedaluwarsa", .sorry), (.full, "Keluarga penuh", .pout),
+            (.tooManyAttempts, "Terlalu banyak percobaan", .scared), (.signUpLimit, "Batas pendaftaran", .nervous),
+            (.alreadyConnected, "Sudah terhubung", .point), (.hasMembers, "Masih melindungi orang", .here),
+            (.offline, "Tidak ada koneksi", .cry), (.other, "Ada yang salah", .sorry),
+        ]
+        for (problem, title, pose) in titles {
+            #expect(L10n.string(problem.title, language: .indonesian) == title)
+            #expect(problem.pose == pose)
+        }
+    }
+
+    /// "Coba lagi" sends the same code again only when the code itself was never the problem.
+    @Test func onlyConnectionProblemsOfferTryAgain() {
+        #expect(ConnectModel.Problem.offline.canRetry)
+        #expect(ConnectModel.Problem.other.canRetry)
+        for problem in [ConnectModel.Problem.invalid, .expired, .full, .tooManyAttempts, .signUpLimit, .alreadyConnected, .hasMembers] {
+            #expect(!problem.canRetry)
+        }
+    }
+
     @Test func scannedInviteFillsTheCode() {
         let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero))
         #expect(model.scanned("https://shoo-api.afindo-mi01.workers.dev/j/482193"))
