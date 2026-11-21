@@ -883,7 +883,12 @@ private struct InviteCodeCard: View {
                 .foregroundStyle(HomeTheme.secondaryInk)
         case .ready(let code):
             // Figma "Label": SF Pro Rounded 13, -0.08, 18 pt lines, #6A717E.
-            Text("Invite code · valid for \(model.timeLeft)")
+            Group {
+                switch model.remaining {
+                case .minutes(let minutes): Text("Invite code · valid for \(minutes) more min")
+                case .seconds(let seconds): Text("Invite code · valid for \(seconds) more sec")
+                }
+            }
                 .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
                 .figmaLineHeight(18, glyphOffset: 1, relativeTo: .footnote)
                 .monospacedDigit()

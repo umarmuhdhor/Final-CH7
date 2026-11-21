@@ -348,7 +348,9 @@ struct DataSentSheet: View {
                     row("doc.text.magnifyingglass", tint: 0x1E6FCB, fill: 0xE6F0FB,
                         title: "Pages you open", text: "Page text, form field names and the address. What you type is not sent.")
                     row("exclamationmark.shield", tint: 0xD23B3B, fill: 0xFDECEC,
-                        title: "Risky pages", text: "The address and a copy are kept. Some of it stays after the account is deleted.")
+                        title: "Risky pages",
+                        // C6 (goldfish 21 Nov): what stays, and after what, without the word "akun" seen nowhere before.
+                        text: "The address and a copy of the page are kept for 14 days. After you delete your data (Profile › Delete Account), the site's address and score stay, without your name.")
                     row("iphone", tint: 0x5B616C, fill: 0xEEF0F3,
                         title: "Without the online check", text: "Shoo checks on your iPhone only, with less protection.")
                 }

@@ -171,7 +171,7 @@ struct PageCopyCaptionTests {
     @Test func noCopyLineOnlyWithoutScreenshot() {
         #expect(PageCopyCaption.lines(state: .none, meta: nil, scan: Self.scan(), hasScreenshot: true, language: .english).isEmpty)
         #expect(PageCopyCaption.lines(state: .unavailable, meta: nil, scan: Self.scan(), hasScreenshot: false, language: .english)
-            == ["No copy of this page"])
+            == ["Page copy: not available"])
     }
 
     @Test func savingAndRateLimitedInIndonesian() {
