@@ -712,13 +712,15 @@ struct SupervisedModeCard: View {
 
 /// Figma "Aktivitas Terakhir": the title, then the cards. "Lihat Semua" sits beside the title on your own Home
 /// (Pribadi/Home 435:20058) and under the cards as a glass button on the family's (Guardian/Home/warning 1382:2644).
-/// Figma "Empty State · Aktivitas" (Pribadi/Home · Empty Aktivitas 1883:11955): the 128 pt shield, then "Belum ada
-/// aktivitas" (SF Pro Rounded Semibold 17, 22 pt lines, #191D2F) and the hint in 13 (18 pt lines, #6A717E) at most 197
-/// wide, 2 apart; 20 above, 24 below, 32 at the sides. Straight on the white sheet, no card of its own.
+/// Figma "Empty State · Aktivitas" (Pribadi/Home · Empty Aktivitas 1883:11955): a 128 pt picture, then the title
+/// (SF Pro Rounded Semibold 17, 22 pt lines, #191D2F) and the hint in 13 (18 pt lines, #6A717E) at most 197 wide,
+/// 2 apart; 20 above, 24 below, 32 at the sides. Straight on the white sheet, no card of its own.
+/// Goldfish V10 (fase 29f, option A): Shoo with the magnifier ("Detektif") instead of the grey shield, and "Shoo lagi
+/// berjaga": an empty Home means Shoo is watching, not that nothing works.
 ///
-/// Motion: the shield springs in and the copy follows 0.12 s / 0.2 s later, 6 pt up; then the shield floats 4 pt
-/// (2.4 s each way) while a hairline ring ripples out of it every 2.6 s, as if Shoo keeps watching. Reduce Motion
-/// (system, Profile, or `-UITestStillLoops`) keeps only a plain fade.
+/// Motion: Shoo springs in and the copy follows 0.12 s / 0.2 s later, 6 pt up; then Shoo floats 4 pt (2.4 s each
+/// way) while a hairline ring ripples out behind it every 2.6 s, as if it keeps watching. Reduce Motion (system,
+/// Profile, or `-UITestStillLoops`) keeps only a plain fade.
 private struct RecentActivityEmptyState: View {
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var shown = false
@@ -733,10 +735,7 @@ private struct RecentActivityEmptyState: View {
                     .frame(width: 88, height: 88)
                     .scaleEffect(rippling ? 1.45 : 1)
                     .opacity(rippling ? 0 : 0.7)
-                Image("HomeEmptyShield")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 128, height: 128)
+                MascotImage(pose: .magnifier, height: 128)
                     .offset(y: floating ? -4 : 0)
             }
             .frame(width: 128, height: 128)
@@ -744,13 +743,13 @@ private struct RecentActivityEmptyState: View {
             .opacity(shown ? 1 : 0)
             .accessibilityHidden(true)
             VStack(spacing: 2) {
-                Text("No activity yet")
+                Text("Shoo is on watch")
                     .onboardingFont(17, weight: .semibold, design: .rounded, tracking: -0.43, relativeTo: .body)
                     .figmaLineHeight(22, relativeTo: .body)
                     .foregroundStyle(HomeTheme.navy)
                     .accessibilityAddTraits(.isHeader)
                     .modifier(RiseIn(shown: shown, still: reduceMotion, delay: 0.12))
-                Text("When a suspicious site shows up, you'll see it here.")
+                Text("If a suspicious site shows up, you'll see it here.")
                     .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
                     .figmaLineHeight(18, glyphOffset: 1, relativeTo: .footnote)
                     .foregroundStyle(OnboardingTheme.bodyInk)

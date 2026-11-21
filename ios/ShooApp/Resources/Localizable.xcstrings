@@ -197,12 +197,22 @@
         }
       }
     },
-    "When a suspicious site shows up, you'll see it here." : {
+    "If a suspicious site shows up, you'll see it here." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nanti kalau ada web mencurigakan, akan muncul di sini."
+            "value" : "Kalau ada web mencurigakan, akan muncul di sini."
+          }
+        }
+      }
+    },
+    "Shoo is on watch" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo lagi berjaga"
           }
         }
       }
