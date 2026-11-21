@@ -635,7 +635,7 @@ struct SupervisedModeCard: View {
             }
             VStack(alignment: .leading, spacing: 0) {
                 // Figma: SF Pro Rounded Semibold 11, 13 pt lines, 0.06 tracking, #0D8F93.
-                Text(kind == .guardian ? "BECOME A GUARDIAN" : "SUPERVISED MODE")
+                Text(kind == .guardian ? "BECOME A GUARDIAN" : "PROTECTED MODE")
                     .onboardingFont(11, weight: .semibold, design: .rounded, tracking: 0.06, relativeTo: .caption2)
                     .figmaLineHeight(13, relativeTo: .caption2)
                     .foregroundStyle(Color(hex: 0x0D8F93))

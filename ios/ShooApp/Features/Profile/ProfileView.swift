@@ -115,11 +115,13 @@ struct ProfileView: View {
                 }
         } badge: {
             if model.variant == .protected {
-                if model.profile?.guardian != nil {
+                if let guardian = model.profile?.guardian {
                     Button { env.router.show(.profilePage(.connection)) } label: {
                         HStack(spacing: 5.5) {
                             ConnectedPillButtonStyle.glyph
-                            Text("Connected")
+                            // C9 (goldfish 21 Nov): who guards this phone, not a third "Terhubung" on one screen.
+                            Text("Guarded by \(guardian.name)")
+                                .lineLimit(1)
                         }
                     }
                     .buttonStyle(ConnectedPillButtonStyle())
@@ -178,10 +180,10 @@ struct ProfileView: View {
     /// Title to card: 12 on the Protected profile (Figma 455:10275), 10 elsewhere (1115:14392).
     private var sectionSpacing: CGFloat { model.variant == .protected ? 12 : 10 }
 
-    /// Protected: "Terhubung", the guardian who gets the warnings.
+    /// Protected: "Akun Tertaut" (C9), the guardian who gets the warnings.
     @ViewBuilder private var guardianSection: some View {
         if let guardian = model.profile?.guardian {
-            ProfileSection(title: "Connected", spacing: 24) {
+            ProfileSection(title: "Linked account", spacing: 24) {
                 Button { env.router.show(.profilePage(.connection)) } label: {
                     HStack(spacing: 12) {
                         AvatarView(id: guardian.avatarId, size: 33)

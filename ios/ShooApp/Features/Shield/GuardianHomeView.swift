@@ -117,7 +117,11 @@ struct GuardianHomeView: View {
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
             guard model.state == .loaded, !isFamily else { return }
             AccessibilityNotification.Announcement(
-                L10n.string(isActive ? "You're protected!" : "You're not protected yet", language: language)
+                L10n.string(
+                    isActive ? "You're protected!"
+                        : model.extensionStatus.isSomeSitesOnly ? "Not fully protected yet" : "You're not protected yet",
+                    language: language
+                )
             ).post()
         }
         .sheet(
@@ -135,7 +139,7 @@ struct GuardianHomeView: View {
 
     /// The Home toast says (and VoiceOver reads) what changed; the first Guardian switch opens "To be guardian".
     private func switchSide() {
-        if isFamily { env.leaveFamilyMode() } else { env.requestFamilyMode() }
+        if isFamily { env.leaveFamilyMode(keepsFamily: !model.members.isEmpty) } else { env.requestFamilyMode() }
     }
 
     // MARK: Hero and status
@@ -153,7 +157,9 @@ struct GuardianHomeView: View {
             // Shoo being off outranks what it saw while it was on.
             let level = isActive && !isChecking ? model.level : .normal
             let title: LocalizedStringKey = isUnread ? "Checking Shoo…"
-                : isOff ? "You're not protected yet" : isChecking ? "Shoo is on" : level.title
+                // C10: on for some sites only is not the same as off.
+                : isOff ? (model.extensionStatus.isSomeSitesOnly ? "Not fully protected yet" : "You're not protected yet")
+                : isChecking ? "Shoo is on" : level.title
             let identifier = isUnread ? "home.status.extensionChecking"
                 : isOff ? "home.status.off" : isChecking ? "home.status.checking" : level.titleIdentifier
             HomeHero(
@@ -337,7 +343,7 @@ struct GuardianHomeView: View {
             if model.hasNoFamily {
                 HowItWorks()
                 // Figma "Guardian/Home · Belum ada orang" (1253:2381): 42 under How it works.
-                BecomeSupervisedCard(action: "Become supervised") { env.router.isJoinFamilyPresented = true }
+                BecomeSupervisedCard(action: "Join as Protected") { env.router.isJoinFamilyPresented = true }
                     .padding(.top, 18)
             } else {
                 RecentActivity(

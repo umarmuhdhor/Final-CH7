@@ -62,7 +62,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "JADI PENJAGA"
+            "value" : "JADI GUARDIAN"
           }
         }
       }
@@ -297,22 +297,22 @@
         }
       }
     },
-    "Protect them by double-checking what Shoo finds for the people closest to you!" : {
+    "Help look after the people closest to you. You'll see the sites blocked or warned about on their phones. Your own protection stays on." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Melindungi dengan mengecek kembali hasil kalkulasi Shoo milik orang terdekat anda!"
+            "value" : "Bantu jaga orang terdekatmu. Kamu akan melihat situs yang diblokir atau diberi peringatan di HP mereka. Perlindunganmu sendiri tetap menyala."
           }
         }
       }
     },
-    "SUPERVISED MODE" : {
+    "PROTECTED MODE" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "MODE TERAWASI"
+            "value" : "MODE DILINDUNGI"
           }
         }
       }
@@ -332,17 +332,17 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hubungkan agar orang terkasih Anda dapat melakukan pemeriksaan ulang"
+            "value" : "Hubungkan agar orang terkasihmu bisa memeriksa ulang"
           }
         }
       }
     },
-    "Become supervised" : {
+    "Join as Protected" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menjadi yang Terawasi"
+            "value" : "Gabung sebagai Dilindungi"
           }
         }
       }
@@ -422,7 +422,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hubungkan agar orang terkasih Anda dapat melakukan pemeriksaan ulang"
+            "value" : "Hubungkan agar orang terkasihmu bisa memeriksa ulang"
           }
         }
       }
@@ -893,6 +893,16 @@
         }
       }
     },
+    "Your protection stays on. Your family stays connected." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlindunganmu tetap menyala. Keluargamu tetap terhubung."
+          }
+        }
+      }
+    },
     "© 2026 Shoo · Made in Indonesia" : {
       "localizations" : {
         "id" : {
@@ -1032,7 +1042,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktivitas orang dilindungi"
+            "value" : "Aktivitas orang yang kamu lindungi"
           }
         }
       }
@@ -1405,7 +1415,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "oleh Anda · %@"
+            "value" : "olehmu · %@"
           }
         }
       }
@@ -1654,6 +1664,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Terhubung"
+          }
+        }
+      }
+    },
+    "Guarded by %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dijaga %@"
           }
         }
       }
@@ -2621,7 +2641,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bantu cek situs mencurigakan yang dibuka keluarga Anda."
+            "value" : "Bantu cek situs mencurigakan yang dibuka keluargamu."
           }
         }
       }
@@ -2935,7 +2955,6 @@
       }
     },
     "Linked account" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -2976,12 +2995,12 @@
         }
       }
     },
-    "Look after up to 3 people" : {
+    "Protect up to 3 people" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pantau hingga 3 orang"
+            "value" : "Lindungi hingga 3 orang"
           }
         }
       }
@@ -3176,7 +3195,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidak khawatir situs berbahaya. Biarkan Shoo yang bekerja untuk Anda dan keluarga."
+            "value" : "Tidak perlu khawatir situs berbahaya. Biarkan Shoo yang bekerja untukmu dan keluargamu."
           }
         }
       }
@@ -3196,7 +3215,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Belum ada yang Anda lindungi"
+            "value" : "Belum ada yang kamu lindungi"
           }
         }
       }
@@ -4441,7 +4460,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shoo mengecek halaman yang Anda buka dan memblokir situs palsu sebelum merugikan Anda."
+            "value" : "Shoo mengecek halaman yang kamu buka dan memblokir situs palsu sebelum merugikanmu."
           }
         }
       }
@@ -4516,7 +4535,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ekstensi Shoo di Safari tidak aktif, jadi situs yang Anda buka tidak diperiksa."
+            "value" : "Ekstensi Shoo di Safari tidak aktif, jadi situs yang kamu buka tidak diperiksa."
           }
         }
       }
@@ -4952,7 +4971,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Situs mencurigakan yang terdeteksi saat Anda menjelajah di Safari akan muncul di sini."
+            "value" : "Situs mencurigakan yang terdeteksi saat kamu menjelajah di Safari akan muncul di sini."
           }
         }
       }
@@ -5144,7 +5163,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Situs yang Anda buka akhir-akhir ini terlihat aman. Kami akan memberi tahu jika ada yang janggal."
+            "value" : "Situs yang kamu buka akhir-akhir ini terlihat aman. Kami akan memberi tahu kalau ada yang janggal."
           }
         }
       }
@@ -5751,7 +5770,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anda menandai ini aman"
+            "value" : "Kamu menandai ini aman"
           }
         }
       }
@@ -5837,7 +5856,17 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anda Belum Terlindungi"
+            "value" : "Kamu Belum Terlindungi"
+          }
+        }
+      }
+    },
+    "Not fully protected yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum Terlindungi Penuh"
           }
         }
       }
@@ -5859,7 +5888,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anda Terlindungi!"
+            "value" : "Kamu Terlindungi!"
           }
         }
       }
@@ -5948,12 +5977,12 @@
         }
       }
     },
-    "2 of 3" : {
+    "2 of 3 people" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "2 dari 3"
+            "value" : "2 dari 3 orang"
           }
         }
       }
@@ -5978,12 +6007,12 @@
         }
       }
     },
-    "Site blocked · 92%" : {
+    "Site blocked" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Situs diblokir · 92%"
+            "value" : "Situs diblokir"
           }
         }
       }
@@ -6161,7 +6190,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anda Menandai ini Aman"
+            "value" : "Kamu Menandai ini Aman"
           }
         }
       }
@@ -6302,7 +6331,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "dikonfirmasi Anda · %@"
+            "value" : "dikonfirmasi olehmu · %@"
           }
         }
       }
@@ -6483,7 +6512,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nama ini terlihat oleh keluarga Anda."
+            "value" : "Nama ini terlihat oleh keluargamu."
           }
         }
       }
@@ -6553,7 +6582,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gabung sebagai Protected supaya Guardian-mu bisa bantu cek situs mencurigakan."
+            "value" : "Gabung sebagai Dilindungi supaya Guardian-mu bisa bantu cek situs mencurigakan."
           }
         }
       }
@@ -6673,7 +6702,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Periksa koneksi Anda."
+            "value" : "Periksa koneksimu."
           }
         }
       }

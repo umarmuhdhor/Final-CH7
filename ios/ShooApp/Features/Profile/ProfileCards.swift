@@ -83,14 +83,14 @@ struct GuardianModeCard: View {
 /// Figma "Mode Terawasi" (Home Pribadi 1253:8803, Guardian Home 1279:9544): connect to a guardian, who then
 /// double-checks risky sites. On Home Pribadi X hides it for good; the Guardian Home one has no X.
 struct BecomeSupervisedCard: View {
-    /// "Hubungkan" on Home Pribadi, "Menjadi yang Terawasi" on the empty Guardian Home.
+    /// "Hubungkan" on Home Pribadi, "Gabung sebagai Dilindungi" on the empty Guardian Home (C2: no "Terawasi").
     var action: LocalizedStringKey = "Connect"
     let onConnect: () -> Void
     var onDismiss: (() -> Void)?
 
     var body: some View {
         ModeOfferCard(
-            eyebrow: "SUPERVISED MODE",
+            eyebrow: "PROTECTED MODE",
             title: "Not sure?",
             message: "Connect so someone you love can double-check for you",
             action: action,
