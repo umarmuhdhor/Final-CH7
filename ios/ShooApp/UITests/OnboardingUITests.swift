@@ -137,7 +137,7 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
-    func testExtensionOffKeepsTheFigmaScreenAfterSettingsAndRelaunchGoesHome() {
+    func testExtensionOffKeepsTheFigmaScreenAfterSettingsAndRelaunchResumes() {
         let app = launch(extensionActive: false)
         app.onboardName("Rina")
         app.passTurnOnExtension()
@@ -149,10 +149,28 @@ final class OnboardingUITests: XCTestCase {
         // Registered on the first tap: no way back to the name.
         XCTAssertFalse(app.buttons["onboarding.back"].exists)
 
-        // Relaunch without reset: Home shows that Shoo is still off (Figma note 141:6085).
+        // F6 (goldfish 21 Nov 2026): iOS closed the app in Settings. The relaunch carries on at ON-04 while Shoo
+        // is still off, not on Home (the Safari Default step would be lost).
         app.terminate()
         let again = XCUIApplication.mock(["-settings.language", "en", "-UITestNotifications", "denied"], reset: false)
-        XCTAssertTrue(again.tabBars.buttons["Shield"].waitForExistence(timeout: 10), again.debugDescription)
+        XCTAssertTrue(again.buttons["extension.turnOn"].waitForExistence(timeout: 10), again.debugDescription)
+        XCTAssertFalse(again.tabBars.buttons["Shield"].exists)
+
+        // Switched on in the meantime: straight on to Safari Default, then the success screen.
+        again.terminate()
+        let on = XCUIApplication.mock(
+            ["-settings.language", "en", "-UITestNotifications", "denied", "-UITestExtensionActive", "YES"], reset: false
+        )
+        XCTAssertTrue(on.buttons["safariDefault.open"].waitForExistence(timeout: 10), on.debugDescription)
+        on.passSafariDefault()
+        XCTAssertTrue(on.buttons["extensionOn.continue"].waitForExistence(timeout: UITestTimeout.screen), on.debugDescription)
+
+        // Past Safari Default (it can't be read, so a flag remembers it): the success screen again.
+        on.terminate()
+        let last = XCUIApplication.mock(["-settings.language", "en", "-UITestNotifications", "denied"], reset: false)
+        XCTAssertTrue(last.buttons["extensionOn.continue"].waitForExistence(timeout: 10), last.debugDescription)
+        last.buttons["extensionOn.continue"].tapWhenHittable()
+        XCTAssertTrue(last.tabBars.buttons["Shield"].waitForExistence(timeout: 10), last.debugDescription)
     }
 
     /// Usability test 20 Nov 2026: "All Websites → Allow" is a numbered step, and when
