@@ -259,12 +259,6 @@ struct DetailView: View {
                     .figmaLineHeight(25, relativeTo: .title2)
                     .foregroundStyle(DetailStyle.title)
                     .accessibilityAddTraits(.isHeader)
-                PageCopyCaption(
-                    state: model.isSavingCopy ? .saving : copyState,
-                    meta: pageCopy?.meta,
-                    scan: scan,
-                    hasScreenshot: screenshot != nil || screenshotLoading
-                )
                 ForEach(reasons) { reason in
                     let picture = cardPicture(for: reason)
                     EvidenceCard(
@@ -277,6 +271,13 @@ struct DetailView: View {
                         marksKnown: copyState == .shown && !model.isSavingCopy
                     )
                 }
+                // C12 (goldfish 21 Nov): the copy's line goes under the reasons, so "no copy" never reads as one.
+                PageCopyCaption(
+                    state: model.isSavingCopy ? .saving : copyState,
+                    meta: pageCopy?.meta,
+                    scan: scan,
+                    hasScreenshot: screenshot != nil || screenshotLoading
+                )
             }
             .padding(.horizontal, ActivityStyle.margin)
             .padding(.bottom, 24)
