@@ -1,0 +1,2543 @@
+{
+ "on-01-slide-1": {
+  "title": "ON-01 Slide 1",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-01-slide-2": {
+  "title": "ON-01 Slide 2",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-02-name-empty": {
+  "title": "ON-02 Profile setup (empty)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-02-name-filled": {
+  "title": "ON-02 Profile setup (name typed)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-02-avatar-picked": {
+  "title": "ON-02 Another avatar picked",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-04-turn-on": {
+  "title": "ON-04 Turn on the add-on (consent not ticked)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-04-data-sent-sheet": {
+  "title": "ON-04 'See what is sent' sheet",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-04-tutorial": {
+  "title": "ON-04 Tutorial video",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-04-consent-ticked": {
+  "title": "ON-04 Consent ticked",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-04b-firefox-default": {
+  "title": "ON-04b Make Firefox the default browser",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-04b-android-default-apps": {
+  "title": "ON-04b opens Android Default apps settings",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-04b-back-in-shoo": {
+  "title": "ON-04b Back in Shoo (Continue)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-05-protected-success": {
+  "title": "ON-05 Success: you are better protected",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-05-done-home": {
+  "title": "After onboarding: Home",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-00-launch-splash": {
+  "title": "ON-01 Launch splash",
+  "extras": {
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-UITestSplashSeconds": "12"
+  }
+ },
+ "on-02-name-too-long": {
+  "title": "ON-02 Name longer than 20 characters",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-04-firefox-code": {
+  "title": "ON-04 Firefox link code (add-on not linked yet)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestReset": "YES"
+  }
+ },
+ "on-06-data-consent": {
+  "title": "Data consent question (existing user)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "NIL",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.askDataConsent": "YES"
+  }
+ },
+ "x-session-expired": {
+  "title": "Session expired",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.sessionExpired": "YES"
+  }
+ },
+ "gd-01-pribadi-homePribadi": {
+  "title": "Home - Pribadi - scenario homePribadi",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "homePribadi",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-homePribadi-scrolled": {
+  "title": "Home - Pribadi - homePribadi (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "homePribadi",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-homePribadiAlone": {
+  "title": "Home - Pribadi - scenario homePribadiAlone",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "homePribadiAlone",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-homePribadiAlone-scrolled": {
+  "title": "Home - Pribadi - homePribadiAlone (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "homePribadiAlone",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-standard": {
+  "title": "Home - Pribadi - scenario standard",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-standard-scrolled": {
+  "title": "Home - Pribadi - standard (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-empty": {
+  "title": "Home - Pribadi - scenario empty",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "empty",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-empty-scrolled": {
+  "title": "Home - Pribadi - empty (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "empty",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-allBlocked": {
+  "title": "Home - Pribadi - scenario allBlocked",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "allBlocked",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-allBlocked-scrolled": {
+  "title": "Home - Pribadi - allBlocked (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "allBlocked",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-allSafe": {
+  "title": "Home - Pribadi - scenario allSafe",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "allSafe",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-allSafe-scrolled": {
+  "title": "Home - Pribadi - allSafe (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "allSafe",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-figma": {
+  "title": "Home - Pribadi - scenario figma",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-pribadi-figma-scrolled": {
+  "title": "Home - Pribadi - figma (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-02-guardian-intro": {
+  "title": "GD-02 Become a Guardian intro",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "NO",
+   "-settings.familyModeOn": "NO"
+  }
+ },
+ "gd-01-family-standard": {
+  "title": "Home - Family mode - scenario standard",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-standard-scrolled": {
+  "title": "Home - Family mode - standard (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-standard-bottom": {
+  "title": "Home - Family mode - standard (bottom)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-figma": {
+  "title": "Home - Family mode - scenario figma",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-figma-scrolled": {
+  "title": "Home - Family mode - figma (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-figma-bottom": {
+  "title": "Home - Family mode - figma (bottom)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-empty": {
+  "title": "Home - Family mode - scenario empty",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "empty",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-empty-scrolled": {
+  "title": "Home - Family mode - empty (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "empty",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-empty-bottom": {
+  "title": "Home - Family mode - empty (bottom)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "empty",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-oneMember": {
+  "title": "Home - Family mode - scenario oneMember",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "oneMember",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-oneMember-scrolled": {
+  "title": "Home - Family mode - oneMember (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "oneMember",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-oneMember-bottom": {
+  "title": "Home - Family mode - oneMember (bottom)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "oneMember",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-threeMembers": {
+  "title": "Home - Family mode - scenario threeMembers",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "threeMembers",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-threeMembers-scrolled": {
+  "title": "Home - Family mode - threeMembers (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "threeMembers",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-threeMembers-bottom": {
+  "title": "Home - Family mode - threeMembers (bottom)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "threeMembers",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-mixedVerdicts": {
+  "title": "Home - Family mode - scenario mixedVerdicts",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "mixedVerdicts",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-mixedVerdicts-scrolled": {
+  "title": "Home - Family mode - mixedVerdicts (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "mixedVerdicts",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "gd-01-family-mixedVerdicts-bottom": {
+  "title": "Home - Family mode - mixedVerdicts (bottom)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "mixedVerdicts",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "pr-04-protectedQuiet": {
+  "title": "Home - Protected - scenario protectedQuiet",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedQuiet"
+  }
+ },
+ "pr-04-protectedQuiet-scrolled": {
+  "title": "Home - Protected - protectedQuiet (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedQuiet"
+  }
+ },
+ "pr-04-protectedWarning": {
+  "title": "Home - Protected - scenario protectedWarning",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedWarning"
+  }
+ },
+ "pr-04-protectedWarning-scrolled": {
+  "title": "Home - Protected - protectedWarning (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedWarning"
+  }
+ },
+ "pr-04-protectedWarningSafe": {
+  "title": "Home - Protected - scenario protectedWarningSafe",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedWarningSafe"
+  }
+ },
+ "pr-04-protectedWarningSafe-scrolled": {
+  "title": "Home - Protected - protectedWarningSafe (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedWarningSafe"
+  }
+ },
+ "pr-04-protectedWarningScam": {
+  "title": "Home - Protected - scenario protectedWarningScam",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedWarningScam"
+  }
+ },
+ "pr-04-protectedWarningScam-scrolled": {
+  "title": "Home - Protected - protectedWarningScam (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedWarningScam"
+  }
+ },
+ "pr-04-protectedBlocked": {
+  "title": "Home - Protected - scenario protectedBlocked",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedBlocked"
+  }
+ },
+ "pr-04-protectedBlocked-scrolled": {
+  "title": "Home - Protected - protectedBlocked (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedBlocked"
+  }
+ },
+ "pr-04-protectedBlockedSafe": {
+  "title": "Home - Protected - scenario protectedBlockedSafe",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedBlockedSafe"
+  }
+ },
+ "pr-04-protectedBlockedSafe-scrolled": {
+  "title": "Home - Protected - protectedBlockedSafe (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedBlockedSafe"
+  }
+ },
+ "pr-04-protectedBlockedScam": {
+  "title": "Home - Protected - scenario protectedBlockedScam",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedBlockedScam"
+  }
+ },
+ "pr-04-protectedBlockedScam-scrolled": {
+  "title": "Home - Protected - protectedBlockedScam (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedBlockedScam"
+  }
+ },
+ "pr-04-protectedAlone": {
+  "title": "Home - Protected - scenario protectedAlone",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedAlone"
+  }
+ },
+ "pr-04-protectedAlone-scrolled": {
+  "title": "Home - Protected - protectedAlone (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedAlone"
+  }
+ },
+ "pr-04-unpaired": {
+  "title": "Home - Protected - scenario unpaired",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "unpaired"
+  }
+ },
+ "pr-04-unpaired-scrolled": {
+  "title": "Home - Protected - unpaired (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "unpaired"
+  }
+ },
+ "pr-04-addon-off": {
+  "title": "Home - Protected - add-on switched off",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedQuiet",
+   "-UITestExtensionStatus": "switchedOff"
+  }
+ },
+ "pr-01-connect": {
+  "title": "PR-01 Connect to a Guardian",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "unpaired"
+  }
+ },
+ "pr-01-connect-code": {
+  "title": "PR-01 Code entered",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "unpaired"
+  }
+ },
+ "pr-04-turn-on-sheet": {
+  "title": "Turn on the add-on sheet",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "protectedQuiet",
+   "-UITestExtensionStatus": "switchedOff"
+  }
+ },
+ "pr-01-connected": {
+  "title": "PR-01 Connected",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "unpaired"
+  }
+ },
+ "pr-01-connect-error": {
+  "title": "PR-01 Wrong code",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "unpaired",
+   "-mock.fail": "joinFamily=code_invalid"
+  }
+ },
+ "pr-01-scan-qr": {
+  "title": "PR-01 Scan QR (camera permission asked just in time)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "unpaired"
+  }
+ },
+ "gd-04-invite-sheet": {
+  "title": "GD-04 Invite sheet (QR, code, share)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profile": "YES"
+  }
+ },
+ "gd-04-invite-sheet-scrolled": {
+  "title": "GD-04 Invite sheet (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profile": "YES"
+  }
+ },
+ "pr-05-activity-pribadi": {
+  "title": "Activity - Pribadi",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-debug.tab": "activity"
+  }
+ },
+ "pr-05-activity-pribadi-filter-warning": {
+  "title": "Activity - Pribadi - filter Waspada",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-debug.tab": "activity"
+  }
+ },
+ "pr-05-activity-pribadi-filter-blocked": {
+  "title": "Activity - Pribadi - filter Diblokir",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-debug.tab": "activity"
+  }
+ },
+ "gd-05-activity-family": {
+  "title": "Activity - Family",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity"
+  }
+ },
+ "gd-05-activity-family-filter-warning": {
+  "title": "Activity - Family - filter Waspada",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity"
+  }
+ },
+ "gd-05-activity-family-filter-blocked": {
+  "title": "Activity - Family - filter Diblokir",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity"
+  }
+ },
+ "gd-05-activity-person-picker": {
+  "title": "Activity - Family - person picker",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity"
+  }
+ },
+ "pr-05-activity-protected": {
+  "title": "Activity - Protected",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-debug.tab": "activity"
+  }
+ },
+ "pr-05-activity-protected-filter-warning": {
+  "title": "Activity - Protected - filter Waspada",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-debug.tab": "activity"
+  }
+ },
+ "pr-05-activity-protected-filter-blocked": {
+  "title": "Activity - Protected - filter Diblokir",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-debug.tab": "activity"
+  }
+ },
+ "pr-05-activity-empty": {
+  "title": "Activity - empty",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "empty",
+   "-debug.tab": "activity"
+  }
+ },
+ "pr-05-activity-error": {
+  "title": "Activity - could not load",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.fail": "scans",
+   "-debug.tab": "activity"
+  }
+ },
+ "dt-blocked-92": {
+  "title": "Detail - blocked-92 - Guardian (family)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+  }
+ },
+ "dt-blocked-92-2": {
+  "title": "Detail - blocked-92 - evidence",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+  }
+ },
+ "dt-blocked-92-3": {
+  "title": "Detail - blocked-92 - further down",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+  }
+ },
+ "dt-warning-63": {
+  "title": "Detail - warning-63 - Guardian (family)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e02"
+  }
+ },
+ "dt-warning-63-2": {
+  "title": "Detail - warning-63 - evidence",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e02"
+  }
+ },
+ "dt-warning-63-3": {
+  "title": "Detail - warning-63 - further down",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e02"
+  }
+ },
+ "dt-warning-41": {
+  "title": "Detail - warning-41 - Guardian (family)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e01"
+  }
+ },
+ "dt-warning-41-2": {
+  "title": "Detail - warning-41 - evidence",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e01"
+  }
+ },
+ "dt-warning-41-3": {
+  "title": "Detail - warning-41 - further down",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e01"
+  }
+ },
+ "dt-verified-scam": {
+  "title": "Detail - verified-scam - Guardian (family)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e04"
+  }
+ },
+ "dt-verified-scam-2": {
+  "title": "Detail - verified-scam - evidence",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e04"
+  }
+ },
+ "dt-verified-scam-3": {
+  "title": "Detail - verified-scam - further down",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e04"
+  }
+ },
+ "dt-marked-safe": {
+  "title": "Detail - marked-safe - Guardian (family)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e05"
+  }
+ },
+ "dt-marked-safe-2": {
+  "title": "Detail - marked-safe - evidence",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e05"
+  }
+ },
+ "dt-marked-safe-3": {
+  "title": "Detail - marked-safe - further down",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e05"
+  }
+ },
+ "gd-07-safe-reason-sheet": {
+  "title": "GD-07 Why is it safe? sheet",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+  }
+ },
+ "gd-07-marked-danger": {
+  "title": "GD-07 Marked dangerous",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+  }
+ },
+ "dt-blocked-92-protected": {
+  "title": "Detail - blocked - Protected view",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "standard",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+  }
+ },
+ "dt-04-page-copy": {
+  "title": "DT-04 Page copy (replica)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03",
+   "-debug.replicaFixture": "YES"
+  }
+ },
+ "dt-gone": {
+  "title": "Detail - scan no longer exists",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "missing-scan-id"
+  }
+ },
+ "pf-01-profile-pribadi": {
+  "title": "Profile - pribadi",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "NO",
+   "-debug.profile": "YES"
+  }
+ },
+ "pf-01-profile-pribadi-2": {
+  "title": "Profile - pribadi (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "NO",
+   "-debug.profile": "YES"
+  }
+ },
+ "pf-01-profile-pribadi-3": {
+  "title": "Profile - pribadi (bottom)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "NO",
+   "-debug.profile": "YES"
+  }
+ },
+ "pf-01-profile-family": {
+  "title": "Profile - family",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profile": "YES"
+  }
+ },
+ "pf-01-profile-family-2": {
+  "title": "Profile - family (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profile": "YES"
+  }
+ },
+ "pf-01-profile-family-3": {
+  "title": "Profile - family (bottom)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profile": "YES"
+  }
+ },
+ "pf-01-profile-protected": {
+  "title": "Profile - protected",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.profile": "YES"
+  }
+ },
+ "pf-01-profile-protected-2": {
+  "title": "Profile - protected (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.profile": "YES"
+  }
+ },
+ "pf-01-profile-protected-3": {
+  "title": "Profile - protected (bottom)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.profile": "YES"
+  }
+ },
+ "pf-01-page-mode": {
+  "title": "Profile page - mode",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "mode"
+  }
+ },
+ "pf-01-page-mode-2": {
+  "title": "Profile page - mode (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "mode"
+  }
+ },
+ "pf-01-page-editProfile": {
+  "title": "Profile page - editProfile",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "editProfile"
+  }
+ },
+ "pf-01-page-editProfile-2": {
+  "title": "Profile page - editProfile (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "editProfile"
+  }
+ },
+ "pf-01-page-notifications": {
+  "title": "Profile page - notifications",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "notifications"
+  }
+ },
+ "pf-01-page-notifications-2": {
+  "title": "Profile page - notifications (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "notifications"
+  }
+ },
+ "pf-01-page-language": {
+  "title": "Profile page - language",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "language"
+  }
+ },
+ "pf-01-page-language-2": {
+  "title": "Profile page - language (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "language"
+  }
+ },
+ "pf-01-page-theme": {
+  "title": "Profile page - theme",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "theme"
+  }
+ },
+ "pf-01-page-theme-2": {
+  "title": "Profile page - theme (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "theme"
+  }
+ },
+ "pf-01-page-accessibility": {
+  "title": "Profile page - accessibility",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "accessibility"
+  }
+ },
+ "pf-01-page-accessibility-2": {
+  "title": "Profile page - accessibility (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "accessibility"
+  }
+ },
+ "pf-01-page-about": {
+  "title": "Profile page - about",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "about"
+  }
+ },
+ "pf-01-page-about-2": {
+  "title": "Profile page - about (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "about"
+  }
+ },
+ "pf-01-page-licenses": {
+  "title": "Profile page - licenses",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "licenses"
+  }
+ },
+ "pf-01-page-licenses-2": {
+  "title": "Profile page - licenses (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profilePage": "licenses"
+  }
+ },
+ "pf-01-page-connection": {
+  "title": "Profile page - Linked account (Protected)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.profilePage": "connection"
+  }
+ },
+ "pf-01-page-editProfile-protected": {
+  "title": "Profile page - Manage profile (Protected)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "protected",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.profilePage": "editProfile"
+  }
+ },
+ "pf-01-name-sheet": {
+  "title": "Profile - name sheet",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.profilePage": "editProfile"
+  }
+ },
+ "pf-01-avatar-sheet": {
+  "title": "Profile - avatar sheet",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.profilePage": "editProfile"
+  }
+ },
+ "pf-01-member-detail": {
+  "title": "Profile - family member detail",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.member": "dev_mom"
+  }
+ },
+ "pf-01-member-detail-2": {
+  "title": "Member detail (scrolled)",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.member": "dev_mom"
+  }
+ },
+ "var-en-home": {
+  "title": "English - Home",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "en",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES"
+  }
+ },
+ "var-en-activity": {
+  "title": "English - Activity",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "en",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity"
+  }
+ },
+ "var-en-detail": {
+  "title": "English - Detail",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "en",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+  }
+ },
+ "var-en-profile": {
+  "title": "English - Profile",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "en",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profile": "YES"
+  }
+ },
+ "var-dark-home": {
+  "title": "Dark theme - Home",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES",
+   "-settings.theme": "dark"
+  }
+ },
+ "var-dark-activity": {
+  "title": "Dark theme - Activity",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-settings.theme": "dark"
+  }
+ },
+ "var-dark-detail": {
+  "title": "Dark theme - Detail",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03",
+   "-settings.theme": "dark"
+  }
+ },
+ "var-dark-profile": {
+  "title": "Dark theme - Profile",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profile": "YES",
+   "-settings.theme": "dark"
+  }
+ },
+ "var-large-home": {
+  "title": "Largest text - Home",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES",
+   "-settings.textSize": "4"
+  }
+ },
+ "var-large-activity": {
+  "title": "Largest text - Activity",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-mock.scenario": "figma",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-settings.textSize": "4"
+  }
+ },
+ "var-large-detail": {
+  "title": "Largest text - Detail",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.tab": "activity",
+   "-debug.detail": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03",
+   "-settings.textSize": "4"
+  }
+ },
+ "var-large-profile": {
+  "title": "Largest text - Profile",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-settings.familyModeOn": "YES",
+   "-debug.profile": "YES",
+   "-settings.textSize": "4"
+  }
+ },
+ "var-en-onboarding": {
+  "title": "English - Onboarding slide 1",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.language": "en"
+  }
+ },
+ "pf-01-delete-sheet": {
+  "title": "Profile - delete account sheet",
+  "extras": {
+   "-UITestSkipSplash": "YES",
+   "-UITestNotifications": "granted",
+   "-UITestReduceMotion": "YES",
+   "-UITestExtensionActive": "YES",
+   "-UITestReset": "YES",
+   "-settings.onboardingCompleted": "YES",
+   "-settings.dataConsent": "granted",
+   "-settings.mode": "guardian",
+   "-settings.language": "id",
+   "-settings.guardianIntroSeen": "YES",
+   "-debug.profilePage": "editProfile"
+  }
+ },
+ "addon-01-settings-linked": {
+  "title": "Firefox add-on - settings page linked to the app (code entered)",
+  "extras": {
+   "note": "Firefox 160 for Android on the emulator; add-on from android/firefox-addon/build.mjs, installed with web-ext"
+  }
+ },
+ "addon-02-block-page": {
+  "title": "Firefox add-on - block page (Safari pipeline running in Firefox)",
+  "extras": {
+   "note": "Firefox 160 for Android on the emulator; add-on from android/firefox-addon/build.mjs, installed with web-ext"
+  }
+ }
+}

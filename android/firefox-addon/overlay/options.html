@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shoo</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <main>
+        <header>
+            <img src="images/icon-96.png" alt="" width="48" height="48">
+            <h1>Shoo</h1>
+        </header>
+
+        <section id="linked" hidden>
+            <p class="status ok" id="linked-title"></p>
+            <p id="linked-detail"></p>
+            <button type="button" id="unlink" class="secondary"></button>
+        </section>
+
+        <section id="unlinked">
+            <p class="status" id="unlinked-title"></p>
+            <ol id="steps"></ol>
+            <form id="pair" autocomplete="off">
+                <label for="code" id="code-label"></label>
+                <input id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required>
+                <button type="submit" id="connect"></button>
+            </form>
+        </section>
+
+        <p id="message" role="status"></p>
+    </main>
+    <script type="module" src="options.js"></script>
+</body>
+</html>

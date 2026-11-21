@@ -1,0 +1,380 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Tap the button below to show your code and open Firefox." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the button below to show your code and open Firefox."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekan tombol di bawah untuk menampilkan kodemu dan membuka Firefox."
+          }
+        }
+      }
+    },
+    "Tap the button below to get Firefox from the Play Store." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the button below to get Firefox from the Play Store."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekan tombol di bawah untuk memasang Firefox dari Play Store."
+          }
+        }
+      }
+    },
+    "In Firefox, add the Shoo add-on, then open its settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Firefox, add the Shoo add-on, then open its settings."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di Firefox, pasang add-on Shoo, lalu buka pengaturannya."
+          }
+        }
+      }
+    },
+    "Enter the code from Shoo, then come back to get protected." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the code from Shoo, then come back to get protected."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masukkan kode dari Shoo, lalu kembali untuk terima perlindungan."
+          }
+        }
+      }
+    },
+    "Firefox isn't installed yet. Install it, then add the Shoo add-on to stay safe." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Firefox isn't installed yet. Install it, then add the Shoo add-on to stay safe."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Firefox belum terpasang. Pasang dulu, lalu tambahkan add-on Shoo agar tetap aman."
+          }
+        }
+      }
+    },
+    "Shoo can't check every website yet. In Firefox, open Extensions › Shoo and allow it on all sites." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo can't check every website yet. In Firefox, open Extensions › Shoo and allow it on all sites."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo belum bisa memeriksa semua situs. Di Firefox, buka Ekstensi › Shoo dan izinkan di semua situs."
+          }
+        }
+      }
+    },
+    "Shoo isn't linked to Firefox yet. Add the Shoo add-on in Firefox, then enter the code from Shoo in its settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo isn't linked to Firefox yet. Add the Shoo add-on in Firefox, then enter the code from Shoo in its settings."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo belum terhubung ke Firefox. Pasang add-on Shoo di Firefox, lalu masukkan kode dari Shoo di pengaturannya."
+          }
+        }
+      }
+    },
+    "Almost done. Open any website in Firefox so Shoo can check in." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Almost done. Open any website in Firefox so Shoo can check in."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sedikit lagi. Buka situs apa saja di Firefox agar Shoo bisa terhubung."
+          }
+        }
+      }
+    },
+    "Open Firefox" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Firefox"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Firefox"
+          }
+        }
+      }
+    },
+    "Your Firefox code" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your Firefox code"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode Firefox-mu"
+          }
+        }
+      }
+    },
+    "Enter it in the Shoo add-on's settings within 10 minutes." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter it in the Shoo add-on's settings within 10 minutes."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masukkan di pengaturan add-on Shoo dalam 10 menit."
+          }
+        }
+      }
+    },
+    "Couldn't show a code. Try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't show a code. Try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gagal menampilkan kode. Coba lagi."
+          }
+        }
+      }
+    },
+    "The code has expired. Tap the button to get a new one." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The code has expired. Tap the button to get a new one."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kodenya kedaluwarsa. Tekan tombol untuk mendapatkan kode baru."
+          }
+        }
+      }
+    },
+    "Too many wrong codes. Tap the button to get a new one." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too many wrong codes. Tap the button to get a new one."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak kode salah. Tekan tombol untuk mendapatkan kode baru."
+          }
+        }
+      }
+    },
+    "Shoo checks on your phone only, with less protection." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo checks on your phone only, with less protection."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo hanya cek di ponsel, perlindungan lebih terbatas."
+          }
+        }
+      }
+    },
+    "Set Firefox as default" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Firefox as default"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jadikan Firefox Default"
+          }
+        }
+      }
+    },
+    "Make Firefox default" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make Firefox default"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jadikan Firefox default"
+          }
+        }
+      }
+    },
+    "Tap Browser app, then choose Firefox." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap Browser app, then choose Firefox."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk Aplikasi browser, lalu pilih Firefox."
+          }
+        }
+      }
+    },
+    "Shoo checks the pages you open in Firefox. This is what leaves your phone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo checks the pages you open in Firefox. This is what leaves your phone."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo memeriksa halaman yang kamu buka di Firefox. Ini yang keluar dari ponselmu."
+          }
+        }
+      }
+    },
+    "Without it, Shoo checks pages on your phone only and protects you less. Risky pages are still reported. You can change this in Profile." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without it, Shoo checks pages on your phone only and protects you less. Risky pages are still reported. You can change this in Profile."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa ini, Shoo hanya memeriksa halaman di ponselmu dan perlindunganmu berkurang. Halaman berisiko tetap dilaporkan. Kamu bisa mengubahnya di Profil."
+          }
+        }
+      }
+    },
+    "This phone isn't connected to Shoo anymore. Set it up again to stay protected." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This phone isn't connected to Shoo anymore. Set it up again to stay protected."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ponsel ini tidak terhubung lagi ke Shoo. Siapkan lagi supaya tetap terlindungi."
+          }
+        }
+      }
+    },
+    "This phone isn't protected yet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This phone isn't protected yet"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ponsel ini belum terlindungi"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

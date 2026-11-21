@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tagline">Together, we shoo the scams.</string>
+
+    <string name="action_retry">Try again</string>
+    <string name="action_ok">OK</string>
+    <string name="action_back">Back</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_confirm">Yes, continue</string>
+    <string name="action_later">Later</string>
+    <string name="action_load_more">Load more</string>
+
+    <string name="error_network">No internet connection. Try again in a moment.</string>
+    <string name="error_code_invalid">Wrong or expired code. Ask your Guardian for a new one.</string>
+    <string name="error_family_full">This family is full (3 people at most).</string>
+    <string name="error_already_connected">You are already connected to a Guardian.</string>
+    <string name="error_rate_limited">Too many tries. Wait a moment, then try again.</string>
+    <string name="error_forbidden">You can\'t do this.</string>
+    <string name="error_unauthorized">Session ended. Please start again.</string>
+    <string name="error_generic">Something went wrong (%1$s).</string>
+
+    <string name="status_blocked">Blocked</string>
+    <string name="status_warning">Be careful</string>
+    <string name="status_normal">Safe</string>
+    <string name="status_unknown">Unknown</string>
+
+    <string name="session_expired_title">Session ended</string>
+    <string name="session_expired_body">This device\'s data was deleted on the server. Start again to use Shoo.</string>
+
+    <string name="onboarding_start">Get started</string>
+    <string name="onboarding_mode_title">Who are you in the family?</string>
+    <string name="onboarding_mode_body">Pick once. A Guardian checks blocked links; a Protected person browses with Shoo on.</string>
+    <string name="mode_protected">Protected</string>
+    <string name="mode_protected_body">Shoo checks every page I open and blocks scam sites.</string>
+    <string name="mode_guardian">Guardian</string>
+    <string name="mode_guardian_body">I look after up to 3 family members and decide whether a blocked page is safe.</string>
+    <string name="onboarding_mode_once">You can\'t change this later without deleting your data.</string>
+    <string name="onboarding_name_title">What\'s your name?</string>
+    <string name="onboarding_name_label">Nickname</string>
+    <string name="onboarding_privacy">No email, no phone number. Pages that score under 30% never leave this phone.</string>
+
+    <string name="tab_home">Home</string>
+    <string name="tab_activity">Activity</string>
+    <string name="tab_profile">Profile</string>
+    <string name="home_hello">Hi, %1$s</string>
+
+    <string name="guardian_hero">%1$d members protected</string>
+    <string name="guardian_hero_empty">No members yet</string>
+    <string name="guardian_hero_body">Blocked pages show up in Activity for you to check.</string>
+    <string name="family_title">Family</string>
+    <string name="family_empty">Invite a parent or relative with a 6-digit code.</string>
+    <string name="family_invite">Invite a member</string>
+    <string name="member_no_scans">No risky pages yet</string>
+    <string name="member_last">Last: %1$d%% on %2$s</string>
+    <string name="member_active">Active</string>
+    <string name="member_not_connected">Not connected</string>
+
+    <string name="protected_hero_on">You are protected</string>
+    <string name="protected_hero_on_body">Shoo checks the pages you open in Firefox.</string>
+    <string name="protected_hero_off">Protection is not on yet</string>
+    <string name="protected_hero_off_body">Connect Shoo in Firefox so every page is checked.</string>
+    <string name="guardian_title">Guardian</string>
+    <string name="guardian_checks_for_you">Checks blocked pages for you</string>
+    <string name="guardian_none">Not connected to a Guardian. Pages are still blocked, but nobody can open them for you.</string>
+    <string name="connect_enter_code">Enter your Guardian\'s code</string>
+
+    <string name="firefox_card_title">Protection in Firefox</string>
+    <string name="firefox_card_on">The Shoo add-on in Firefox is connected to this app.</string>
+    <string name="firefox_card_off">Not connected. Chrome on Android has no add-ons, so Shoo works in Firefox.</string>
+    <string name="firefox_manage">Firefox settings</string>
+    <string name="firefox_turn_on">Turn on in Firefox</string>
+
+    <string name="latest_scams">Latest scams</string>
+
+    <string name="filter_all">All</string>
+    <string name="activity_empty_family">No risky pages from your family yet.</string>
+    <string name="activity_empty_me">No risky pages yet. Pages under 30% are not recorded.</string>
+
+    <string name="detail_title">Detail</string>
+    <string name="detail_reasons">Why it is risky</string>
+    <string name="detail_no_reasons">No reasons were recorded.</string>
+    <string name="detail_who">Opened by</string>
+    <string name="detail_when">Time</string>
+    <string name="detail_page_copy">See page copy</string>
+
+    <string name="verdict_safe">Marked safe</string>
+    <string name="verdict_not_safe">Marked dangerous</string>
+    <string name="verdict_by">By %1$s · %2$s</string>
+    <string name="verdict_waiting">Waiting for your Guardian to check this page.</string>
+    <string name="verdict_question">Is this page safe?</string>
+    <string name="verdict_explain">Safe: the page opens again for your family member. Danger: it stays blocked.</string>
+    <string name="verdict_danger">Danger</string>
+    <string name="verdict_safe_action">Safe</string>
+    <string name="verdict_confirm_safe">Mark as safe?</string>
+    <string name="verdict_confirm_safe_body">This page will open again for %1$s. Make sure you are certain.</string>
+    <string name="verdict_confirm_danger">Mark as dangerous?</string>
+    <string name="verdict_confirm_danger_body">This page stays blocked for %1$s.</string>
+
+    <string name="invite_title">Invite a member</string>
+    <string name="invite_body">Share this code. The member enters it in the Shoo app. One code works until the family is full.</string>
+    <string name="invite_share_text">Use Shoo to stay safe from scam sites. Family code: %1$s\n%2$s</string>
+    <string name="invite_share">Share</string>
+    <string name="invite_new_code">New code</string>
+    <string name="invite_expired">The code has expired. Make a new one.</string>
+    <string name="invite_expires_in">Valid for %1$d:%2$02d</string>
+
+    <string name="connect_title">Connect to a Guardian</string>
+    <string name="connect_body">Enter the 6-digit code from your Guardian. They will check blocked pages for you.</string>
+    <string name="connect_code_label">6-digit code</string>
+    <string name="connect_action">Connect</string>
+    <string name="connect_done">Connected to %1$s</string>
+    <string name="connect_done_body">Blocked pages are sent to your Guardian to check.</string>
+
+    <string name="firefox_title">Turn on in Firefox</string>
+    <string name="firefox_intro">Chrome on Android can\'t use add-ons. Shoo checks pages through the Shoo add-on in Firefox.</string>
+    <string name="firefox_step_install">Install Firefox</string>
+    <string name="firefox_install">Open Play Store</string>
+    <string name="firefox_check_again">Installed? Check again</string>
+    <string name="firefox_step_addon">Install the Shoo add-on</string>
+    <string name="firefox_addon_body">The add-on is not on addons.mozilla.org yet. During testing the team installs it with web-ext (see android/README.md).</string>
+    <string name="firefox_step_link">Connect the add-on</string>
+    <string name="firefox_show_code">Show code</string>
+    <string name="firefox_link_again">Connect again</string>
+    <string name="firefox_code_where">In Firefox: menu ⋮ → Extensions → Shoo → Settings, then enter this code. Keep the Shoo app open in the background.</string>
+    <string name="firefox_open">Open Firefox</string>
+    <string name="firefox_code_expired">The code expired. Show a new one.</string>
+    <string name="firefox_code_locked">Too many wrong codes. Show a new one.</string>
+    <string name="firefox_port_busy">Couldn\'t open the connection for Firefox. Close the app and try again.</string>
+    <string name="firefox_linked">Firefox connected</string>
+    <string name="firefox_linked_body">The Shoo add-on has this device\'s session.</string>
+
+    <string name="profile_none">None yet</string>
+    <string name="profile_sharing">Sharing with your Guardian</string>
+    <string name="profile_auto_send">Send links automatically</string>
+    <string name="profile_share_warnings">Share warning history</string>
+    <string name="profile_sharing_note">Blocked pages are always sent, so your Guardian can open them for you. Changes reach Firefox after you connect again.</string>
+    <string name="profile_backend">Server (debug only)</string>
+    <string name="backend_mock">Mock (sample data, no server)</string>
+    <string name="backend_cloud">Cloud (shoo-api)</string>
+    <string name="backend_local">Local (wrangler dev at 10.0.2.2:8787)</string>
+    <string name="backend_switch_body">Switching servers signs you out and starts setup again.</string>
+    <string name="profile_delete">Delete my data</string>
+    <string name="profile_delete_title">Delete all data?</string>
+    <string name="profile_delete_body">This device, its history and family links are deleted from the server right away. This can\'t be undone.</string>
+    <string name="profile_delete_confirm">Delete</string>
+
+    <string name="notify_channel">Family</string>
+    <string name="notify_blocked_title">Page blocked for %1$s</string>
+    <string name="notify_warning_title">%1$s opened a risky page</string>
+</resources>

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default = Bahasa Indonesia (like the iOS app, #587). English lives in values-en/. -->
+<resources>
+    <string name="app_name">Shoo</string>
+    <string name="tagline">Bersama, kita usir penipuan.</string>
+
+    <string name="action_retry">Coba lagi</string>
+    <string name="action_ok">OK</string>
+    <string name="action_back">Kembali</string>
+    <string name="action_continue">Lanjut</string>
+    <string name="action_cancel">Batal</string>
+    <string name="action_confirm">Ya, lanjutkan</string>
+    <string name="action_later">Nanti</string>
+    <string name="action_load_more">Muat lagi</string>
+
+    <string name="error_network">Tidak ada koneksi internet. Coba lagi sebentar lagi.</string>
+    <string name="error_code_invalid">Kode salah atau sudah tidak berlaku. Minta kode baru ke Guardian.</string>
+    <string name="error_family_full">Keluarga ini sudah penuh (maksimal 3 orang).</string>
+    <string name="error_already_connected">Kamu sudah terhubung dengan Guardian.</string>
+    <string name="error_rate_limited">Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.</string>
+    <string name="error_forbidden">Kamu tidak bisa melakukan ini.</string>
+    <string name="error_unauthorized">Sesi berakhir. Silakan mulai lagi.</string>
+    <string name="error_generic">Terjadi kesalahan (%1$s).</string>
+
+    <string name="status_blocked">Diblokir</string>
+    <string name="status_warning">Waspada</string>
+    <string name="status_normal">Aman</string>
+    <string name="status_unknown">Tidak diketahui</string>
+
+    <string name="session_expired_title">Sesi berakhir</string>
+    <string name="session_expired_body">Data perangkat ini sudah dihapus di server. Mulai lagi untuk memakai Shoo.</string>
+
+    <string name="onboarding_start">Mulai</string>
+    <string name="onboarding_mode_title">Kamu siapa di keluarga?</string>
+    <string name="onboarding_mode_body">Pilih sekali saja. Guardian memeriksa link yang diblokir; yang dilindungi browsing dengan Shoo menyala.</string>
+    <string name="mode_protected">Dilindungi</string>
+    <string name="mode_protected_body">Shoo memeriksa setiap halaman yang saya buka dan memblokir situs penipuan.</string>
+    <string name="mode_guardian">Guardian</string>
+    <string name="mode_guardian_body">Saya menjaga sampai 3 anggota keluarga dan memutuskan apakah halaman yang diblokir aman.</string>
+    <string name="onboarding_mode_once">Pilihan ini tidak bisa diubah nanti tanpa menghapus data.</string>
+    <string name="onboarding_name_title">Siapa namamu?</string>
+    <string name="onboarding_name_label">Nama panggilan</string>
+    <string name="onboarding_privacy">Tanpa email, tanpa nomor HP. Halaman dengan skor di bawah 30% tidak pernah meninggalkan HP ini.</string>
+
+    <string name="tab_home">Beranda</string>
+    <string name="tab_activity">Aktivitas</string>
+    <string name="tab_profile">Profil</string>
+    <string name="home_hello">Halo, %1$s</string>
+
+    <string name="guardian_hero">%1$d anggota terlindungi</string>
+    <string name="guardian_hero_empty">Belum ada anggota</string>
+    <string name="guardian_hero_body">Halaman yang diblokir muncul di Aktivitas untuk kamu periksa.</string>
+    <string name="family_title">Keluarga</string>
+    <string name="family_empty">Undang orang tua atau saudara dengan kode 6 digit.</string>
+    <string name="family_invite">Undang anggota</string>
+    <string name="member_no_scans">Belum ada halaman berisiko</string>
+    <string name="member_last">Terakhir: %1$d%% di %2$s</string>
+    <string name="member_active">Aktif</string>
+    <string name="member_not_connected">Tidak tersambung</string>
+
+    <string name="protected_hero_on">Kamu terlindungi</string>
+    <string name="protected_hero_on_body">Shoo memeriksa halaman yang kamu buka di Firefox.</string>
+    <string name="protected_hero_off">Perlindungan belum aktif</string>
+    <string name="protected_hero_off_body">Hubungkan Shoo di Firefox agar setiap halaman diperiksa.</string>
+    <string name="guardian_title">Guardian</string>
+    <string name="guardian_checks_for_you">Memeriksa halaman yang diblokir untukmu</string>
+    <string name="guardian_none">Belum terhubung dengan Guardian. Halaman tetap diblokir, tapi tidak ada yang bisa membukanya untukmu.</string>
+    <string name="connect_enter_code">Masukkan kode Guardian</string>
+
+    <string name="firefox_card_title">Perlindungan di Firefox</string>
+    <string name="firefox_card_on">Add-on Shoo di Firefox sudah terhubung dengan aplikasi ini.</string>
+    <string name="firefox_card_off">Belum terhubung. Chrome di Android tidak mendukung add-on, jadi Shoo bekerja di Firefox.</string>
+    <string name="firefox_manage">Atur Firefox</string>
+    <string name="firefox_turn_on">Aktifkan di Firefox</string>
+
+    <string name="latest_scams">Penipuan terbaru</string>
+
+    <string name="filter_all">Semua</string>
+    <string name="activity_empty_family">Belum ada halaman berisiko dari keluargamu.</string>
+    <string name="activity_empty_me">Belum ada halaman berisiko. Halaman di bawah 30% tidak dicatat.</string>
+
+    <string name="detail_title">Detail</string>
+    <string name="detail_reasons">Kenapa berisiko</string>
+    <string name="detail_no_reasons">Tidak ada alasan yang tercatat.</string>
+    <string name="detail_who">Dibuka oleh</string>
+    <string name="detail_when">Waktu</string>
+    <string name="detail_page_copy">Lihat salinan halaman</string>
+
+    <string name="verdict_safe">Ditandai aman</string>
+    <string name="verdict_not_safe">Ditandai bahaya</string>
+    <string name="verdict_by">Oleh %1$s · %2$s</string>
+    <string name="verdict_waiting">Menunggu Guardian memeriksa halaman ini.</string>
+    <string name="verdict_question">Apakah halaman ini aman?</string>
+    <string name="verdict_explain">Aman: halaman dibuka lagi untuk anggota keluarga. Bahaya: tetap diblokir.</string>
+    <string name="verdict_danger">Bahaya</string>
+    <string name="verdict_safe_action">Aman</string>
+    <string name="verdict_confirm_safe">Tandai aman?</string>
+    <string name="verdict_confirm_safe_body">Halaman ini akan terbuka lagi untuk %1$s. Pastikan kamu yakin.</string>
+    <string name="verdict_confirm_danger">Tandai bahaya?</string>
+    <string name="verdict_confirm_danger_body">Halaman ini tetap diblokir untuk %1$s.</string>
+
+    <string name="invite_title">Undang anggota</string>
+    <string name="invite_body">Bagikan kode ini. Anggota memasukkannya di aplikasi Shoo. Satu kode bisa dipakai sampai keluarga penuh.</string>
+    <string name="invite_share_text">Ayo pakai Shoo supaya aman dari situs penipuan. Kode keluarga: %1$s\n%2$s</string>
+    <string name="invite_share">Bagikan</string>
+    <string name="invite_new_code">Buat kode baru</string>
+    <string name="invite_expired">Kode sudah berakhir. Buat kode baru.</string>
+    <string name="invite_expires_in">Berlaku %1$d:%2$02d lagi</string>
+
+    <string name="connect_title">Hubungkan ke Guardian</string>
+    <string name="connect_body">Masukkan kode 6 digit dari Guardian. Guardian akan memeriksa halaman yang diblokir untukmu.</string>
+    <string name="connect_code_label">Kode 6 digit</string>
+    <string name="connect_action">Hubungkan</string>
+    <string name="connect_done">Terhubung dengan %1$s</string>
+    <string name="connect_done_body">Halaman yang diblokir dikirim ke Guardian untuk diperiksa.</string>
+
+    <string name="firefox_title">Aktifkan di Firefox</string>
+    <string name="firefox_intro">Chrome di Android tidak bisa memakai add-on. Shoo memeriksa halaman lewat add-on Shoo di Firefox.</string>
+    <string name="firefox_step_install">Pasang Firefox</string>
+    <string name="firefox_install">Buka Play Store</string>
+    <string name="firefox_check_again">Sudah terpasang? Cek lagi</string>
+    <string name="firefox_step_addon">Pasang add-on Shoo</string>
+    <string name="firefox_addon_body">Add-on belum ada di addons.mozilla.org. Selama uji coba, tim memasangnya dengan web-ext (lihat android/README.md).</string>
+    <string name="firefox_step_link">Hubungkan add-on</string>
+    <string name="firefox_show_code">Tampilkan kode</string>
+    <string name="firefox_link_again">Hubungkan ulang</string>
+    <string name="firefox_code_where">Di Firefox: menu ⋮ → Ekstensi → Shoo → Pengaturan, lalu masukkan kode ini. Biarkan aplikasi Shoo tetap terbuka di latar belakang.</string>
+    <string name="firefox_open">Buka Firefox</string>
+    <string name="firefox_code_expired">Kode berakhir. Tampilkan kode baru.</string>
+    <string name="firefox_code_locked">Terlalu banyak kode salah. Tampilkan kode baru.</string>
+    <string name="firefox_port_busy">Tidak bisa membuka sambungan ke Firefox. Tutup aplikasi lalu coba lagi.</string>
+    <string name="firefox_linked">Firefox terhubung</string>
+    <string name="firefox_linked_body">Add-on Shoo sudah menerima sesi perangkat ini.</string>
+
+    <string name="profile_none">Belum ada</string>
+    <string name="profile_sharing">Berbagi dengan Guardian</string>
+    <string name="profile_auto_send">Kirim link secara otomatis</string>
+    <string name="profile_share_warnings">Bagikan riwayat waspada</string>
+    <string name="profile_sharing_note">Halaman yang diblokir selalu dikirim, supaya Guardian bisa membukanya untukmu. Ubahan berlaku di Firefox setelah dihubungkan ulang.</string>
+    <string name="profile_backend">Server (khusus debug)</string>
+    <string name="backend_mock">Mock (data contoh, tanpa server)</string>
+    <string name="backend_cloud">Cloud (shoo-api)</string>
+    <string name="backend_local">Lokal (wrangler dev di 10.0.2.2:8787)</string>
+    <string name="backend_switch_body">Ganti server akan mengeluarkanmu dan memulai pendaftaran dari awal.</string>
+    <string name="profile_delete">Hapus data saya</string>
+    <string name="profile_delete_title">Hapus semua data?</string>
+    <string name="profile_delete_body">Perangkat ini, riwayat, dan hubungan keluarga dihapus dari server saat itu juga. Tidak bisa dibatalkan.</string>
+    <string name="profile_delete_confirm">Hapus</string>
+
+    <string name="notify_channel">Keluarga</string>
+    <string name="notify_blocked_title">Halaman diblokir untuk %1$s</string>
+    <string name="notify_warning_title">%1$s membuka halaman berisiko</string>
+</resources>

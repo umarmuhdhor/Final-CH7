@@ -1,0 +1,74 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Checking the Firefox add-on" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking the Firefox add-on"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memeriksa add-on Firefox"
+          }
+        }
+      }
+    },
+    "In Firefox, open the menu ⋮ › Extensions › Manage extensions." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Firefox, open the menu ⋮ › Extensions › Manage extensions."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di Firefox, buka menu ⋮ › Ekstensi › Kelola ekstensi."
+          }
+        }
+      }
+    },
+    "Open Firefox" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Firefox"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Firefox"
+          }
+        }
+      }
+    },
+    "Shows how to switch Shoo on in Firefox" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows how to switch Shoo on in Firefox"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menunjukkan cara menyalakan Shoo di Firefox"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

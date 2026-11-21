@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window only; every screen is drawn by Compose (ui/Theme.kt). -->
+    <style name="Theme.Shoo" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/shoo_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <color name="shoo_background">#F5F6FA</color>
+    <color name="shoo_blue">#0A84FF</color>
+</resources>

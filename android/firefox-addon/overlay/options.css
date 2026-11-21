@@ -1,0 +1,28 @@
+:root {
+    --blue: #0a84ff;
+    --text: #1c1f26;
+    --muted: #6b7180;
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --ok: #2e9e5b;
+    --error: #d93a30;
+}
+@media (prefers-color-scheme: dark) {
+    :root { --text: #eef0f5; --muted: #a2a8b6; --bg: #111318; --card: #1b1e26; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, sans-serif; }
+main { max-width: 480px; margin: 0 auto; padding: 24px 16px; }
+header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+h1 { margin: 0; font-size: 24px; }
+section { background: var(--card); border-radius: 20px; padding: 18px; }
+.status { font-weight: 600; font-size: 18px; margin: 0 0 8px; }
+.status.ok { color: var(--ok); }
+ol { padding-left: 20px; color: var(--muted); }
+label { display: block; font-weight: 600; margin: 12px 0 6px; }
+input { width: 100%; font: 600 28px/1.2 ui-monospace, monospace; letter-spacing: 8px; text-align: center; padding: 12px; border: 1px solid #c9cdd6; border-radius: 12px; }
+button { width: 100%; margin-top: 14px; padding: 14px; border: 0; border-radius: 14px; background: var(--blue); color: #fff; font: 600 16px system-ui, sans-serif; }
+button.secondary { background: transparent; color: var(--error); border: 1px solid currentColor; }
+button:disabled { opacity: 0.5; }
+#message { min-height: 1.5em; margin-top: 12px; color: var(--muted); }
+#message.error { color: var(--error); }
