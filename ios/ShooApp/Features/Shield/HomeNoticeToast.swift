@@ -89,13 +89,17 @@ struct HomeNoticeToast: View {
         }
     }
 
-    /// A mode change shows a shield in the mode's colour, teal for Guardian and Home's blue for Pribadi (Alief,
-    /// 21 Nov 2026). Other changes keep the Figma tile: 40 pt, 11 pt corners, light-to-dark, a white glyph.
+    /// A mode change shows Home's own shield (`HalftoneShield`), teal for Guardian and blue for Pribadi, as on that
+    /// Home's hero (Alief, 21 Nov 2026). Other changes keep the Figma tile: 40 pt, 11 pt corners, light-to-dark, a
+    /// white glyph.
     @ViewBuilder private var tile: some View {
         if isModeChange {
-            Image(systemName: "checkmark.shield.fill")
-                .font(.system(size: 34, weight: .regular))
-                .foregroundStyle(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
+            // The hero is 220 × 176 with the glass centred 18 pt left and 12.7 pt low; scaled to about 31 × 36 and
+            // moved back to the middle of the 40 pt slot, then 4 pt left (Alief), so it does not crowd the title.
+            let scale: CGFloat = 0.3
+            HalftoneShield(tint: notice == .guardianOn ? .teal : .blue)
+                .scaleEffect(scale)
+                .offset(x: 18 * scale - 4, y: -12.7 * scale)
                 .frame(width: 40, height: 40)
                 .accessibilityHidden(true)
         } else {
