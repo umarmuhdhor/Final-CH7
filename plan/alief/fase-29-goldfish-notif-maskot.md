@@ -74,29 +74,29 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
 
 ## 29e · Kata-kata dan status
 
-- [ ] **C2**: satu nama untuk tiap peran (Guardian / Dilindungi). Tidak ada lagi "Terawasi", "Pantau", atau "Penjaga".
-- [ ] **C3**: status anggota pakai "Ekstensi aktif" / "Ekstensi tidak aktif". "Terhubung" hanya berarti sudah bergabung.
+- [x] **C2** (PR #655): satu nama untuk tiap peran (Guardian / Dilindungi). Tidak ada lagi "Terawasi", "Pantau", atau "Penjaga".
+- [x] **C3** (PR #653): status anggota pakai "Ekstensi aktif" / "Ekstensi tidak aktif". "Terhubung" hanya berarti sudah bergabung.
   - Di detail anggota, kartu "Yang perlu dicek di HP {nama}" berisi 3 poin, dengan tombol "Ingatkan {nama}". Figma: kolom C3 "Usulan · detail anggota".
-- [ ] **C9, C10**:
+- [x] **C9, C10** (PR #655):
   - label "Dijaga Budi";
   - judul bagian "Akun Tertaut";
   - "Belum terlindungi penuh" kalau baru sebagian situs.
-- [ ] **C4 + F9**: kalimat perkenalan Guardian.
-- [ ] **C5**: satu pertanyaan "Menurutmu situs ini aman?". Nama filter disamakan dengan label.
-- [ ] **C6**: sheet "Data yang dikirim" dibuat lebih simpel, dengan kalimat penyimpanan setelah Shoo dihapus.
-- [ ] **C8**: "berlaku 29 menit lagi". Detik hanya muncul di menit terakhir.
-- [ ] **C11**: "kamu" di semua teks Indonesia.
-- [ ] **C12**: "Tidak ada salinan halaman ini" dipindah ke bagian salinan.
-- [ ] **F11**: kalimat tambahan di notifikasi ganti mode.
+- [x] **C4 + F9** (PR #655): kalimat perkenalan Guardian.
+- [x] **C5** (PR #656): satu pertanyaan "Menurutmu situs ini aman?". Nama filter disamakan dengan label.
+- [x] **C6** (PR #656): sheet "Data yang dikirim" dibuat lebih simpel, dengan kalimat penyimpanan setelah Shoo dihapus.
+- [x] **C8** (PR #656): "berlaku 29 menit lagi". Detik hanya muncul di menit terakhir.
+- [x] **C11** (PR #655): "kamu" di semua teks Indonesia.
+- [x] **C12** (PR #656): "Tidak ada salinan halaman ini" dipindah ke bagian salinan.
+- [x] **F11** (PR #655): kalimat tambahan di notifikasi ganti mode.
 
 ## 29f · Home dan Profil
 
-- [ ] **F8**: kartu "Punya kode undangan?" di Profil Pribadi, di bawah kartu Mode Guardian.
-- [ ] **F12**: hapus kartu Mode Terawasi di Guardian Home yang belum punya anggota.
-- [ ] **V3** pilihan A:
+- [x] **F8** (PR #663): kartu "Punya kode undangan?" di Profil Pribadi, di bawah kartu Mode Guardian.
+- [x] **F12** (PR #663): hapus kartu Mode Terawasi di Guardian Home yang belum punya anggota.
+- [x] **V3** pilihan A (PR #663):
   - kartu "Scam Terbaru" bisa ditekan dan membuka sheet modus;
   - visual di sheet: contoh SMS link palsu, lalu situs palsu yang meminta PIN.
-- [ ] **V8**: label "Ditandai aman" tetap di bawah teks, ikonnya centang. Ukuran:
+- [x] **V8** (PR #663): label "Ditandai aman" tetap di bawah teks, ikonnya centang. Ukuran:
   - jarak 8 pt dari teks di atasnya;
   - tinggi 24 pt;
   - teks 13 pt;
@@ -104,7 +104,10 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
   - padding kiri-kanan 8 pt, jarak ikon-teks 4 pt;
   - radius 12 pt.
 - [ ] **V10**: Home kosong pakai maskot Detektif dengan teks "Shoo lagi berjaga. Kalau ada web mencurigakan, akan muncul di sini."
-- [ ] **V1, V2, V4, V6, V7, V9**: perbaikan kecil sesuai kolom "Cara memperbaiki" di laporan.
+  - Menunggu aset `magnifier` dari 29a masuk main. Dikerjakan di PR kecil setelah #663.
+- [x] **V1, V2, V6, V7, V9** (PR #663): perbaikan kecil sesuai kolom "Cara memperbaiki" di laporan.
+  - V7 tanpa perubahan kode: di ujung scroll, isi Home sudah lewat bilah tab (bilah tab sistem masuk safe area).
+- **V4** tidak jadi (Alief, 22 Nov): pill "Terhubung" tetap oranye.
 
 ## 29g · Notif lain dengan maskot ("alief notif")
 
@@ -121,10 +124,11 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
 
 ## 29h · Ke Lead (issue, bukan kode)
 
-- [ ] Ekstensi Safari dengan maskot: popup Waspada / Risiko tinggi, halaman diblokir, dan tanda isian. Ini bagian 5 "alief notif". Milik Lead (`ios/ShooExtension`).
-- [ ] Push dengan gambar maskot. Butuh Notification Service Extension, yaitu target baru di `project.yml`.
-- [ ] Kirim `allSites` ke backend supaya status anggota bisa membedakan penyebabnya. Ini perubahan kontrak.
+- [x] (#649) Ekstensi Safari dengan maskot: popup Waspada / Risiko tinggi, halaman diblokir, dan tanda isian. Ini bagian 5 "alief notif". Milik Lead (`ios/ShooExtension`).
+- [x] (#650) Push dengan gambar maskot. Butuh Notification Service Extension, yaitu target baru di `project.yml`.
+- [x] (#651) Kirim `allSites` ke backend supaya status anggota bisa membedakan penyebabnya. Ini perubahan kontrak.
 
 ## Riwayat
 
 - 21 Nov 2026: dibuat dari sesi review Figma bersama Alief (sesi 24386bf6).
+- 22 Nov 2026: 29e di PR #653, #655, #656; 29h jadi issue #649, #650, #651; 29f di PR #663 (tanpa V10). V4 tidak jadi.
