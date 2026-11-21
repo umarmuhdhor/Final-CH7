@@ -1,0 +1,51 @@
+01-splash1: fresh install, app opened for the first time.
+02-splash2: Tapped the round arrow button.
+03-name: Tapped the round arrow button again.
+04-name-filled: Picked the blue owl (4th) and typed the name 'Sari'.
+05-ext: Tapped Selanjutnya. (First tap while the keyboard was up did nothing; second tap worked.)
+06-data-sheet: Tapped 'Lihat data yang dikirim' (first tap on the link did nothing, second opened this).
+07-ext-checked: Closed the sheet with Mengerti, then ticked the box.
+08-settings-root: Tapped Aktifkan Ekstensi. iPhone Settings opened at its top page.
+09-ext-back-nothing: Went back to Shoo without changing anything in Settings (waited ~6 s). The back arrow at top-left is gone now.
+10-home-after-kill: While in Settings the phone closed the Shoo app. Opened Shoo again from the Home Screen. This is the first thing shown. (Shoo extension is turned on in Safari but only for some websites.)
+11-home-pribadi: Tapped Nyalakan on the 'Notifikasi mati' popup (needed two taps). The popup closed; no iPhone permission question appeared.
+12-home-pribadi-scrolled: Scrolled down on Home.
+12b (no new screenshot): Tapped the 'Minta PIN m-banking' card under 'Scam Terbaru Pengguna Shoo'. Nothing happened.
+13-home-turnon-sheet: Back at the top of Home, tapped 'Nyalakan sekarang' under 'Anda Belum Terlindungi'.
+14-ext-already-on: SECOND RUN (a different person who had already turned on the Shoo extension in Safari before opening the app). Skipped intro with Lewati, typed name, pressed return.
+15-ext-consent-nudge: Tapped the grey Selanjutnya without ticking the box.
+16-safari-default: Ticked the box and tapped Selanjutnya.
+17-safari-settings: Tapped Jadikan Safari default. iPhone Settings opened here.
+18-safari-default-back: Went back to Shoo from Settings without changing anything.
+19-success: Tapped Lanjutkan.
+20-home-protected: Tapped Selanjutnya on the success screen. No iPhone notification permission question appeared; went straight here.
+21-guardian-intro: Tapped Menjadi Guardian on the 'Jadi Penjaga' card (second tap).
+22-home-pribadi-empty: THIRD RUN: a person who finished setup and has not browsed yet. Opened app; closed the 'Notifikasi mati' popup with Nanti saja.
+23-guardian-home-new: Tapped Menjadi Guardian, then Mulai on the 'Lindungi orang terdekat' intro page (same page as screenshot 21). Landed here.
+24-guardian-home-scrolled: Tapped the 'Pindah mode di sini' tip to close it, then scrolled down. A 'Mode Guardian aktif' banner slid in at the top.
+25-share-sheet: Waited for the banner to go, scrolled up, tapped Bagikan.
+25b (no screenshot): The share message reads: 'Gabung ke keluargaku di Shoo supaya aku bisa bantu menjagamu dari situs penipuan. Buka <link> atau masukkan kode <6 digits> di Shoo.'
+26-profile-pribadi: FOURTH RUN: a Pribadi user (name Adhella) who got an invite code from family and wants to join. Opened app, closed 'Notifikasi mati' popup, tapped the avatar at top-right.
+27-profile-settings: Scrolled down on Profil.
+28-mode-akun: Tapped Mode akun.
+29-join-code: Tapped 'Punya kode undangan?'.
+30-join-expired: Typed an old code 999999 and tapped Hubungkan.
+31-join-success: Deleted the digits, typed the code from the family member (524703), tapped Hubungkan. A spinner showed ~2 s, no question asked before, then this.
+32-home-protected-joined: Tapped Selanjutnya.
+33-profile-protected: Tapped the avatar at top-right (now joined to Budi's family).
+34-linked-account: Tapped the row 'Budi' under 'Terhubung'. (Tried tapping the two green switches: nothing changes.)
+35-guardian-home-family: FIFTH RUN: a Guardian whose family (Mom, Dad) joined some days ago. Opened app (white screen for ~6 s first), closed 'Notifikasi mati' with Nanti saja.
+36-detail-blocked: Tapped the bca-verifikasi.site row (Mom, Diblokir).
+37-detail-reasons: Scrolled down under 'Alasan Terdeteksi'.
+38-safe-sheet: Tapped Aman.
+39-after-safe: Picked 'Saya kenal situs ini', tapped Tandai Aman. Sheet closed; bottom of the page now shows this.
+40-after-safe-top: Scrolled to the top of the same page.
+41-activity: Tapped back, then the Aktivitas tab at the bottom.
+42-activity-picker: Tapped the round faces button at top-right.
+43-detail-warning: Closed the menu, tapped the promo-un...hopee.click row (Waspada).
+44-profile-guardian: Tapped back, the Perisai tab, then the avatar at top-right.
+45-member-dad: Tapped Dad's row.
+46-member-dad-bottom: Scrolled down on Dad's page.
+47-disconnect-confirm: Tapped Putuskan koneksi.
+48-after-disconnect: Tapped the red Putuskan koneksi. Went back to Home by itself.
+49-switch-mode: On Guardian Home, tapped the round icon top-left (the arrows icon). No question asked.
