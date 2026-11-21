@@ -46,6 +46,8 @@ extension View {
 /// white 90 % with a #C81414 28 % ring, a 40 pt tile (#B73C13 12 %, 8 pt corners) with the symbol in #BB1616 70 %,
 /// the title (SF Pro Rounded Semibold 17) over the line (13, #6A717E), the action in #136CB7 on the right.
 /// The symbol wiggles (error) or bounces (info) once when the card arrives; the action shows a spinner while it runs.
+/// Fase 29g (Figma "alief notif" section 7, 2431:12760): an error shows Shoo instead of the tile (Maaf unless the
+/// caller picks another pose), standing in the tile's place and peeking over the card's top edge.
 struct StateNoticeCard: View {
     enum Tone {
         /// "Gagal memuat", "Gagal menyimpan": a circular arrow with a "!".
@@ -66,6 +68,8 @@ struct StateNoticeCard: View {
     let message: Text
     var actionTitle: LocalizedStringKey?
     var cornerRadius: CGFloat = 12
+    /// Errors only; nil = Maaf.
+    var pose: Mascot?
     var action: (() async -> Void)?
 
     @Environment(\.shooReduceMotion) private var reduceMotion
@@ -134,6 +138,18 @@ struct StateNoticeCard: View {
 
     @ViewBuilder
     private var icon: some View {
+        if tone == .error {
+            // 56 pt tall in the tile's 46 × 40 slot, so its head rises 16 pt over the card's edge.
+            MascotImage(pose: pose ?? .sorry, height: 56)
+                .frame(width: 46, height: 40, alignment: .bottom)
+                .offset(y: -8)
+        } else {
+            symbolIcon
+        }
+    }
+
+    @ViewBuilder
+    private var symbolIcon: some View {
         let image = Image(systemName: tone.symbol)
             .font(.system(size: 21.67, weight: .regular, design: .rounded))
             .foregroundStyle(Color(hex: 0xBB1616).opacity(0.7))

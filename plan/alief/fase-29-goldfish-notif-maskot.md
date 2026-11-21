@@ -104,8 +104,7 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
   - ikon 12 pt;
   - padding kiri-kanan 8 pt, jarak ikon-teks 4 pt;
   - radius 12 pt.
-- [ ] **V10**: Home kosong pakai maskot Detektif dengan teks "Shoo lagi berjaga. Kalau ada web mencurigakan, akan muncul di sini."
-  - Menunggu aset `magnifier` dari 29a masuk main. Dikerjakan di PR kecil setelah #663.
+- [x] **V10** (PR #668): Home kosong pakai maskot Detektif dengan teks "Shoo lagi berjaga. Kalau ada web mencurigakan, akan muncul di sini."
 - [x] **V1, V2, V6, V7, V9** (PR #663): perbaikan kecil sesuai kolom "Cara memperbaiki" di laporan.
   - V7 tanpa perubahan kode: di ujung scroll, isi Home sudah lewat bilah tab (bilah tab sistem masuk safe area).
 - **V4** tidak jadi (Alief, 22 Nov): pill "Terhubung" tetap oranye.
@@ -133,3 +132,4 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
 
 - 21 Nov 2026: dibuat dari sesi review Figma bersama Alief (sesi 24386bf6).
 - 22 Nov 2026: 29e di PR #653, #655, #656; 29h jadi issue #649, #650, #651; 29f di PR #663 (tanpa V10). V4 tidak jadi.
+- 22 Nov 2026: V10 di PR #668, setelah aset maskot 29a masuk main.

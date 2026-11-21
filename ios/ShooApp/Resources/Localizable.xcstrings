@@ -289,6 +289,16 @@
         }
       }
     },
+    "Open Settings again and switch Shoo on (step 02)." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan lagi, lalu nyalakan Shoo (langkah 02)."
+          }
+        }
+      }
+    },
     "Opens the share sheet with your invite link" : {
       "localizations" : {
         "id" : {
@@ -339,12 +349,42 @@
         }
       }
     },
+    "Shoo is on for some sites only" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo baru aktif di sebagian situs"
+          }
+        }
+      }
+    },
+    "Shoo isn't on yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo belum menyala"
+          }
+        }
+      }
+    },
     "Switch modes here" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pindah mode di sini"
+          }
+        }
+      }
+    },
+    "Tap All Websites and choose Allow (step 03)." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk Semua Situs Web, lalu pilih Izinkan (langkah 03)."
           }
         }
       }
@@ -369,12 +409,22 @@
         }
       }
     },
-    "When a suspicious site shows up, you'll see it here." : {
+    "If a suspicious site shows up, you'll see it here." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nanti kalau ada web mencurigakan, akan muncul di sini."
+            "value" : "Kalau ada web mencurigakan, akan muncul di sini."
+          }
+        }
+      }
+    },
+    "Shoo is on watch" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo lagi berjaga"
           }
         }
       }
@@ -399,12 +449,12 @@
         }
       }
     },
-    "The address and a copy are kept. Some of it stays after the account is deleted." : {
+    "The address and a copy of the page are kept for 14 days. After you delete your data (Profile › Delete Account), the site's address and score stay, without your name." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alamat dan salinannya disimpan. Sebagian tetap ada setelah akun dihapus."
+            "value" : "Alamat dan salinan halaman disimpan 14 hari. Setelah kamu menghapus datamu (Profil › Hapus Akun), alamat situs dan skornya tetap ada, tanpa namamu."
           }
         }
       }
@@ -2993,6 +3043,26 @@
         }
       }
     },
+    "Invite code · valid for %lld more min" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode undangan · berlaku %lld menit lagi"
+          }
+        }
+      }
+    },
+    "Invite code · valid for %lld more sec" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode undangan · berlaku %lld detik lagi"
+          }
+        }
+      }
+    },
     "Invite family" : {
       "localizations" : {
         "id" : {
@@ -3040,6 +3110,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apakah situs ini benar penipuan?"
+          }
+        }
+      }
+    },
+    "Do you think this site is safe?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menurutmu situs ini aman?"
           }
         }
       }
@@ -3398,13 +3478,12 @@
         }
       }
     },
-    "No copy of this page" : {
-      "extractionState" : "stale",
+    "Page copy: not available" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidak ada salinan halaman ini"
+            "value" : "Salinan halaman: tidak tersedia"
           }
         }
       }
@@ -5664,6 +5743,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Berlaku %@ lagi"
+          }
+        }
+      }
+    },
+    "Valid for %lld more min" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku %lld menit lagi"
+          }
+        }
+      }
+    },
+    "Valid for %lld more sec" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku %lld detik lagi"
           }
         }
       }

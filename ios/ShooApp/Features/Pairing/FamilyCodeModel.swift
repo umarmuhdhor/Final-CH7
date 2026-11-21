@@ -194,9 +194,15 @@ final class FamilyCodeModel {
         request > appliedCodeRequest && !codeRequestsInFlight.contains { $0 > request }
     }
 
-    /// "29:59": what is left of the code on screen.
-    var timeLeft: String {
-        Duration.seconds(secondsLeft).formatted(.time(pattern: .minuteSecond))
+    /// C8 (goldfish 21 Nov): "29:49" read like a time of day. Whole minutes ("29 menit lagi"), seconds only in the
+    /// last minute.
+    enum Remaining: Equatable {
+        case minutes(Int)
+        case seconds(Int)
+    }
+
+    var remaining: Remaining {
+        secondsLeft >= 60 ? .minutes(secondsLeft / 60) : .seconds(secondsLeft)
     }
 
     /// Updates the countdown; `true` when the code just ran out.

@@ -21,7 +21,8 @@ enum ActivityFilter: String, CaseIterable, Hashable, Sendable {
         switch self {
         case .all: "All"
         case .warning: "activity.warning"
-        case .blocked: family ? "Danger" : "Blocked"
+        // C5: the same word as the "Diblokir" label on the rows.
+        case .blocked: "Blocked"
         }
     }
 }

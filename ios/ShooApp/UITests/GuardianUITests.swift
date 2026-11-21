@@ -108,7 +108,7 @@ final class GuardianUITests: XCTestCase {
             let label = rows.element(boundBy: index).label
             XCTAssertTrue(label.contains("Mom") || label.contains("Dad"), label)
         }
-        XCTAssertTrue(app.buttons["filter.blocked"].label.contains("Danger"))
+        XCTAssertTrue(app.buttons["filter.blocked"].label.contains("Blocked"))
 
         picker.tap()
         XCTAssertTrue(app.buttons["person.everyone"].waitForExistence(timeout: 5), app.debugDescription)

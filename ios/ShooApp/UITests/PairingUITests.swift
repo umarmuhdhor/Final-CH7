@@ -254,9 +254,8 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["family.invite"].exists)
         let countdown = app.staticTexts["familyCode.countdown"]
         XCTAssertTrue(countdown.exists)
-        let first = countdown.label
-        let ticked = NSPredicate(format: "label != %@", first)
-        wait(for: [expectation(for: ticked, evaluatedWith: countdown)], timeout: 5)
+        // C8 (fase 29e): whole minutes until the last one, so the label no longer changes every second.
+        XCTAssertTrue(countdown.label.contains("more min"), countdown.label)
         app.buttons["familyCode.copy"].tap()
         XCTAssertTrue(app.buttons["familyCode.copy"].label.contains("Copied"), app.buttons["familyCode.copy"].label)
         XCTAssertTrue(app.descendants(matching: .any)["home.howItWorks"].exists)

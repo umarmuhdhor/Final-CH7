@@ -10,7 +10,7 @@ struct DetailFooter: View {
     let canValidate: Bool
     /// Why the last verdict was not saved (BH-27); nil when it was, or none was sent.
     let failure: DetailModel.VerdictError?
-    /// Blocked sites ask "Apakah situs ini berbahaya?", warnings "Apakah situs ini benar penipuan?".
+    /// A blocked or a warning page. Both ask "Menurutmu situs ini aman?" since C5 (goldfish 21 Nov).
     var isBlocked = false
     /// "Ubah" pressed: the buttons are back. Owned by Detail, so it survives the footer moving between the bottom
     /// and the page (U-07); a footer of its own keeps it here.
@@ -60,7 +60,8 @@ struct DetailFooter: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if showsButtons {
-                Text(isBlocked ? "Is this site dangerous?" : "Is this site really a scam?")
+                // C5 (goldfish 21 Nov): one question on both pages, which Aman / Bahaya answer.
+                Text("Do you think this site is safe?")
                     // Figma "Pertanyaan": SF Pro Rounded 17, 140 %.
                     .activityFont(17, rounded: true)
                     .figmaLineHeight(23.8, relativeTo: .body)

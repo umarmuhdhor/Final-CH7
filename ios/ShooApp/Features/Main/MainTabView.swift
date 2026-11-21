@@ -80,7 +80,16 @@ struct MainTabView: View {
             return router.homeNotice == nil ? nil : .success
         }
         // PR-03: an invite link opened before or during onboarding opens its join sheet now the tabs are here.
-        .onAppear { env.presentInviteAfterOnboarding() }
+        .onAppear {
+            env.presentInviteAfterOnboarding()
+            #if DEBUG
+            if let notice = Self.screenshotNotice {
+                // The once-per-launch "Notifications are off" popup would cover the toast.
+                env.router.notificationReminderShown = true
+                env.router.show(notice)
+            }
+            #endif
+        }
         // An invite link that started the app (PR-03): Connect comes up once the launch splash (ON-01) is gone.
         .sheet(isPresented: Binding(
             get: { router.isConnectPresented && env.launchSplash == .done },
@@ -254,3 +263,19 @@ private struct ConnectSheet: View {
     }
 }
 
+#if DEBUG
+extension MainTabView {
+    /// Screenshots only: `-debug.homeNotice guardianOn|personalOn|memberJoined|connected|disconnected` shows that
+    /// Home toast at launch, with the sample names from Figma "alief notif" section 2.
+    static var screenshotNotice: HomeNotice? {
+        switch UserDefaults.standard.string(forKey: "debug.homeNotice") {
+        case "guardianOn": .guardianOn
+        case "personalOn": .personalOn(keepsFamily: false)
+        case "memberJoined": .memberJoined(name: "Mom")
+        case "connected": .connected(guardian: "Budi")
+        case "disconnected": .disconnected(name: "Dad")
+        default: nil
+        }
+    }
+}
+#endif

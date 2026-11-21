@@ -425,11 +425,21 @@ struct FamilyCodeModelTests {
         await model.refreshCode()
         #expect(model.code?.code == "100001")
         #expect(model.secondsLeft == 1800)
-        #expect(model.timeLeft == "30:00")
-        clock.now += 1799.2
+        #expect(model.remaining == .minutes(30))
+        // C8: whole minutes ("29 menit lagi") until the last minute, then seconds.
+        clock.now += 11
+        #expect(!model.tick())
+        #expect(model.remaining == .minutes(29))
+        clock.now += 1729
+        #expect(!model.tick())
+        #expect(model.remaining == .minutes(1))
+        clock.now += 1
+        #expect(!model.tick())
+        #expect(model.remaining == .seconds(59))
+        clock.now += 58.2
         #expect(!model.tick())
         #expect(model.secondsLeft == 1)
-        #expect(model.timeLeft == "0:01")
+        #expect(model.remaining == .seconds(1))
         clock.now += 1
         #expect(model.tick())
         await model.refreshCode()
