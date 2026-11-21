@@ -23,17 +23,17 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
 
 ## 29a · Aset maskot
 
-- [ ] Export 23 rect `Maskot Shoo · <pose>` dari frame `2431:12759` sebagai PNG transparan.
+- [x] (PR #648) Export 23 rect `Maskot Shoo · <pose>` dari frame `2431:12759` sebagai PNG transparan.
   - Sumber cadangan: `owl/gen/fixed/<pose>.png` di scratchpad sesi 24386bf6. Folder ini bisa hilang.
-- [ ] Masukkan ke `Assets.xcassets/Mascot/`.
+- [x] (PR #648) Masukkan ke `Assets.xcassets/Mascot/`.
   - Perkecil ke tinggi maksimal sekitar 600 px supaya ukuran app tidak bengkak.
   - Cek total ukuran aset.
-- [ ] Pecah pose `peek` jadi 2 gambar: `peek` (badan) dan `peek-hands` (hanya jari, baris 812 ke bawah). Caranya ada di resep.
-- [ ] Beri nama yang jelas di Swift, misalnya `enum Mascot { case think, wave, … }`.
+- [x] (PR #648) Pecah pose `peek` jadi 2 gambar: `peek` (badan) dan `peek-hands` (hanya jari, baris 812 ke bawah). Caranya ada di resep.
+- [x] (PR #648) Beri nama yang jelas di Swift, misalnya `enum Mascot { case think, wave, … }`.
 
 ## 29b · Komponen dialog Shoo
 
-- [ ] Buat komponen `ShooDialog`:
+- [x] (PR #659) Buat komponen `ShooDialog`:
   - layar diredupkan;
   - maskot mengintip di atas kartu;
   - judul dan isi;
@@ -41,12 +41,12 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
   - tombol kedua dengan outline;
   - posisi di tengah layar;
   - VoiceOver dan Reduce Motion.
-- [ ] Ganti `alert`/`confirmationDialog` berikut. Figma: kartu `2428:12706` dan "alief notif" bagian 1.
-  - [ ] Putuskan koneksi (Kaget). Termasuk **F10**: isi dialog menjelaskan akibatnya. Cek dulu perilaku aslinya.
-  - [ ] Hapus akun (Nangis).
-  - [ ] Ganti kode undangan (Mikir).
-  - [ ] Notifikasi mati (Tidur).
-  - [ ] Semua error aksi di Profil: "Gagal menyimpan" (Maaf), satu tombol "Oke".
+- [x] (PR #659) Ganti `alert`/`confirmationDialog` berikut. Figma: kartu `2428:12706` dan "alief notif" bagian 1.
+  - [x] Putuskan koneksi (Kaget). Termasuk **F10**: isi dialog menjelaskan akibatnya. Cek dulu perilaku aslinya.
+  - [x] Hapus akun (Nangis).
+  - [x] Ganti kode undangan (Mikir).
+  - [x] Notifikasi mati (Tidur).
+  - [x] Semua error aksi di Profil: "Gagal menyimpan" (Maaf), satu tombol "Oke".
 
 ## 29c · Konfirmasi tandai aman dan gabung keluarga
 
