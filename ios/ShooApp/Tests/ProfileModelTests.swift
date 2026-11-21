@@ -690,4 +690,20 @@ struct ProfileModelTests {
         #expect(past != justNow)
         #expect(past.contains("2"))
     }
+
+    /// C3 (goldfish 21 Nov): a member's status names the extension, never "connected" (which means joined) and
+    /// never "Shoo mati". The member detail says how long Shoo on their phone has been quiet.
+    @Test func C3_memberStatusNamesTheExtension() {
+        let now = Date(timeIntervalSince1970: 1_792_584_000)
+        var dad = FamilyMember(deviceId: "dev_dad", name: "Dad", avatarId: "avatar_1", extensionActive: false)
+        #expect(MemberText.status(dad, now: now, language: .indonesian) == "Ekstensi tidak aktif")
+        #expect(MemberDetailView.quietText(dad, now: now, language: .indonesian) == "Belum ada kabar dari Shoo di HP Dad.")
+        dad.lastSeenAt = now.addingTimeInterval(-3 * 86_400)
+        #expect(MemberText.status(dad, now: now, language: .indonesian) == "Ekstensi tidak aktif sejak 3 hari lalu")
+        #expect(MemberDetailView.quietText(dad, now: now, language: .indonesian) == "Belum ada kabar dari Shoo di HP Dad sejak 3 hari lalu.")
+        #expect(MemberDetailView.quietText(dad, now: now, language: .english) == "No word from Shoo on Dad's phone for 3 days.")
+        dad.extensionActive = true
+        dad.deviceModel = "iPhone15,2"
+        #expect(MemberText.status(dad, now: now, language: .indonesian) == "Ekstensi aktif · iPhone · Safari")
+    }
 }

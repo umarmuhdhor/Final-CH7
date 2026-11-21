@@ -44,8 +44,8 @@ enum InviteNotice: Equatable {
 enum HomeNotice: Equatable {
     /// Family mode on ("Mulai" on "To be guardian", ⇆, Account mode, Profile's Guardian card).
     case guardianOn
-    /// Family mode off.
-    case personalOn
+    /// Family mode off. `keepsFamily`: this guardian still protects someone, and the toast says they stay linked (F11).
+    case personalOn(keepsFamily: Bool)
     /// Someone joined with this guardian's code while the invite was on screen.
     case memberJoined(name: String)
     /// This iPhone joined a guardian's family ("Selanjutnya" after "Berhasil Terhubung").

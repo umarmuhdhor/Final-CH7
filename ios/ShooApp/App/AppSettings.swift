@@ -22,6 +22,7 @@ final class AppSettings {
         static let onboardingCompleted = "settings.onboardingCompleted"
         static let familyModeOn = "settings.familyModeOn"
         static let onboardingConnectPassed = "settings.onboardingConnectPassed"
+        static let onboardingSafariDefaultPassed = "settings.onboardingSafariDefaultPassed"
         static let dataConsent = "settings.dataConsent"
         static let inviteRegistrationPending = "settings.inviteRegistrationPending"
         /// Before the text size slider: "Teks besar" on/off. Read once to pick the slider's start.
@@ -46,7 +47,7 @@ final class AppSettings {
         static let guardianSwitchTipSeen = "settings.guardianSwitchTipSeen"
 
         static let all = [
-            language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, dataConsent,
+            language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, onboardingSafariDefaultPassed, dataConsent,
             inviteRegistrationPending, largeText,
             theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
             dismissedHomeScanIds, guardianCardDismissed, homeGuardianCardDismissed, supervisedCardDismissed, guardianIntroSeen, guardianSwitchTipSeen,
@@ -72,6 +73,12 @@ final class AppSettings {
     /// Protected passed the Connect step of onboarding (resume point after a relaunch).
     var onboardingConnectPassed: Bool {
         didSet { defaults.set(onboardingConnectPassed, forKey: Keys.onboardingConnectPassed) }
+    }
+
+    /// F6 (goldfish 21 Nov 2026): onboarding passed "Jadikan Safari Default". Nothing can read the default
+    /// browser, so a relaunch before onboarding finished resumes at the success screen only with this set.
+    var onboardingSafariDefaultPassed: Bool {
+        didSet { defaults.set(onboardingSafariDefaultPassed, forKey: Keys.onboardingSafariDefaultPassed) }
     }
 
     /// Fase 27d (K6): onboarding registered this device for an invite join that has not succeeded yet. While
@@ -174,6 +181,7 @@ final class AppSettings {
         onboardingCompleted = defaults.bool(forKey: Keys.onboardingCompleted)
         familyModeOn = defaults.bool(forKey: Keys.familyModeOn)
         onboardingConnectPassed = defaults.bool(forKey: Keys.onboardingConnectPassed)
+        onboardingSafariDefaultPassed = defaults.bool(forKey: Keys.onboardingSafariDefaultPassed)
         dataConsent = defaults.string(forKey: Keys.dataConsent).flatMap(DataConsent.init(rawValue:))
         inviteRegistrationPending = defaults.bool(forKey: Keys.inviteRegistrationPending)
         theme = defaults.string(forKey: Keys.theme).flatMap(AppTheme.init(rawValue:)) ?? .system
@@ -298,6 +306,7 @@ final class AppSettings {
         onboardingCompleted = false
         familyModeOn = false
         onboardingConnectPassed = false
+        onboardingSafariDefaultPassed = false
         dataConsent = nil
         // `clear` empties the defaults only; the value in memory goes here.
         inviteRegistrationPending = false

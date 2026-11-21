@@ -270,7 +270,7 @@ extension MainTabView {
     static var screenshotNotice: HomeNotice? {
         switch UserDefaults.standard.string(forKey: "debug.homeNotice") {
         case "guardianOn": .guardianOn
-        case "personalOn": .personalOn
+        case "personalOn": .personalOn(keepsFamily: false)
         case "memberJoined": .memberJoined(name: "Mom")
         case "connected": .connected(guardian: "Budi")
         case "disconnected": .disconnected(name: "Dad")
