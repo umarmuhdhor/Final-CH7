@@ -32,18 +32,13 @@ struct SoftPulse: View {
     }
 }
 
-/// Loading state for a whole area: a small `HalftoneShield` on the pulse of the Home hero.
-/// Screens with the big shield already in view keep the plain spinner.
+/// Loading state for a whole area: Shoo thinking (Figma "alief notif" section 7 "Memuat", fase 29g) on the pulse of
+/// the Home hero, where a small `HalftoneShield` was. Screens with the big shield already in view keep the plain spinner.
 struct ShieldPulseLoader: View {
-    private static let shieldScale: CGFloat = 0.46
-
     var body: some View {
         ZStack {
             SoftPulse(color: ActivityStyle.hex(0x1A73D9), smallest: 50, largest: 180, peak: 0.22)
-            HalftoneShield()
-                .scaleEffect(Self.shieldScale)
-                .frame(width: HalftoneShield.size.width * Self.shieldScale,
-                       height: HalftoneShield.size.height * Self.shieldScale)
+            MascotImage(pose: .think, height: 92)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Loading"))
