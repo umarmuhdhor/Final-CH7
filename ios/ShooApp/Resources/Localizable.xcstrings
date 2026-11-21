@@ -2188,7 +2188,6 @@
       }
     },
     "Disconnect from %@?" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -7908,6 +7907,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Centang kotak di bawah, lalu tekan Aktifkan Ekstensi."
+          }
+        }
+      }
+    },
+    "Yes, disconnect" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya, putuskan"
+          }
+        }
+      }
+    },
+    "Delete Shoo from this iPhone?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus Shoo dari HP ini?"
+          }
+        }
+      }
+    },
+    "Yes, delete" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya, hapus"
+          }
+        }
+      }
+    },
+    "Change the invite code?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganti kode undangan?"
+          }
+        }
+      }
+    },
+    "The old code and links stop working right away. Family who haven't joined yet need the new code." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode dan link lama langsung tidak berlaku. Keluarga yang belum bergabung perlu kode baru."
+          }
+        }
+      }
+    },
+    "Yes, change code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya, ganti kode"
+          }
+        }
+      }
+    },
+    "Shoo stays on on %@'s iPhone. You stop seeing their activity, and your Safe / Not safe marks are removed. %@ will be told." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo tetap menyala di HP %1$@. Kamu tidak lagi melihat aktivitasnya, dan tanda Aman/Bahaya darimu dihapus. %2$@ akan diberi tahu."
           }
         }
       }

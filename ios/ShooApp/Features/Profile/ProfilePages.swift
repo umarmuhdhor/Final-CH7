@@ -161,17 +161,14 @@ private struct PageNote: View {
     }
 }
 
-/// Failures of a page's action (save, switch), as an alert.
-private struct ActionErrorAlert: ViewModifier {
+/// Failures of a page's action (save, switch): the Shoo error dialog (pose Maaf, one "OK").
+private struct ActionErrorDialog: ViewModifier {
     @Bindable var model: ProfileModel
     @Environment(\.locale) private var locale
 
     func body(content: Content) -> some View {
-        content.alert(
-            Text(verbatim: model.actionError.map { L10n.string($0, language: AppLanguage(locale: locale)) } ?? ""),
-            isPresented: Binding(get: { model.actionError != nil }, set: { if !$0 { model.actionError = nil } })
-        ) {
-            Button("OK", role: .cancel) {}
+        content.shooErrorDialog(model.actionError.map { L10n.string($0, language: AppLanguage(locale: locale)) }) {
+            model.actionError = nil
         }
     }
 }
@@ -525,8 +522,8 @@ private struct ManageProfilePage: View {
             NameSheet(model: model, subtitle: nameSubtitle)
                 .environment(\.locale, locale)
         }
-        .deleteAccountSheet(model: model, isPresented: $isDeleteConfirming)
-        .modifier(ActionErrorAlert(model: model))
+        // Its action errors show in the same Shoo dialog.
+        .deleteAccountDialog(model: model, isPresented: $isDeleteConfirming)
     }
 
     /// Figma "Avatar" (104 pt: a 100 pt photo in a 2 pt white ring, card shadow) and "Badge edit avatar".
@@ -693,8 +690,8 @@ private struct ProtectedManageProfilePage: View {
         .onChange(of: model.nameError) { _, message in
             if let message { announce(message) }
         }
-        .deleteAccountSheet(model: model, isPresented: $isDeleteConfirming)
-        .modifier(ActionErrorAlert(model: model))
+        // Its action errors show in the same Shoo dialog.
+        .deleteAccountDialog(model: model, isPresented: $isDeleteConfirming)
     }
 
     private var nameMessage: Text? {
@@ -1079,7 +1076,7 @@ private struct NotificationsPage: View {
             }
             .environment(\.locale, locale)
         }
-        .modifier(ActionErrorAlert(model: model))
+        .modifier(ActionErrorDialog(model: model))
     }
 
     /// Figma: the first title sits 24 pt under the back button; the header leaves 16. Not under the
@@ -1229,7 +1226,7 @@ private struct LanguagePage: View {
             PageNote(text: Text("Warnings in Safari and notifications use this language too."))
         }
         // A save the server missed says so here, where it was chosen (Profile's own alert sits under this page).
-        .modifier(ActionErrorAlert(model: model))
+        .modifier(ActionErrorDialog(model: model))
     }
 
     /// The language's own name, read by VoiceOver in that language.

@@ -20,7 +20,8 @@ final class LaunchSplashUITests: XCTestCase {
         "-settings.language", "en",
         "-settings.familyModeOn", "YES",
         "-UITestExtensionActive", "YES",
-        "-UITestNotifications", "granted",
+        // The reminder dialog waits for the splash too.
+        "-UITestNotifications", "denied",
     ]
 
     @MainActor
@@ -36,9 +37,8 @@ final class LaunchSplashUITests: XCTestCase {
         let profile = app.buttons["profileButton"]
         XCTAssertTrue(profile.exists, app.debugDescription)
         XCTAssertFalse(profile.isHittable, app.debugDescription)
-        // GD-01's "Notifications are off" popup waits for the splash too. (The splash is modal for VoiceOver,
-        // so XCUITest lists it as an alert as well: look for the popup's button.)
-        let notNow = app.alerts.buttons["Not now"].firstMatch
+        // GD-01's "Notifications are off" dialog waits for the splash too.
+        let notNow = app.buttons["reminder.notNow"].firstMatch
         XCTAssertFalse(notNow.exists, app.debugDescription)
         XCTAssertTrue(logo(app).waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertTrue(notNow.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)

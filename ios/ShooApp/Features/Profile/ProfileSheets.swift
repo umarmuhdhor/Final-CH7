@@ -10,8 +10,6 @@ extension ProfileStyle {
     static let fieldFill = Color.dynamic(0xF3F6F8, dark: 0x2A303A, contrastLight: 0xE2E7EE, contrastDark: 0x3A414D)
     /// Sheet grabber (#D9DFE6).
     static let sheetGrabber = Color.dynamic(0xD9DFE6, dark: 0x4A515C)
-    /// "Batal" in the delete alert (#ECECF0).
-    static let alertCancelFill = Color.dynamic(0xECECF0, dark: 0x2A303A, contrastLight: 0xD6D6DD, contrastDark: 0x3A414D)
 }
 
 // MARK: Sheet parts
@@ -300,103 +298,40 @@ struct NameSheet: View {
 // MARK: Hapus akun
 
 extension View {
-    /// "Hapus akun?" alert (Profile and Kelola profil).
-    func deleteAccountSheet(model: ProfileModel, isPresented: Binding<Bool>) -> some View {
-        modifier(DeleteAccountAlert(model: model, isPresented: isPresented))
+    /// "Hapus Shoo dari HP ini?" (Profile and Kelola profil), and the page's action errors in the same dialog:
+    /// only one cover can be up, so a failed delete turns the dialog into the error.
+    func deleteAccountDialog(model: ProfileModel, isPresented: Binding<Bool>) -> some View {
+        modifier(DeleteAccountDialog(model: model, isPresented: isPresented))
     }
 }
 
-/// Figma "Alert/Hapus akun" (1115:14268): a 320 pt card over a #0A0F1F 38 % dim, "Batal" and a red "Hapus".
-private struct DeleteAccountAlert: ViewModifier {
+/// Figma "Dialog Shoo · Hapus Shoo dari HP ini?" (2428:12735), pose Nangis.
+private struct DeleteAccountDialog: ViewModifier {
     let model: ProfileModel
     @Binding var isPresented: Bool
     @Environment(\.locale) private var locale
-    @AccessibilityFocusState private var isTitleFocused: Bool
 
     func body(content: Content) -> some View {
-        content
-            // The screen under the dim is out of reach, so VoiceOver and the audit skip it too.
-            .accessibilityHidden(isPresented)
-            .overlay {
-                if isPresented {
-                    ZStack {
-                        Color(hex: 0x0A0F1F, opacity: 0.38)
-                            .ignoresSafeArea()
-                            .accessibilityHidden(true)
-                        card
-                    }
-                    .transition(.opacity)
-                }
-            }
-            .animation(.easeOut(duration: 0.2), value: isPresented)
-    }
-
-    private var card: some View {
         let language = AppLanguage(locale: locale)
-        return VStack(spacing: 18) {
-            VStack(spacing: 8) {
-                Text("Delete account?")
-                    .profileFont(17, .semibold)
-                    .figmaLineHeight(22, relativeTo: .body)
-                    .foregroundStyle(ProfileStyle.ink)
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityFocused($isTitleFocused)
-                Text(verbatim: model.deleteMessage(language: language))
-                    .profileValue()
-                    .foregroundStyle(ProfileStyle.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .multilineTextAlignment(.center)
-            HStack(spacing: 10) {
-                Button { isPresented = false } label: {
-                    Text("Cancel").alertButton(fill: ProfileStyle.alertCancelFill, ink: ProfileStyle.ink)
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isWorking)
-                .accessibilityIdentifier("profile.confirm.cancel")
-                Button {
+        let error = model.actionError.map { L10n.string($0, language: language) }
+        return content.shooDialog(isPresented: Binding(
+            get: { isPresented || error != nil },
+            set: { if !$0 { isPresented = false; model.actionError = nil } }
+        )) {
+            if let error { return ShooDialog.error(error) }
+            return ShooDialog(
+                pose: .cry,
+                title: Text("Delete Shoo from this iPhone?"),
+                // Says what goes, and who is disconnected (#494).
+                message: Text(verbatim: model.deleteMessage(language: language)),
+                tone: .danger,
+                primary: .init(title: Text("Yes, delete"), identifier: "profile.delete.confirm", closes: false) {
                     Task { if await model.deleteMyData() { isPresented = false } }
-                } label: {
-                    Group {
-                        if model.isWorking {
-                            ProgressView().tint(.white).transition(.opacity)
-                        } else {
-                            Text("Delete").transition(.opacity)
-                        }
-                    }
-                    .animation(.easeInOut(duration: 0.2), value: model.isWorking)
-                    .alertButton(fill: ProfileStyle.red, ink: .white)
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isWorking)
-                .accessibilityIdentifier("profile.delete.confirm")
-            }
+                },
+                secondary: .init(title: Text("Cancel"), identifier: "profile.confirm.cancel"),
+                isWorking: model.isWorking,
+                identifier: "profile.deleteAlert"
+            )
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 26)
-        .padding(.bottom, 18)
-        .frame(maxWidth: 320)
-        .background(ProfileStyle.card.opacity(0.96), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
-        // Figma: black 18 %, y 12, blur 40.
-        .shadow(color: .black.opacity(0.18), radius: 20, y: 12)
-        .padding(.horizontal, 24)
-        .accessibilityElement(children: .contain)
-        .accessibilityAddTraits(.isModal)
-        .accessibilityAction(.escape) { if !model.isWorking { isPresented = false } }
-        .accessibilityIdentifier("profile.deleteAlert")
-        .onAppear { isTitleFocused = true }
-    }
-}
-
-private extension View {
-    /// Figma "Tombol/Batal", "Tombol/Hapus": 50 pt, r 24, SF Pro Display Semibold 17.
-    func alertButton(fill: Color, ink: Color) -> some View {
-        profileFont(17, .semibold)
-            .figmaLineHeight(22, relativeTo: .body)
-            .foregroundStyle(ink)
-            .padding(.vertical, 14)
-            .frame(maxWidth: .infinity, minHeight: 50)
-            .background(fill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .contentShape(Rectangle())
     }
 }

@@ -127,10 +127,10 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
         app.buttons["extensionOn.continue"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 5))
-        let reminder = app.alerts["Notifications are off"]
+        let reminder = app.buttons["reminder.notNow"]
         XCTAssertTrue(reminder.waitForExistence(timeout: 5), app.debugDescription)
-        reminder.buttons["Not now"].firstMatch.tap()
-        XCTAssertFalse(reminder.waitForExistence(timeout: 2))
+        reminder.tap()
+        XCTAssertTrue(reminder.waitForNonExistence(timeout: 2))
         // Pribadi Home that has never been Guardian: no ⇆, the "Jadi Penjaga" card instead (Figma 1382:10567).
         XCTAssertTrue(app.descendants(matching: .any)["home.guardianCard"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertFalse(app.descendants(matching: .any)["familyModeToggle"].exists)

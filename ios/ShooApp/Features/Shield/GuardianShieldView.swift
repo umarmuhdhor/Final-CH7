@@ -28,18 +28,19 @@ struct GuardianShieldView: View {
         }
         // Push alerts are how the guardian hears about the family: remind while they are off (D-alief-A08).
         // A popup once per launch, so it never takes room on Home (QA-A P2-7).
-        .alert(Text("Notifications are off"), isPresented: $isReminderPresented) {
-            Button("Turn on") { turnOnNotifications() }
-                .accessibilityIdentifier("reminder.turnOn")
-            Button("Not now", role: .cancel) {}
-                .accessibilityIdentifier("reminder.notNow")
-        } message: {
-            // Pribadi (Family mode off) protects nobody: its pushes are about its own blocked sites.
-            if env.settings.familyModeOn {
-                Text("You won't hear when your family is at risk.")
-            } else {
-                Text("You won't hear when Shoo blocks a dangerous site.")
-            }
+        // Figma "Dialog Shoo · Notifikasi mati" (2439:12861), pose Tidur.
+        .shooDialog(isPresented: $isReminderPresented) {
+            ShooDialog(
+                pose: .sleep,
+                title: Text("Notifications are off"),
+                // Pribadi (Family mode off) protects nobody: its pushes are about its own blocked sites.
+                message: env.settings.familyModeOn
+                    ? Text("You won't hear when your family is at risk.")
+                    : Text("You won't hear when Shoo blocks a dangerous site."),
+                primary: .init(title: Text("Turn on"), identifier: "reminder.turnOn") { turnOnNotifications() },
+                secondary: .init(title: Text("Not now"), identifier: "reminder.notNow"),
+                identifier: "reminder.dialog"
+            )
         }
         .onChange(of: isReminderPresented) { _, isPresented in
             if isPresented { env.router.notificationReminderShown = true }
