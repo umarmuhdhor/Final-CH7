@@ -51,7 +51,12 @@ describe("GET /j/:code", () => {
     expect([...html.matchAll(/class="digit">(\d)</g)].map((m) => m[1]).join("")).toBe("482193");
     expect(html).toContain('lang="en"');
     expect(html).toContain("Open in the Shoo app");
-    expect(html).toContain('src="/og/join-hero.png"');
+    expect(html).toContain('<div class="sky" aria-hidden="true">');
+    expect(html).toContain('<img class="mascot" src="/og/mascot-wave.webp" width="148" height="180" alt="">');
+    // The button sits at the bottom of the screen: main fills the viewport, the actions take the free space above.
+    expect(html).toContain("body{margin:0;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;");
+    expect(html).toContain("main{position:relative;flex:1;");
+    expect(html).toContain(".actions{width:100%;margin-top:auto;padding-top:24px;");
   });
 
   it("Install copies the invite link, then goes to the store; the only script carries the header's nonce", async () => {
@@ -165,7 +170,8 @@ describe("GET /j/:code", () => {
     expect(html.match(/<script/g)).toHaveLength(1);
     expect(html).toContain(`<script nonce="${nonceOf(res)}">`);
     expect(html).toContain("no valid code");
-    expect(html).not.toContain('class="hero"');
+    expect(html).toContain('src="/og/mascot-sorry.webp"');
+    expect(html).not.toContain("mascot-wave");
   });
 
   const strip = (html: string) => html.replace(/nonce="[^"]+"/g, "");
@@ -181,11 +187,12 @@ describe("GET /j/:code", () => {
     expect(strip(html)).toBe(strip((await page("/j/12ab")).html));
   });
 
-  it("Indonesian invalid page matches Figma 1619:7334: badge, copy, a real Minta kode baru button, Unduh", async () => {
+  it("Indonesian invalid page (Figma 1619:7334, app look): orange sky, Shoo saying sorry, copy, a real Minta kode baru button, Unduh", async () => {
     const { html } = await page("/j/000000", "id-ID,id;q=0.9");
     expect(html).toContain('<main class="enter invalid">');
-    expect(html).toContain('<div class="badge" aria-hidden="true"><span>!</span></div>');
-    expect(html).toContain("<h1>Bergabung ke keluarga di Shoo</h1>");
+    expect(html).toContain('<div class="sky warn" aria-hidden="true">');
+    expect(html).toContain('<img class="mascot" src="/og/mascot-sorry.webp" width="134" height="180" alt="">');
+    expect(html).toContain("<h1>Kode undangan tidak berlaku</h1>");
     expect(html).toContain("Link undangan ini tidak berisi kode yang valid.<");
     expect(html).toMatch(/<button id="request" class="btn" type="button" data-msg="[^"]+" data-label="Minta kode baru" data-done="Pesan tersalin">Minta kode baru<\/button>/);
     expect(html).toContain('Belum punya Shoo?<a href="https://apps.apple.com/">Unduh</a>');
@@ -234,13 +241,14 @@ describe("GET /j/:code", () => {
     expect(await sql`select 1 from join_attempts`).toHaveLength(0);
   });
 
-  it("motion: entrance, badge attention and press feedback, all off under prefers-reduced-motion", async () => {
+  it("motion: entrance, mascot pop and bob, press feedback, all off under prefers-reduced-motion", async () => {
     const { html } = await page("/j/000000");
     expect(html).toContain("@keyframes rise{from{opacity:0;transform:translateY(8px)}");
     expect(html).toContain(".enter>*{animation:rise .3s");
     expect(html).toContain(".btn:active{transform:scale(.97)");
     const reduced = /@media \(prefers-reduced-motion:reduce\)\{([^@]*)\}/.exec(html)![1]!;
-    for (const sel of [".enter>*", ".badge", ".badge::after", ".badge span", ".hero i"]) expect(reduced).toContain(sel);
+    expect(html).toContain("@keyframes bob{");
+    for (const sel of [".enter>*", ".mascot"]) expect(reduced).toContain(sel);
     expect(reduced).toContain(".btn:active,.copy:active{transform:none}");
     // Same specificity: the reduced-motion block must come after the press rule to win.
     expect(html.indexOf("@media (prefers-reduced-motion:reduce)")).toBeGreaterThan(html.indexOf(".btn:active{transform:scale(.97)"));
@@ -279,15 +287,20 @@ describe("GET /og/invite.jpg", () => {
   });
 });
 
-describe("GET /og/join-hero.png", () => {
-  it("serves the page hero as a cacheable PNG (no user data)", async () => {
-    const res = await call("/og/join-hero.png");
+describe("GET /og/mascot-*.webp", () => {
+  it.each(["/og/mascot-wave.webp", "/og/mascot-sorry.webp"])("serves %s as a cacheable WebP (no user data)", async (path) => {
+    const res = await call(path);
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(res.headers.get("content-type")).toBe("image/webp");
     expect(res.headers.get("cache-control")).toBe("public, max-age=86400");
     const bytes = new Uint8Array(await res.arrayBuffer());
-    expect([...bytes.slice(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
-    expect(bytes.length).toBeLessThan(100 * 1024);
+    expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe("RIFF");
+    expect(new TextDecoder().decode(bytes.slice(8, 12))).toBe("WEBP");
+    expect(bytes.length).toBeLessThan(50 * 1024);
+  });
+
+  it("the old page hero is gone", async () => {
+    expect((await call("/og/join-hero.png")).status).toBe(404);
   });
 });
 
