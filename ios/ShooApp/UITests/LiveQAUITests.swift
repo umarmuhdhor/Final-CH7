@@ -61,6 +61,7 @@ final class LiveQAUITests: XCTestCase {
         field.tap()
         field.typeText(code)
         app.buttons["connect.join"].tap()
+        app.confirmJoin()
         XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["protectedBy.continue"].tapWhenHittable()
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 15), app.debugDescription)
@@ -93,7 +94,7 @@ final class LiveQAUITests: XCTestCase {
     private func finishOnboarding(_ app: XCUIApplication) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let steps = [
-            "extension.continue", "extension.skipCheck", "safariDefault.continue", "extensionOn.continue", "reminder.notNow",
+            "extension.continue", "extension.skipCheck", "safariDefault.continue", "extensionOn.continue", "notificationAsk.allow", "reminder.notNow",
         ]
         let opensSettings = ["extension.turnOn", "safariDefault.open"]
         let end = Date().addingTimeInterval(90)

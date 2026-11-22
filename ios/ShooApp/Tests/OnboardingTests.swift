@@ -429,6 +429,61 @@ struct OnboardingModelTests {
         #expect(settings.onboardingCompleted)
     }
 
+    /// F6: Next shows Shoo's dialog before the one-time iOS prompt.
+    @Test func nextShowsTheNotificationDialogFirst() async {
+        let model = await registeredPersonal()
+        await reachSuccess(model)
+        await model.continueFromSuccess()
+        #expect(model.asksNotifications)
+        #expect(notifications.requestCount == 0)
+        #expect(model.step == .extensionOn)
+        #expect(!settings.onboardingCompleted)
+        // A second tap while it is up changes nothing.
+        await model.continueFromSuccess()
+        #expect(notifications.requestCount == 0)
+    }
+
+    @Test func turnOnInTheDialogAsksThenFinishes() async {
+        let model = await registeredPersonal()
+        await reachSuccess(model)
+        await model.continueFromSuccess()
+        await model.requestNotifications()
+        #expect(notifications.requestCount == 1)
+        #expect(!model.asksNotifications)
+        #expect(model.step == .done)
+        #expect(settings.onboardingCompleted)
+    }
+
+    @Test func notNowFinishesWithoutAsking() async {
+        let model = await registeredPersonal()
+        await reachSuccess(model)
+        await model.continueFromSuccess()
+        model.skipNotifications()
+        #expect(notifications.requestCount == 0)
+        #expect(!model.asksNotifications)
+        #expect(model.step == .done)
+        #expect(settings.onboardingCompleted)
+        #expect(await notifications.status() == .notDetermined)
+    }
+
+    @Test func decidedPermissionSkipsTheDialog() async {
+        notifications.current = .denied
+        let model = await registeredPersonal()
+        await reachSuccess(model)
+        await model.continueFromSuccess()
+        #expect(!model.asksNotifications)
+        #expect(notifications.requestCount == 0)
+        #expect(model.step == .done)
+    }
+
+    @Test func notNowOnlyWorksOnTheSuccessScreen() async {
+        let model = await registeredPersonal()
+        model.skipNotifications()
+        #expect(!settings.onboardingCompleted)
+        await model.continueFromSuccess()
+        #expect(!model.asksNotifications)
+    }
+
     @Test func familyModeShowsTheGuardianIntroOnce() async {
         _ = await registeredPersonal()
         env.requestFamilyMode()

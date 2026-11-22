@@ -241,7 +241,7 @@ private struct ModePage: View {
                     }
                 } label: {
                     ProfileRow(
-                        symbol: ProfileStyle.extensionSymbol, title: Text("Have an invite code?"),
+                        symbol: ProfileStyle.inviteCodeSymbol, title: Text("Have an invite code?"),
                         subtitle: Text("Connect your account to a family guardian")
                     )
                 }
@@ -397,7 +397,7 @@ struct JoinAnotherFamilySheet: View {
                     } else {
                         env.router.reset()
                     }
-                })
+                }, joinDeletesHistory: true)
             } else {
                 // An empty Group never appears, so `onAppear` below would never run.
                 Color(.systemBackground)
@@ -851,13 +851,21 @@ private struct ConnectionPage: View {
                     .accessibilityIdentifier("linked.shareWarnings")
             } else {
                 // Today the extension sends every check to the guardian, so both read on and can't change.
-                ProfileToggleRow(symbol: "paperplane.fill", title: Text("Send links automatically"), subtitle: Text("Coming soon"), isOn: .constant(true))
-                    .disabled(true)
-                    .accessibilityIdentifier("linked.autoSend")
+                // V1 (goldfish 21 Nov): grey, not the green of a switch the user can change. They stay on because today every
+                // check does go to the guardian (#183): an "off" switch would say less is shared than really is.
+                ProfileToggleRow(
+                    symbol: "paperplane.fill", title: Text("Send links automatically"), subtitle: Text("Coming soon"),
+                    tint: ProfileStyle.secondary, isOn: .constant(true)
+                )
+                .disabled(true)
+                .accessibilityIdentifier("linked.autoSend")
                 ProfileDivider()
-                ProfileToggleRow(symbol: "clock", title: Text("Share caution history"), subtitle: Text("Coming soon"), isOn: .constant(true))
-                    .disabled(true)
-                    .accessibilityIdentifier("linked.shareWarnings")
+                ProfileToggleRow(
+                    symbol: "clock", title: Text("Share caution history"), subtitle: Text("Coming soon"),
+                    tint: ProfileStyle.secondary, isOn: .constant(true)
+                )
+                .disabled(true)
+                .accessibilityIdentifier("linked.shareWarnings")
             }
         }
         .padding(.horizontal, ProfileStyle.margin)

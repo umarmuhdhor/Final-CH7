@@ -61,6 +61,20 @@ final class PairingUITests: XCTestCase {
         if open.waitForExistence(timeout: 3) { open.tap() }
     }
 
+    /// 29g (Figma "alief notif" section 8): Copy on the invite sheet shows Shoo's small "Copied" toast.
+    @MainActor
+    func testCopyOnTheInviteSheetShowsTheCopiedToast() {
+        let app = launch(mode: "guardian")
+        app.buttons["profileButton"].tapWhenHittable()
+        app.buttons["profile.invite"].tapWhenHittable()
+        XCTAssertTrue(app.descendants(matching: .any)["invite.code"].firstMatch.waitForExistence(timeout: UITestTimeout.screen))
+        app.buttons["invite.copy"].tapWhenHittable()
+        let toast = app.descendants(matching: .any)["miniToast"].firstMatch
+        XCTAssertTrue(toast.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertTrue(toast.label.contains("Copied"), toast.label)
+        XCTAssertTrue(toast.waitForNonExistence(timeout: 5), "Leaves by itself")
+    }
+
     /// PR-03: a new install opened from an invite link onboards as Pribadi like everyone else (no Connect step,
     /// no consent screen first). Once onboarding is done the join sheet has the code; nothing joins until the tap.
     /// `empty`: the new Pribadi protects nobody, so the mock lets the join through.
@@ -74,7 +88,7 @@ final class PairingUITests: XCTestCase {
         XCTAssertFalse(app.buttons["consent.allow"].exists, "Consent screen before ON-04")
         app.passTurnOnExtension()
         app.passSafariDefault()
-        app.buttons["extensionOn.continue"].tapWhenHittable()
+        app.finishOnboarding()
 
         let field = app.textFields["connect.code"]
         XCTAssertTrue(field.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
@@ -89,6 +103,7 @@ final class PairingUITests: XCTestCase {
         let join = app.buttons["connect.join"]
         enter("111111", in: app)
         tapWhenSettled(join)
+        app.confirmJoin()
         let error = app.staticTexts["connect.error"]
         XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertTrue(error.label.contains("doesn't match"), error.label)
@@ -96,6 +111,7 @@ final class PairingUITests: XCTestCase {
         enter("999999", in: app)
         XCTAssertFalse(error.exists, "Editing the code clears the error")
         tapWhenSettled(join)
+        app.confirmJoin()
         XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen))
         XCTAssertTrue(error.label.contains("expired"), error.label)
         // 29g: the card says it in a headline, and "Retype code" empties the boxes.
@@ -107,6 +123,7 @@ final class PairingUITests: XCTestCase {
 
         enter("482193", in: app)
         tapWhenSettled(join)
+        app.confirmJoin()
         let title = app.staticTexts["protectedBy.title"]
         XCTAssertTrue(title.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertTrue(title.label.contains("Budi"), title.label)
@@ -127,7 +144,7 @@ final class PairingUITests: XCTestCase {
         XCTAssertFalse(app.buttons["consent.allow"].exists, app.debugDescription)
         app.passTurnOnExtension()
         app.passSafariDefault()
-        app.buttons["extensionOn.continue"].tapWhenHittable()
+        app.finishOnboarding()
 
         let field = app.textFields["connect.code"]
         XCTAssertTrue(field.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
@@ -216,6 +233,7 @@ final class PairingUITests: XCTestCase {
 
         let join = app.buttons["connect.join"]
         tapWhenSettled(join)
+        app.confirmJoin()
         let error = app.staticTexts["connect.error"]
         XCTAssertTrue(error.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(error.label.contains("Terlalu banyak percobaan"), error.label)

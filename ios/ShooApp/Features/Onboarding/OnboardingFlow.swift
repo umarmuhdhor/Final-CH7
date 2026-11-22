@@ -54,7 +54,14 @@ private struct OnboardingStepView: View {
             case .name: NameView(model: model)
             case .turnOnExtension: OnboardingExtensionStep(model: model)
             case .safariDefault: SafariDefaultView(onBack: model.goBack, onContinue: model.continueFromSafariDefault)
-            case .extensionOn: ExtensionOnView { Task { await model.requestNotifications() } }
+            case .extensionOn:
+                ExtensionOnView { Task { await model.continueFromSuccess() } }
+                    .shooDialog(isPresented: Binding(
+                        get: { model.asksNotifications },
+                        set: { model.asksNotifications = $0 }
+                    )) {
+                        NotificationAskDialog.make(model: model)
+                    }
             case .done: Color(.systemBackground)
             }
         }
@@ -94,6 +101,26 @@ private struct OnboardingExtensionStep: View {
                 limited: model.registrationLimited,
                 prepare: model.activateExtension
             )
+        )
+    }
+}
+
+/// F6 (goldfish 21 Nov 2026, Figma pose Nunjuk): says why before the one-time iOS prompt, so a "Don't Allow"
+/// tapped in surprise doesn't lose the warnings for good.
+@MainActor
+enum NotificationAskDialog {
+    static func make(model: OnboardingModel) -> ShooDialog {
+        ShooDialog(
+            pose: .point,
+            title: Text("Turn on notifications?"),
+            message: Text("So Shoo can tell you when a dangerous site is blocked or your Guardian reminds you."),
+            primary: .init(title: Text("Turn on"), identifier: "notificationAsk.allow") {
+                Task { await model.requestNotifications() }
+            },
+            secondary: .init(title: Text("Not now"), identifier: "notificationAsk.notNow") {
+                model.skipNotifications()
+            },
+            identifier: "notificationAsk"
         )
     }
 }

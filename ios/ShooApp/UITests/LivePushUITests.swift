@@ -135,6 +135,7 @@ final class LivePushUITests: XCTestCase {
         XCTAssertTrue(reason.waitForExistence(timeout: 10), app.debugDescription)
         reason.tap()
         app.buttons["safeReason.submit"].tap()
+        app.confirmMarkSafe()
         XCTAssertTrue(app.descendants(matching: .any)["detail.verdictNote"].waitForExistence(timeout: 10), app.debugDescription)
         try write("safe-\(name)", Self.millis())
         try shot("push-\(name)-3-safe")

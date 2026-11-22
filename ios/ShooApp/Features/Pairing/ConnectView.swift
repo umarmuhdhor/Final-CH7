@@ -11,6 +11,9 @@ struct ConnectView: View {
     var onSkip: (() -> Void)?
     /// After PR-02.
     let onFinish: () -> Void
+    /// A Pribadi / Guardian device joining from Profile becomes a new device: its history goes (B14). The join
+    /// dialog says so.
+    var joinDeletesHistory = false
 
     enum Tab: Hashable {
         case scan
@@ -26,6 +29,10 @@ struct ConnectView: View {
     @State private var problemsShown = 0
     /// Bumped by "Ketik ulang kode": the code field takes focus again.
     @State private var focusRequests = 0
+    /// F2 (goldfish 21 Nov): "Gabung dengan keluarga ini?" before the join, for a typed code and a scanned QR alike
+    /// (a QR only fills the code; Connect still joins, T11). The disclosure under the field hides while typing,
+    /// so a valid code joined without it.
+    @State private var isConfirmingJoin = false
 
     var body: some View {
         Group {
@@ -48,6 +55,10 @@ struct ConnectView: View {
     }
 
     private static let codeFieldID = "connect.codeField"
+    /// Goldfish V6: the boxes alone, a little short at the bottom. With only the keyboard up, the boxes need to sit
+    /// above the button, not above its fade: scrolling them clear of the fade too moved the page about 17 pt on a
+    /// 402 × 874 iPhone, and the title slid under the top edge on first open.
+    private static let codeBoxesID = "connect.codeBoxes"
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
@@ -56,7 +67,7 @@ struct ConnectView: View {
             title: "Connect your account",
             message: "Scan the QR or enter the invite code from your Guardian.",
             onBack: onBack.map { back in { if !model.isBusy { back() } } },
-            scrollTarget: codeFocused || model.problem != nil ? Self.codeFieldID : nil
+            scrollTarget: model.problem != nil ? Self.codeFieldID : codeFocused ? Self.codeBoxesID : nil
         ) {
             VStack(spacing: 0) {
                 // Figma: tabs at y 242, label at y 332.
@@ -107,6 +118,8 @@ struct ConnectView: View {
                                 onFocusChange: { codeFocused = $0 }
                             )
                             .modifier(ShakeOnProblem(trigger: problemsShown, isEnabled: !reduceMotion))
+                            // 16 of the footer's 24 pt fade: the boxes end 8 pt above the button.
+                            .background { Color.clear.id(Self.codeBoxesID).padding(.bottom, 16) }
                             problemLabel
                         }
                         // Fades in; editing the code clears it at once (no fade-out to wait for).
@@ -140,7 +153,7 @@ struct ConnectView: View {
                     // QA 1110 #8: the answer shows on the whole page, not squeezed above the keyboard where
                     // a two-line error ran under the button and the headline was pushed off the top.
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    Task { await model.join() }
+                    if model.canJoin { isConfirmingJoin = true }
                 } label: {
                     ZStack {
                         Text("Connect").opacity(model.state == .joining ? 0 : 1)
@@ -173,6 +186,23 @@ struct ConnectView: View {
             guard let problem else { return }
             problemsShown += 1
             AccessibilityNotification.Announcement(L10n.string(problem.message, language: language)).post()
+        }
+        // Figma "Dialog Shoo", pose Melambai. No name yet: no endpoint tells who owns a code before the join.
+        .shooDialog(isPresented: $isConfirmingJoin) {
+            ShooDialog(
+                pose: .wave,
+                title: Text("Join this family?"),
+                message: joinDeletesHistory
+                    ? Text("Your Guardian will see the sites Shoo blocks or warns you about on this phone (copies are kept 14 days). Only your Guardian can disconnect you.")
+                        + Text(verbatim: " ") + Text("Your history on this phone will be deleted.")
+                    : Text("Your Guardian will see the sites Shoo blocks or warns you about on this phone (copies are kept 14 days). Only your Guardian can disconnect you."),
+                primary: .init(title: Text("Yes, join"), identifier: "connect.join.confirm") {
+                    Task { await model.join() }
+                },
+                // Figma: a red way out, in case the code came from someone who isn't family.
+                secondary: .init(title: Text("Not my family"), identifier: "connect.join.cancel", warns: true),
+                identifier: "connect.joinDialog"
+            )
         }
     }
 
