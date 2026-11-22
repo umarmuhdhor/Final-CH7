@@ -84,6 +84,13 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Without the online check"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["dataSent.done"].tap()
         XCTAssertTrue(app.staticTexts["Without the online check"].waitForNonExistence(timeout: 5))
+        // 29g peek sheet: a drag down closes it too.
+        app.buttons["extension.dataSent"].tapWhenHittable()
+        let title = app.staticTexts["What is sent"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5), app.debugDescription)
+        let start = title.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 450)))
+        XCTAssertTrue(title.waitForNonExistence(timeout: 5), app.debugDescription)
         app.buttons["extension.consent"].tap()
         XCTAssertTrue(hint.waitForNonExistence(timeout: 5), app.debugDescription)
         // Nothing saved yet: Back still reaches the name.

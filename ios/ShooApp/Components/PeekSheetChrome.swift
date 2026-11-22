@@ -11,12 +11,14 @@ import SwiftUI
 extension View {
     /// Like `.sheet(isPresented:onDismiss:content:)`, with Shoo peeking over the card. Inside, close with
     /// `@Environment(\.closePeekSheet)` (not `dismiss`, which would skip the slide down).
+    /// `background`: the card's colour (white by default; a dynamic colour follows dark mode).
     func peekSheet<Sheet: View>(
         isPresented: Binding<Bool>,
+        background: Color = .white,
         onDismiss: (() -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Sheet
     ) -> some View {
-        modifier(PeekSheetPresenter(isPresented: isPresented, onDismiss: onDismiss, sheet: content))
+        modifier(PeekSheetPresenter(isPresented: isPresented, background: background, onDismiss: onDismiss, sheet: content))
     }
 }
 
@@ -41,6 +43,7 @@ private struct PeekSheetDismissDisabledKey: PreferenceKey {
 
 private struct PeekSheetPresenter<Sheet: View>: ViewModifier {
     @Binding var isPresented: Bool
+    let background: Color
     let onDismiss: (() -> Void)?
     @ViewBuilder let sheet: () -> Sheet
     @State private var coverShown = false
@@ -55,7 +58,7 @@ private struct PeekSheetPresenter<Sheet: View>: ViewModifier {
                 if isPresented { isPresented = false }
                 onDismiss?()
             }) {
-                PeekSheetHost(isPresented: $isPresented, removeCover: { show(false) }, content: sheet)
+                PeekSheetHost(isPresented: $isPresented, background: background, removeCover: { show(false) }, content: sheet)
                     .presentationBackground(.clear)
                     // As ShooDialog does: the app's language and motion setting reach into the cover.
                     .environment(\.locale, locale)
@@ -74,6 +77,7 @@ private struct PeekSheetPresenter<Sheet: View>: ViewModifier {
 
 private struct PeekSheetHost<Content: View>: View {
     @Binding var isPresented: Bool
+    let background: Color
     let removeCover: () -> Void
     @ViewBuilder let content: () -> Content
     @Environment(\.shooReduceMotion) private var reduceMotion
@@ -96,7 +100,7 @@ private struct PeekSheetHost<Content: View>: View {
                 .onTapGesture { close() }
                 .accessibilityHidden(true)
             if shown {
-                PeekSheetChrome(content: content)
+                PeekSheetChrome(background: background, content: content)
                     .offset(y: drag)
                     .gesture(dragToClose)
                     .transition(reduceMotion ? .opacity : .move(edge: .bottom))
