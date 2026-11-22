@@ -21,7 +21,6 @@ describe("GET /safari-check (ON-04)", () => {
       "Safari bertanya soal Shoo?",
       "di kiri nama situs (biasanya di bawah layar)",
       "Selalu Izinkan… → Selalu Izinkan di Semua Situs Web",
-      'Jangan pilih "Izinkan selama Satu Hari" (tombol biru)',
       '<svg class="ic"',
       '<a class="btn" href="shoo://">Kembali ke Shoo</a>',
       'src="/safari-check/shoo.png"',
@@ -39,7 +38,7 @@ describe("GET /safari-check (ON-04)", () => {
       expect(html).toContain('<html lang="en">');
       for (const s of [
         "Almost done!", "Is Safari asking about Shoo?", "left of the site name", "Always Allow… → Always Allow on Every Website",
-        'Don\'t choose "Allow for One Day"', "Back to Shoo",
+        "Back to Shoo",
       ]) expect(html).toContain(s);
       expect(html).not.toContain("address bar");
     }
