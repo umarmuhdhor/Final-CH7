@@ -530,7 +530,6 @@ struct ExtensionReadyView: View {
             onContinue: onContinue,
             largeTitle: false,
             celebrates: true,
-            progress: OnboardingProgress(done: 1, count: 2),
             buttonTitle: "Continue"
         ) {
             // Figma: the owl about 300 pt tall from y 90, the headline under it.

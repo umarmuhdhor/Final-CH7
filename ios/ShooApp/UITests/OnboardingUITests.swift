@@ -362,7 +362,7 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5))
     }
 
-    /// Transition B (Figma 2502:5418): ON-04's Next shows "Shoo extension is on!" with step 1 of 2 done, then
+    /// Transition B (Figma 2502:5418): ON-04's Next shows "Shoo extension is on!" (no progress dots), then
     /// Safari Default with "Step 2 of 2". Back from there goes to ON-04, not to the celebration screen.
     @MainActor
     func testExtensionReadyCelebratesBeforeSafariDefault() {
@@ -375,9 +375,7 @@ final class OnboardingUITests: XCTestCase {
         let title = app.staticTexts["extensionReady.title"]
         XCTAssertTrue(title.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertEqual(title.label, "Shoo extension is on!")
-        let dots = app.descendants(matching: .any)["onboarding.progressDots"].firstMatch
-        XCTAssertTrue(dots.exists, app.debugDescription)
-        XCTAssertEqual(dots.label, "Step 1 of 2 done")
+        XCTAssertFalse(app.descendants(matching: .any)["onboarding.progressDots"].exists)
         XCTAssertFalse(app.buttons["onboarding.back"].exists)
         XCTAssertFalse(app.buttons["extensionOn.video"].exists)
         app.passExtensionReady()
