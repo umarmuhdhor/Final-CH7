@@ -341,7 +341,9 @@ struct DetailView: View {
             .padding(.horizontal, 16)
             scoreRow(scan, look: look)
             // Figma 1619:6617: "Ringkasan" 24 pt under the score row, 354 pt wide at x 24.
-            if let text = DetailSummaryCard.text(scan, language: language) {
+            if let text = DetailSummaryCard.text(
+                scan, owner: ownerName(scan), viewerDeviceId: model.viewer?.deviceId, language: language
+            ) {
                 DetailSummaryCard(text: text, look: look)
                     .padding(.top, 2)
                     .padding(.horizontal, 24)

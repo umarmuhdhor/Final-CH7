@@ -15,9 +15,8 @@ struct InviteSheet: View {
     @State private var model: FamilyCodeModel
     /// Text for the system share sheet ("More", or WhatsApp / Messages when they can't open).
     @State private var shareText: ShareText?
-    /// Bumped by each copy: "Link undangan tersalin" shows for a moment in place of "Refresh code".
+    /// Bumped by each copy: Shoo's "Tersalin" toast shows for a moment (fase 29g, Figma "alief notif" section 8).
     @State private var copies = 0
-    @State private var showsCopiedNote = false
     /// "Refresh code" asks first: a new code also stops every invite link already sent (EGM audit B8).
     @State private var confirmsRefresh = false
 
@@ -84,13 +83,7 @@ struct InviteSheet: View {
             .onChange(of: model.joined) { _, member in
                 if let member { onJoined?(member) }
             }
-            .task(id: copies) {
-                guard copies > 0 else { return }
-                withAnimation(StateMotion.enter(reduceMotion: reduceMotion)) { showsCopiedNote = true }
-                try? await Task.sleep(for: .seconds(2))
-                guard !Task.isCancelled else { return }
-                withAnimation(.easeOut(duration: 0.25)) { showsCopiedNote = false }
-            }
+            .shooMiniToast(.copied, trigger: copies)
             .sensoryFeedback(.success, trigger: copies) { _, new in new > 0 }
             .sheet(item: $shareText) { item in
                 InviteActivityView(text: item.text)
@@ -150,26 +143,7 @@ struct InviteSheet: View {
                 .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .accessibilityLabel(Text("Code \(code.code.map(String.init).joined(separator: " "))"))
                 .accessibilityIdentifier("invite.code")
-            ZStack {
-                if showsCopiedNote {
-                    // Figma "Link tersalin" (1681:6222): a check and the line where "Refresh code" was.
-                    Label {
-                        Text("Invite link copied")
-                    } icon: {
-                        Image(systemName: "checkmark")
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color(hex: 0x34C759))
-                    }
-                    .onboardingFont(15, weight: .medium, family: .display, relativeTo: .subheadline)
-                    .foregroundStyle(Color(hex: 0x191D2F))
-                    .frame(minHeight: 44)
-                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.92)))
-                    .accessibilityIdentifier("invite.copiedNote")
-                } else {
-                    refreshAndCountdown
-                        .transition(.opacity)
-                }
-            }
+            refreshAndCountdown
         case .unavailable:
             // Figma "Gagal mengambil kode" (1681:5974); "Try again" is the footer button.
             StateMessage(

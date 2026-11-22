@@ -44,6 +44,8 @@ private struct PeekSheetPresenter<Sheet: View>: ViewModifier {
     let onDismiss: (() -> Void)?
     @ViewBuilder let sheet: () -> Sheet
     @State private var coverShown = false
+    @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
@@ -55,6 +57,9 @@ private struct PeekSheetPresenter<Sheet: View>: ViewModifier {
             }) {
                 PeekSheetHost(isPresented: $isPresented, removeCover: { show(false) }, content: sheet)
                     .presentationBackground(.clear)
+                    // As ShooDialog does: the app's language and motion setting reach into the cover.
+                    .environment(\.locale, locale)
+                    .environment(\.shooReduceMotion, reduceMotion)
             }
     }
 

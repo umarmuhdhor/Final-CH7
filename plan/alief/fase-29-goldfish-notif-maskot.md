@@ -50,15 +50,16 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
 
 ## 29c · Konfirmasi tandai aman dan gabung keluarga
 
-- [ ] **F1 + C1** (blocker), tandai aman:
+- [x] (PR #666) **F1 + C1** (blocker), tandai aman:
   - dialog "Yakin tandai aman?" (Mikir);
   - di sheet: "Berlaku untuk semua HP keluargamu. Tidak bisa diubah sampai {tanggal}";
   - ringkasan setelah ditandai aman ditulis sebagai orang ketiga di scan milik orang lain.
-- [ ] **F2** (blocker): dialog "Gabung dengan keluarga {nama}?" (Melambai) sebelum terhubung.
+- [x] (PR #666) **F2** (blocker): dialog "Gabung dengan keluarga {nama}?" (Melambai) sebelum terhubung.
+  - Untuk sekarang tanpa nama: "Gabung dengan keluarga ini?" (keputusan Alief). Nama menunggu endpoint dari Lead (#662).
   - Muncul setelah kode benar dan juga setelah QR terbaca.
   - Isinya: apa yang dilihat Guardian, dan hanya Guardian yang bisa memutus koneksi.
   - Termasuk riwayat yang dihapus (B14).
-- [ ] **V5**: tombol simpan di sheet tandai aman abu-abu dan mati sampai alasan dipilih, dengan teks "Pilih minimal satu alasan".
+- [x] (PR #666) **V5**: tombol simpan di sheet tandai aman abu-abu dan mati sampai alasan dipilih, dengan teks "Pilih minimal satu alasan".
 
 ## 29d · Onboarding
 

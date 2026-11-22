@@ -341,10 +341,9 @@ struct GuardianHomeView: View {
                 refreshFailedNotice
             }
             if model.hasNoFamily {
+                // F12 (goldfish 21 Nov): no "Mode Terawasi" card here. A Guardian was being offered to be guarded;
+                // joining with a code stays in Profil › Mode akun and on Profil Pribadi (F8).
                 HowItWorks()
-                // Figma "Guardian/Home · Belum ada orang" (1253:2381): 42 under How it works.
-                BecomeSupervisedCard(action: "Join as Protected") { env.router.isJoinFamilyPresented = true }
-                    .padding(.top, 18)
             } else {
                 RecentActivity(
                     scans: model.recent,
