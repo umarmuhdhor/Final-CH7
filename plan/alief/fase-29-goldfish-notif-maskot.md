@@ -111,16 +111,18 @@ Ditolak atau tidak dikerjakan: **F4** (kartu dihapus) dan **F7** (pesan undangan
 
 ## 29g · Notif lain dengan maskot ("alief notif")
 
-- [ ] Toast di Home (7), bagian 2.
-  - **Tanya Alief dulu:** app sekarang memakai kartu putih ala notif iOS (`HomeNoticeToast.swift`), sedangkan Figma memakai kartu gradien dengan maskot.
-- [ ] Toast kecil "Tersalin" / "Terkirim", bagian 8.
-- [ ] Banner di Home dengan maskot (2), bagian 4.
-- [ ] Sheet:
+- [x] Toast di Home (7), bagian 2 (PR #657): kartu gradien dengan maskot, sesuai Figma.
+- [x] Toast kecil "Tersalin", bagian 8 (PR #670).
+  - "Terkirim" tidak dibuat: app belum punya aksi kirim ke Guardian dari Detail.
+- [x] Banner di Home dengan maskot, bagian 4 (PR #675).
+  - Pribadi dan Dilindungi: pilihan B (Alief, 22 Nov). Judul hero tetap. Link "Nyalakan sekarang" pindah ke kartu oranye (pose Cemas) di bawah hero.
+  - Guardian, kartu "Ekstensi Safari mati": **tidak dibuat** (Alief, 22 Nov). Cukup status "Ekstensi tidak aktif" di sel anggota.
+- [ ] Sheet (PR #671, #672, #673, #674; satu PR per sheet, bertumpuk):
   - Shoo mengintip dan memegang tepi sheet: badan di belakang tepi, jari di depan, bayangan tipis;
   - dipakai di Matikan Shoo, Tandai aman, Data yang dikirim, dan Modus penipuan.
-- [ ] Pesan error kode undangan (9), bagian 6.
-- [ ] Kartu memuat / gagal memuat (8), bagian 7.
-- [ ] Empty state (8), bagian 9. "Belum ada aktivitas" pakai pose Duduk.
+- [ ] Pesan error kode undangan (9), bagian 6 (PR #669).
+- [x] Kartu memuat / gagal memuat (8), bagian 7 (PR #661).
+- [x] Empty state (8), bagian 9 (PR #660). "Belum ada aktivitas" pakai pose Duduk.
 
 ## 29h · Ke Lead (issue, bukan kode)
 
