@@ -59,6 +59,9 @@ final class AppEnvironment {
     var launchSplash: LaunchSplashPhase = .showing
     /// UI tests: how long the splash stays before it fades (`-UITestSplashSeconds`, Debug only).
     @ObservationIgnored private(set) var launchSplashHold: Double?
+    /// UI tests: how long a mini toast stays (`-UITestMiniToastSeconds`, Debug only). A slow CI runner can miss
+    /// the 1.5 s "Copied" between the tap and its next look at the screen.
+    @ObservationIgnored private(set) var miniToastHold: Double?
 
     init(
         repository: any ShooRepository,
@@ -223,6 +226,7 @@ final class AppEnvironment {
         // the splash test holds it long enough to see (`-UITestSplashSeconds 5`).
         if Self.value(after: "-UITestSkipSplash", in: arguments) == "YES" { environment.launchSplash = .done }
         environment.launchSplashHold = Self.value(after: "-UITestSplashSeconds", in: arguments).flatMap(Double.init)
+        environment.miniToastHold = Self.value(after: "-UITestMiniToastSeconds", in: arguments).flatMap(Double.init)
         if Self.value(after: "-UITestReduceMotion", in: arguments) == "YES" {
             environment.reducesMotionForUITests = true
             // Push and sheet transitions too (UIKit); SwiftUI's own animations read `shooReduceMotion`.

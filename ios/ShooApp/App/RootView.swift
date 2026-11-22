@@ -52,6 +52,7 @@ struct RootView: View {
         .overlay { LaunchSplash() }
         .environment(\.locale, env.settings.language.locale)
         .environment(\.shooReduceMotion, reducesMotion)
+        .environment(\.shooMiniToastSeconds, env.miniToastHold ?? ShooMiniToast.seconds)
         .environment(\.shooReduceGlass, env.settings.reduceGlass || systemReduceTransparency)
         // PF-01 Tema and Aksesibilitas: theme, text size, bold text and contrast for every window.
         .background(AppearanceOverrides(

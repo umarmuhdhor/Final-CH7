@@ -11,6 +11,9 @@ struct ShooMiniToast: View {
 
     let kind: Kind
 
+    /// How long it stays.
+    static let seconds: Double = 1.5
+
     // Figma: 52 tall, r 22; Shoo 62 tall, 12 pt in, 17 pt over the top; the word 75 pt from the left, 20 from the right.
     private static let height: CGFloat = 52
     private static let poseHeight: CGFloat = 62
@@ -71,6 +74,7 @@ private struct ShooMiniToastModifier: ViewModifier {
     let trigger: Int
     @State private var isShown = false
     @Environment(\.shooReduceMotion) private var reduceMotion
+    @Environment(\.shooMiniToastSeconds) private var seconds
 
     func body(content: Content) -> some View {
         content
@@ -85,10 +89,22 @@ private struct ShooMiniToastModifier: ViewModifier {
             .task(id: trigger) {
                 guard trigger > 0 else { return }
                 withAnimation(StateMotion.enter(reduceMotion: reduceMotion)) { isShown = true }
-                try? await Task.sleep(for: .seconds(1.5))
+                try? await Task.sleep(for: .seconds(seconds))
                 guard !Task.isCancelled else { return }
                 withAnimation(.easeOut(duration: 0.25)) { isShown = false }
             }
+    }
+}
+
+private struct MiniToastSecondsKey: EnvironmentKey {
+    static let defaultValue = ShooMiniToast.seconds
+}
+
+extension EnvironmentValues {
+    /// How long a mini toast stays: 1.5 s, longer only in UI tests (`-UITestMiniToastSeconds`).
+    var shooMiniToastSeconds: Double {
+        get { self[MiniToastSecondsKey.self] }
+        set { self[MiniToastSecondsKey.self] = newValue }
     }
 }
 
