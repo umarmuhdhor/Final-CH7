@@ -228,7 +228,13 @@ final class OnboardingModel {
         step = .safariDefault
     }
 
-    /// Nothing can read the default browser, so this trusts the user. Saved, so a relaunch does not ask again (F6).
+    /// Safari Default's "Check & continue" (`SafariCheck`): the extension status as now.
+    func safariCheckStatus() async -> ExtensionStatus {
+        await environment.extensionStatus()
+    }
+
+    /// The check passed, or the user chose "Continue anyway" after it failed. Saved, so a relaunch does not ask
+    /// again (F6).
     func continueFromSafariDefault() {
         guard step == .safariDefault else { return }
         environment.settings.onboardingSafariDefaultPassed = true

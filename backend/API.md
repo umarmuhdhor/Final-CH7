@@ -21,7 +21,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Blocklist](#blocklist): `GET /blocklist`
 - [Latest scams](#latest-scams): `GET /scams/latest` (Home card)
 - [Config](#config): `GET /config/public`
-- [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /support`, `GET /terms`, `GET /get`
+- [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /support`, `GET /terms`, `GET /safari-check`, `GET /get`
 - [Push notification](#push-notification) sent by `POST /scans`
 - [Scheduled pushes](#scheduled-pushes): protection off, weekly summary (hourly cron)
 
@@ -1036,6 +1036,18 @@ constant as on `/privacy` (a placeholder until the team mailbox exists).
 before public release.
 
 - **Auth:** none. No database. Language as for `/privacy`.
+
+### `GET /safari-check?lang=en|id`
+
+**For:** ON-04 "Jadikan Safari Default", "Cek & lanjutkan" (Figma 2497:4919, screen 8). The app opens it with
+`UIApplication.open`, so it shows in the default browser. In Safari the Shoo extension reports in on its own
+(heartbeat with `allSites`), and the app reads that when the user comes back. The page says "Almost done", how to
+answer Safari's permission prompt (Always Allow on Every Website), and links back with `shoo://`. Not a Universal
+Link (the AASA lists only `/j/*`), so it never opens the app instead of the browser. The mascot is
+`GET /safari-check/shoo.png` (`Cache-Control: public, max-age=604800`).
+
+- **Auth:** none. No database, no script. `noindex`. Language as for `/privacy`.
+- Served on the API host only; `shoo.ai.id` does not pass this path through.
 
 ### `GET /get`
 

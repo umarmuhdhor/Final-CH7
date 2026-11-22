@@ -47,18 +47,84 @@ extension SafariDefaultSetup.Step {
         case .openDefaultApps: "Go to Apps › Default Apps › Browser App, then choose Safari."
         case .openAppsSafari: "Go to Apps › Safari › Default Browser App, then choose Safari."
         case .openSafariLegacy: "Go to Safari › Default Browser App, then choose Safari."
-        case .comeBack: "Go back to Shoo, then tap Keep going."
+        case .comeBack: "Go back to Shoo, then tap Check & continue."
         }
     }
 }
 
-/// The button opens Settings; once the user is back it turns into "Keep going".
+/// "Cek & lanjutkan" (Figma 2497:4919). No API reads the default browser, and none reads Safari's "All Websites"
+/// setting for Shoo. An https link opened from the app goes to the DEFAULT browser, so one trip answers both: a
+/// heartbeat from the extension that is newer than the tap means Safari is the default and Shoo runs there, and
+/// it says whether Shoo may read every site (`extension.allSites`). With "Ask" and no answer to Safari's prompt the
+/// extension never runs, so nothing arrives (simulator test 22 Nov 2026): that is `notSeen` too.
+enum SafariCheck {
+    enum Result: Equatable {
+        /// Fresh heartbeat with every site allowed: on to the success screen.
+        case passed
+        /// Fresh heartbeat, but Safari lets Shoo read only some sites (F3 toast B).
+        case someSitesOnly
+        /// No heartbeat since the tap: another browser is the default, or Safari still asks.
+        case notSeen
+    }
+
+    /// A heartbeat can land a moment after the user is back (same as ON-04, #135).
+    static let recheck = (times: 10, every: Duration.seconds(2))
+
+    /// The page the check opens (backend `GET /safari-check`), in the app's language.
+    static func pageURL(language: AppLanguage) -> URL {
+        AppConfig.legalPage("/safari-check", language: language)
+    }
+
+    /// What `status` says about a check started at `start`; nil while nothing newer than the tap has arrived.
+    static func result(of status: ExtensionStatus, since start: Date) -> Result? {
+        guard let seen = status.lastSeen, seen >= start else { return nil }
+        switch status {
+        case .active: return .passed
+        case .off(_, .someSitesOnly): return .someSitesOnly
+        // Switched off since: not passed yet, keep looking.
+        case .off: return nil
+        }
+    }
+
+    /// Reads the status `times` times, `every` apart, until a fresh heartbeat decides; `notSeen` when none came.
+    /// nil when cancelled (the app left the foreground again).
+    static func run(
+        since start: Date,
+        times: Int = recheck.times,
+        every: Duration = recheck.every,
+        read: () async -> ExtensionStatus
+    ) async -> Result? {
+        for attempt in 0..<times {
+            if attempt > 0 {
+                do { try await Task.sleep(for: every) } catch { return nil }
+            }
+            if let result = result(of: await read(), since: start) { return result }
+            if Task.isCancelled { return nil }
+        }
+        return .notSeen
+    }
+}
+
+/// Settings first ("Make Safari default"); once the user is back the button turns into "Check & continue", which
+/// opens Shoo's check page in the default browser (`SafariCheck`). Back in Shoo the result decides: the success
+/// screen, or a toast with what to fix.
 struct SafariDefaultView: View {
     let onBack: () -> Void
     let onContinue: () -> Void
+    /// The extension status as now (`AppEnvironment.extensionStatus`).
+    let readStatus: () async -> ExtensionStatus
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var openedSettings = false
     @State private var cameBack = false
+    /// When "Check & continue" was tapped: only heartbeats after it count.
+    @State private var checkStartedAt: Date?
+    @State private var isChecking = false
+    /// The check page is opening: the result is read once Shoo is back in front, not before it left.
+    @State private var awaitingReturn = false
+    @State private var result: SafariCheck.Result?
+    @State private var toast: SafariCheckToast?
     @State private var isVideoPresented = false
     @State private var videoStartTime: CMTime = .zero
 
@@ -72,17 +138,94 @@ struct SafariDefaultView: View {
             // Figma "stack": 16 between rows, 40 under the headline.
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                    OnboardingStepRow(number: index + 1, text: step.text)
+                    OnboardingStepRow(number: index + 1, text: text(for: step))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 40)
         } footer: {
+            footer
+        }
+        .footerEndsWithLink()
+        .largeHeadline()
+        // Figma "Frame 2": 354 wide, one line.
+        .headlineInset(24)
+        // Back from Settings, "Make Safari default" crossfades into "Check & continue".
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.3), value: cameBack)
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.3), value: result)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, openedSettings { cameBack = true }
+            if phase != .active { awaitingReturn = false }
+        }
+        // Back from the check page: read now, then a few more times, only for heartbeats after the tap.
+        .task(id: CheckKey(phase: scenePhase, startedAt: checkStartedAt, awaitingReturn: awaitingReturn)) {
+            guard scenePhase == .active, let start = checkStartedAt, isChecking, !awaitingReturn else { return }
+            guard let outcome = await SafariCheck.run(since: start, read: readStatus) else { return }
+            isChecking = false
+            checkStartedAt = nil
+            if outcome == .passed {
+                toast = nil
+                onContinue()
+                return
+            }
+            result = outcome
+            toast = SafariCheckToast(outcome)
+        }
+        // Where an iOS notification would be, Shoo's head 8 pt under the status bar (as ON-04's F3 toasts).
+        .overlay(alignment: .top) {
+            if let toast {
+                ShooToast(
+                    title: L10n.string(toast.title, language: AppLanguage(locale: locale)),
+                    line: L10n.string(toast.line, language: AppLanguage(locale: locale)),
+                    colors: SettingsReturnToast.colors, pose: toast.pose, identifier: "safariDefault.toast",
+                    duration: UIAccessibility.isVoiceOverRunning ? .seconds(10) : .seconds(6),
+                    onClose: { self.toast = nil }
+                )
+                .padding(.top, 8)
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: toast)
+        .fullScreenCover(isPresented: $isVideoPresented) {
+            TutorialVideoPlayer(startTime: videoStartTime)
+        }
+    }
+
+    @ViewBuilder private var footer: some View {
+        switch result {
+        case .someSitesOnly:
+            // Toast B: the fix is in Safari's settings for Shoo; the check page tells the extension again.
+            Button("Open Safari settings") { Task { await ExtensionSetup.openSettings() } }
+                .buttonStyle(OnboardingCapsuleButtonStyle())
+                .transition(.opacity)
+                .accessibilityIdentifier("safariDefault.openSafariSettings")
+            SafariDefaultPromptLink(prompt: "Changed it?", link: "Check again", action: startCheck)
+                .accessibilityIdentifier("safariDefault.checkAgain")
+        case .notSeen:
+            Button("Try again", action: startCheck)
+                .buttonStyle(OnboardingCapsuleButtonStyle())
+                .transition(.opacity)
+                .accessibilityIdentifier("safariDefault.retry")
+            SafariDefaultPromptLink(prompt: "Still not working?", link: "Continue anyway", action: onContinue)
+                .accessibilityIdentifier("safariDefault.skip")
+        case .passed, nil:
             if cameBack {
-                Button("Keep going", action: onContinue)
-                    .buttonStyle(OnboardingCapsuleButtonStyle())
-                    .transition(.opacity)
-                    .accessibilityIdentifier("safariDefault.continue")
+                Button(action: startCheck) {
+                    ZStack {
+                        Text("Check & continue").opacity(isChecking ? 0 : 1)
+                        if isChecking { ProgressView().tint(OnboardingTheme.onButton) }
+                    }
+                }
+                .buttonStyle(OnboardingCapsuleButtonStyle())
+                .disabled(isChecking)
+                .accessibilityValue(isChecking ? Text("Checking") : Text(verbatim: ""))
+                .transition(.opacity)
+                .accessibilityIdentifier("safariDefault.check")
+                SafariDefaultPromptLink(prompt: "Not changed yet?", link: "Open Settings again") {
+                    openedSettings = true
+                    Task { await SafariDefaultSetup.openSettings() }
+                }
+                .accessibilityIdentifier("safariDefault.openAgain")
             } else {
                 Button("Make Safari default") {
                     openedSettings = true
@@ -91,21 +234,32 @@ struct SafariDefaultView: View {
                 .buttonStyle(OnboardingCapsuleButtonStyle())
                 .transition(.opacity)
                 .accessibilityIdentifier("safariDefault.open")
+                OnboardingTutorialLink { watchTutorial() }
+                    .accessibilityIdentifier("safariDefault.video")
             }
-            OnboardingTutorialLink { watchTutorial() }
-                .accessibilityIdentifier("safariDefault.video")
         }
-        .footerEndsWithLink()
-        .largeHeadline()
-        // Figma "Frame 2": 354 wide, one line.
-        .headlineInset(24)
-        // Back from Settings, "Make Safari default" crossfades into "Keep going".
-        .animation(.smooth(duration: 0.3), value: cameBack)
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active, openedSettings { cameBack = true }
+    }
+
+    /// Step 03 says what the check does once the button is "Check & continue".
+    private func text(for step: SafariDefaultSetup.Step) -> LocalizedStringKey {
+        if step == .comeBack, cameBack || result != nil {
+            return "Tap Check & continue. Shoo opens one page to check, then you come back to Shoo."
         }
-        .fullScreenCover(isPresented: $isVideoPresented) {
-            TutorialVideoPlayer(startTime: videoStartTime)
+        return step.text
+    }
+
+    /// "Check & continue", "Check again", "Try again": opens the check page in the default browser.
+    private func startCheck() {
+        toast = nil
+        result = nil
+        cameBack = true
+        checkStartedAt = Date()
+        isChecking = true
+        awaitingReturn = true
+        Task {
+            let opened = await UIApplication.shared.open(SafariCheck.pageURL(language: AppLanguage(locale: locale)))
+            // Nothing opened: Shoo never leaves, so the check reads in place (and ends as "couldn't be checked").
+            if !opened { awaitingReturn = false }
         }
     }
 
@@ -124,6 +278,62 @@ struct SafariDefaultView: View {
     }
 }
 
+private struct CheckKey: Equatable {
+    let phase: ScenePhase
+    let startedAt: Date?
+    let awaitingReturn: Bool
+}
+
+/// Grey question, blue link (Figma "Belum diganti? Buka Pengaturan lagi"), like "Having trouble? Watch the tutorial".
+private struct SafariDefaultPromptLink: View {
+    let prompt: LocalizedStringKey
+    let link: LocalizedStringKey
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(prompt) + Text(verbatim: " ") + Text(link).fontWeight(.semibold).foregroundStyle(OnboardingTheme.link)
+        }
+        .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .regular))
+        .transition(.opacity)
+    }
+}
+
+/// The check's two failures (Figma 2497:4919, branches 8a and 8b), orange like ON-04's F3 toasts.
+enum SafariCheckToast: Equatable {
+    case someSitesOnly
+    case notSeen
+
+    init?(_ result: SafariCheck.Result) {
+        switch result {
+        case .passed: return nil
+        case .someSitesOnly: self = .someSitesOnly
+        case .notSeen: self = .notSeen
+        }
+    }
+
+    var title: String.LocalizationValue {
+        switch self {
+        case .someSitesOnly: "Shoo is on for some sites only"
+        case .notSeen: "Shoo couldn't be checked yet"
+        }
+    }
+
+    var line: String.LocalizationValue {
+        switch self {
+        case .someSitesOnly: "In Safari settings, tap All Websites, then choose Allow."
+        case .notSeen: "Safari isn't your main browser yet, or Shoo isn't allowed in Safari yet."
+        }
+    }
+
+    var pose: Mascot {
+        switch self {
+        case .someSitesOnly: .tapHere
+        case .notSeen: .think
+        }
+    }
+}
+
 #Preview {
-    SafariDefaultView(onBack: {}, onContinue: {})
+    SafariDefaultView(onBack: {}, onContinue: {}, readStatus: { .active(lastSeen: nil) })
 }

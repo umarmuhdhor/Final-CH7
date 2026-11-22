@@ -53,7 +53,10 @@ private struct OnboardingStepView: View {
             case .splash: SplashView(model: model)
             case .name: NameView(model: model)
             case .turnOnExtension: OnboardingExtensionStep(model: model)
-            case .safariDefault: SafariDefaultView(onBack: model.goBack, onContinue: model.continueFromSafariDefault)
+            case .safariDefault:
+                SafariDefaultView(
+                    onBack: model.goBack, onContinue: model.continueFromSafariDefault, readStatus: model.safariCheckStatus
+                )
             case .extensionOn:
                 ExtensionOnView { Task { await model.continueFromSuccess() } }
                     .shooDialog(isPresented: Binding(

@@ -154,12 +154,18 @@ extension XCUIApplication {
         activate()
     }
 
-    /// Safari Default has no skip in Figma: open Settings, come back, Keep going.
+    /// Safari Default (Figma 2497:4919): open Settings, come back, "Check & continue" opens the check page in the
+    /// browser, come back. With `-UITestExtensionActive YES` the check passes; otherwise "Continue anyway".
     @MainActor
     func passSafariDefault(file: StaticString = #filePath, line: UInt = #line) {
         buttons["safariDefault.open"].tapWhenHittable(file: file, line: line)
         comeBackFromSettings()
-        buttons["safariDefault.continue"].tapWhenHittable(file: file, line: line)
+        buttons["safariDefault.check"].tapWhenHittable(file: file, line: line)
+        comeBackFromSettings()
+        let skip = buttons["safariDefault.skip"]
+        let end = Date().addingTimeInterval(UITestTimeout.screen + 25)
+        while Date() < end, !buttons["extensionOn.continue"].exists, !skip.exists { Thread.sleep(forTimeInterval: 0.3) }
+        if skip.exists { skip.tapWhenHittable(file: file, line: line) }
     }
 
     /// ON (Figma 1205:4696): the whole onboarding as Pribadi, ending on Home. Needs `-UITestExtensionActive YES`

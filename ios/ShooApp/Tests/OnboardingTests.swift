@@ -320,6 +320,8 @@ struct OnboardingModelTests {
         #expect(model.step == .turnOnExtension)
         await model.skipExtensionCheck()
         #expect(model.step == .safariDefault)
+        // "Check & continue" reads the same status the rest of the app uses.
+        #expect(await model.safariCheckStatus() == box.status)
         model.continueFromSafariDefault()
         #expect(model.step == .extensionOn)
     }
@@ -522,6 +524,70 @@ struct SafariDefaultSetupTests {
     func stepsFollowTheSettingsPage(major: Int, minor: Int, pick: SafariDefaultSetup.Step) {
         let version = OperatingSystemVersion(majorVersion: major, minorVersion: minor, patchVersion: 0)
         #expect(SafariDefaultSetup.steps(for: version) == [.tapOpen, pick, .comeBack])
+    }
+}
+
+/// "Cek & lanjutkan" (Figma 2497:4919): only a heartbeat newer than the tap counts.
+struct SafariCheckTests {
+    private let start = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test func nothingNewerThanTheTapDecidesNothing() {
+        #expect(SafariCheck.result(of: .active(lastSeen: nil), since: start) == nil)
+        #expect(SafariCheck.result(of: .active(lastSeen: start.addingTimeInterval(-1)), since: start) == nil)
+        #expect(SafariCheck.result(of: .off(lastSeen: nil, reason: .notSeen), since: start) == nil)
+        // An old "some sites only" heartbeat is not this check's answer either.
+        #expect(SafariCheck.result(of: .off(lastSeen: start.addingTimeInterval(-30), reason: .someSitesOnly), since: start) == nil)
+    }
+
+    @Test func aFreshHeartbeatPassesOrAsksForEveryWebsite() {
+        let fresh = start.addingTimeInterval(3)
+        #expect(SafariCheck.result(of: .active(lastSeen: fresh), since: start) == .passed)
+        #expect(SafariCheck.result(of: .active(lastSeen: start), since: start) == .passed)
+        #expect(SafariCheck.result(of: .off(lastSeen: fresh, reason: .someSitesOnly), since: start) == .someSitesOnly)
+        // Switched off after the page loaded: not passed, keep looking.
+        #expect(SafariCheck.result(of: .off(lastSeen: fresh, reason: .switchedOff), since: start) == nil)
+    }
+
+    @Test func runStopsAtTheFirstFreshHeartbeat() async {
+        var reads = 0
+        let result = await SafariCheck.run(since: start, times: 10, every: .zero) {
+            reads += 1
+            return .active(lastSeen: reads < 3 ? nil : start.addingTimeInterval(1))
+        }
+        #expect(result == .passed)
+        #expect(reads == 3)
+    }
+
+    @Test func runReportsSomeSitesOnly() async {
+        let result = await SafariCheck.run(since: start, times: 3, every: .zero) {
+            .off(lastSeen: start.addingTimeInterval(1), reason: .someSitesOnly)
+        }
+        #expect(result == .someSitesOnly)
+    }
+
+    /// "Ask" with no answer to Safari's prompt, or another default browser: nothing arrives.
+    @Test func runEndsAsNotSeenWithoutAFreshHeartbeat() async {
+        var reads = 0
+        let result = await SafariCheck.run(since: start, times: 4, every: .zero) {
+            reads += 1
+            return .active(lastSeen: start.addingTimeInterval(-60))
+        }
+        #expect(result == .notSeen)
+        #expect(reads == 4)
+    }
+
+    @Test func toastsFollowTheResult() {
+        #expect(SafariCheckToast(.passed) == nil)
+        #expect(SafariCheckToast(.someSitesOnly)?.pose == .tapHere)
+        #expect(SafariCheckToast(.notSeen)?.pose == .think)
+    }
+
+    @Test func thePageIsTheBackendCheckPageInTheAppLanguage() {
+        let url = SafariCheck.pageURL(language: .indonesian)
+        #expect(url.path() == "/safari-check")
+        #expect(url.query() == "lang=id")
+        // Not the invite host: `/j/*` there is a Universal Link, so the app would open instead of the browser.
+        #expect(url.host() != AppConfig.publicBaseURL.host())
     }
 }
 
