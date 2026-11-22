@@ -89,6 +89,7 @@ final class PairingUITests: XCTestCase {
         let join = app.buttons["connect.join"]
         enter("111111", in: app)
         tapWhenSettled(join)
+        app.confirmJoin()
         let error = app.staticTexts["connect.error"]
         XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertTrue(error.label.contains("doesn't match"), error.label)
@@ -96,11 +97,13 @@ final class PairingUITests: XCTestCase {
         enter("999999", in: app)
         XCTAssertFalse(error.exists, "Editing the code clears the error")
         tapWhenSettled(join)
+        app.confirmJoin()
         XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen))
         XCTAssertTrue(error.label.contains("expired"), error.label)
 
         enter("482193", in: app)
         tapWhenSettled(join)
+        app.confirmJoin()
         let title = app.staticTexts["protectedBy.title"]
         XCTAssertTrue(title.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertTrue(title.label.contains("Budi"), title.label)
@@ -210,6 +213,7 @@ final class PairingUITests: XCTestCase {
 
         let join = app.buttons["connect.join"]
         tapWhenSettled(join)
+        app.confirmJoin()
         let error = app.staticTexts["connect.error"]
         XCTAssertTrue(error.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(error.label.contains("Terlalu banyak percobaan"), error.label)

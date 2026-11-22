@@ -382,6 +382,7 @@ final class ProfileUITests: XCTestCase {
         field.tap()
         field.typeText("482193")
         app.buttons["connect.join"].tap()
+        app.confirmJoin()
         let title = app.staticTexts["protectedBy.title"]
         XCTAssertTrue(title.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(title.label.contains("Budi"), title.label)

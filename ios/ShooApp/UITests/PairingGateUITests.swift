@@ -71,12 +71,14 @@ final class PairingGateUITests: XCTestCase {
                 let join = app.buttons["connect.join"]
                 if !join.isHittable { app.swipeUp() }
                 join.tap()
+                app.confirmJoin()
                 XCTAssertTrue(app.staticTexts["connect.error"].waitForExistence(timeout: 5), app.debugDescription)
                 shot(app, "connect-error-\(tag)")
                 field.tap()
                 field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 6) + "482193")
                 if !join.isHittable { app.swipeUp() }
                 join.tap()
+                app.confirmJoin()
                 XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: 5), app.debugDescription)
                 shot(app, "protected-by-\(tag)")
                 app.terminate()

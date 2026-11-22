@@ -55,6 +55,7 @@ final class LiveReinstallUITests: XCTestCase {
         field.tap()
         field.typeText(code)
         app.buttons["connect.join"].tap()
+        app.confirmJoin()
 
         let joined = app.staticTexts["protectedBy.title"]
         let failed = app.descendants(matching: .any)["connect.error"]
