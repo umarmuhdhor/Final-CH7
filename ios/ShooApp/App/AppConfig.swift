@@ -8,6 +8,11 @@ enum AppConfig {
     /// (checked by backend/api/test/app-config-sync.test.ts).
     static let publicBaseURL = URL(string: "https://join.shoo.ai.id")!
 
+    /// The website (landing Worker, repo Nisrinathifal/shoo-landing). It passes a few API pages through
+    /// (`/privacy`, `/support`, `/terms`, `/safari-check`). No Universal Links on this host (no AASA,
+    /// not in `applinks`), so its links always open in the browser.
+    static let siteURL = URL(string: "https://shoo.ai.id")!
+
     /// The cloud Worker (shoo-api) deployed from `main` (fase 12, TODO D8), on its workers.dev host. The
     /// API stays here: the extension reads this host from the App Group. Invite links on this host
     /// (handed out before PR-03 moved them to `publicBaseURL`) still open the app (`DeepLink.inviteHosts`).

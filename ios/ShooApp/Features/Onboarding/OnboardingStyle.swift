@@ -728,6 +728,10 @@ struct OnboardingSuccessPage<Hero: View>: View {
     /// the title and message come in one after the other, a heavy tap as the hero lands and a success tap with
     /// the title. "Next" works from the start. Replaces `revealsText`.
     var celebrates = false
+    /// Progress dots right above the button (transition B, Figma 2502:5639). `nil`: none.
+    var progress: OnboardingProgress?
+    /// Figma 2502:5639 says "Lanjut" ("Continue"); the older success pages "Selanjutnya" ("Next").
+    var buttonTitle: LocalizedStringKey = "Next"
     /// Brings the headline to Figma's y under the hero.
     @ViewBuilder let hero: Hero
 
@@ -768,7 +772,7 @@ struct OnboardingSuccessPage<Hero: View>: View {
             titleLanded += 1
         }
         .scrollBounceBehavior(.basedOnSize)
-        .contentMargins(.bottom, 104, for: .scrollContent)
+        .contentMargins(.bottom, progress == nil ? 104 : 132, for: .scrollContent)
         .background {
             Image(background)
                 .resizable()
@@ -777,12 +781,15 @@ struct OnboardingSuccessPage<Hero: View>: View {
                 .accessibilityHidden(true)
         }
         .overlay(alignment: .bottom) {
-            Button("Next", action: onContinue)
-                .buttonStyle(OnboardingCapsuleButtonStyle())
-                .accessibilityIdentifier("\(idPrefix).continue")
-                .padding(.horizontal, 24)
-                // Figma "Footer": the button ends 68 pt above the screen bottom.
-                .padding(.bottom, 34)
+            VStack(spacing: 20) {
+                if let progress { OnboardingProgressDots(progress: progress) }
+                Button(buttonTitle, action: onContinue)
+                    .buttonStyle(OnboardingCapsuleButtonStyle())
+                    .accessibilityIdentifier("\(idPrefix).continue")
+            }
+            .padding(.horizontal, 24)
+            // Figma "Footer": the button ends 68 pt above the screen bottom.
+            .padding(.bottom, 34)
         }
         .environment(\.colorScheme, .light)
     }
@@ -812,5 +819,30 @@ struct OnboardingSuccessPage<Hero: View>: View {
                 .figmaLineHeight(23.8, glyphOffset: 0.9, relativeTo: .body)
                 .lineSpacing(3)
         }
+    }
+}
+
+/// Steps done out of all, for the dots on a blue success page.
+struct OnboardingProgress: Equatable {
+    let done: Int
+    let count: Int
+}
+
+/// Same look as the splash's page dots (`SplashPageDots`), in white for the blue page: the step just done is a
+/// 24 × 8 capsule, the others 8 × 8 dots at 40 %. One element for VoiceOver ("Step 1 of 2 done").
+struct OnboardingProgressDots: View {
+    let progress: OnboardingProgress
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(1...max(progress.count, 1), id: \.self) { index in
+                Capsule()
+                    .fill(index == progress.done ? Color.white : Color.white.opacity(0.4))
+                    .frame(width: index == progress.done ? 24 : 8, height: 8)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Step \(progress.done) of \(progress.count) done"))
+        .accessibilityIdentifier("onboarding.progressDots")
     }
 }

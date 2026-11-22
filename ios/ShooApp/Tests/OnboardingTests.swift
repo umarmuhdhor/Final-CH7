@@ -253,7 +253,28 @@ struct OnboardingModelTests {
         #expect(!settings.onboardingCompleted)
     }
 
-    /// F6: Shoo was switched on in Settings before iOS closed the app: on to Safari Default.
+    /// ON-04 Next: the celebration screen (step 1 of 2 done), which has no Back; its Next goes to Safari Default,
+    /// whose Back goes to ON-04, not to the celebration screen.
+    @Test func turnOnNextCelebratesBeforeSafariDefault() async {
+        let model = await registeredPersonal()
+        box.status = .active(lastSeen: Date())
+        await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.goBack()
+        #expect(model.step == .extensionReady)
+        model.continueFromSafariDefault()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
+        #expect(model.step == .safariDefault)
+        #expect(!settings.onboardingSafariDefaultPassed)
+        model.goBack()
+        #expect(model.step == .turnOnExtension)
+        model.continueFromExtensionReady()
+        #expect(model.step == .turnOnExtension)
+    }
+
+    /// F6: Shoo was switched on in Settings before iOS closed the app: on to Safari Default, without the
+    /// celebration screen again.
     @Test func relaunchWithShooOnResumesAtSafariDefault() async {
         _ = await registeredPersonal()
         box.status = .active(lastSeen: Date())
@@ -319,7 +340,11 @@ struct OnboardingModelTests {
         await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
+        // "Check & continue" reads the same status the rest of the app uses.
+        #expect(await model.safariCheckStatus() == box.status)
         model.continueFromSafariDefault()
         #expect(model.step == .extensionOn)
     }
@@ -335,6 +360,8 @@ struct OnboardingModelTests {
         #expect(model.step == .turnOnExtension)
         model.consentChecked = true
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
         #expect(settings.mode == .guardian)
     }
@@ -344,6 +371,8 @@ struct OnboardingModelTests {
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
         model.goBack()
         #expect(model.step == .turnOnExtension)
@@ -351,6 +380,8 @@ struct OnboardingModelTests {
         await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
     }
 
@@ -362,6 +393,8 @@ struct OnboardingModelTests {
         #expect(status == .active(lastSeen: nil))
         #expect(model.step == .turnOnExtension)
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
     }
 
@@ -374,6 +407,8 @@ struct OnboardingModelTests {
         await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
     }
 
@@ -389,6 +424,8 @@ struct OnboardingModelTests {
         model.consentChecked = true
         #expect(settings.dataConsent == .granted)
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
         #expect(settings.dataConsent == .granted)
     }
@@ -399,6 +436,7 @@ struct OnboardingModelTests {
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
         await model.skipExtensionCheck()
+        model.continueFromExtensionReady()
         model.continueFromSafariDefault()
     }
 
@@ -522,6 +560,75 @@ struct SafariDefaultSetupTests {
     func stepsFollowTheSettingsPage(major: Int, minor: Int, pick: SafariDefaultSetup.Step) {
         let version = OperatingSystemVersion(majorVersion: major, minorVersion: minor, patchVersion: 0)
         #expect(SafariDefaultSetup.steps(for: version) == [.tapOpen, pick, .comeBack])
+    }
+}
+
+/// "Cek & lanjutkan" (Figma 2497:4919): only a heartbeat newer than the tap counts.
+struct SafariCheckTests {
+    private let start = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test func nothingNewerThanTheTapDecidesNothing() {
+        #expect(SafariCheck.result(of: .active(lastSeen: nil), since: start) == nil)
+        #expect(SafariCheck.result(of: .active(lastSeen: start.addingTimeInterval(-1)), since: start) == nil)
+        #expect(SafariCheck.result(of: .off(lastSeen: nil, reason: .notSeen), since: start) == nil)
+        // An old "some sites only" heartbeat is not this check's answer either.
+        #expect(SafariCheck.result(of: .off(lastSeen: start.addingTimeInterval(-30), reason: .someSitesOnly), since: start) == nil)
+    }
+
+    @Test func aFreshHeartbeatPassesOrAsksForEveryWebsite() {
+        let fresh = start.addingTimeInterval(3)
+        #expect(SafariCheck.result(of: .active(lastSeen: fresh), since: start) == .passed)
+        #expect(SafariCheck.result(of: .active(lastSeen: start), since: start) == .passed)
+        #expect(SafariCheck.result(of: .off(lastSeen: fresh, reason: .someSitesOnly), since: start) == .someSitesOnly)
+        // Switched off after the page loaded: not passed, keep looking.
+        #expect(SafariCheck.result(of: .off(lastSeen: fresh, reason: .switchedOff), since: start) == nil)
+    }
+
+    @Test func runStopsAtTheFirstFreshHeartbeat() async {
+        var reads = 0
+        let result = await SafariCheck.run(since: start, times: 10, every: .zero) {
+            reads += 1
+            return .active(lastSeen: reads < 3 ? nil : start.addingTimeInterval(1))
+        }
+        #expect(result == .passed)
+        #expect(reads == 3)
+    }
+
+    @Test func runReportsSomeSitesOnly() async {
+        let result = await SafariCheck.run(since: start, times: 3, every: .zero) {
+            .off(lastSeen: start.addingTimeInterval(1), reason: .someSitesOnly)
+        }
+        #expect(result == .someSitesOnly)
+    }
+
+    /// "Ask" with no answer to Safari's prompt, or another default browser: nothing arrives.
+    @Test func runEndsAsNotSeenWithoutAFreshHeartbeat() async {
+        var reads = 0
+        let result = await SafariCheck.run(since: start, times: 4, every: .zero) {
+            reads += 1
+            return .active(lastSeen: start.addingTimeInterval(-60))
+        }
+        #expect(result == .notSeen)
+        #expect(reads == 4)
+    }
+
+    @Test func toastsFollowTheResult() {
+        #expect(SafariCheckToast(.passed) == nil)
+        #expect(SafariCheckToast(.someSitesOnly)?.pose == .tapHere)
+        #expect(SafariCheckToast(.notSeen)?.pose == .think)
+    }
+
+    @Test func thePageIsOnShooAiIdInTheAppLanguage() {
+        let url = SafariCheck.pageURL(language: .indonesian, api: AppConfig.cloudAPIURL)
+        #expect(url.absoluteString == "https://shoo.ai.id/safari-check?lang=id")
+        // Not a Universal Link host (applinks lists only join.shoo.ai.id), so this opens in the browser.
+        #expect(url.host() != AppConfig.publicBaseURL.host())
+        #expect(SafariCheck.pageURL(language: .english, api: AppConfig.cloudAPIURL).query() == "lang=en")
+    }
+
+    @Test func aLocalWorkerServesThePageItself() {
+        let local = URL(string: "http://localhost:8787")!
+        #expect(SafariCheck.pageURL(language: .indonesian, api: local).absoluteString == "http://localhost:8787/safari-check?lang=id")
     }
 }
 

@@ -352,12 +352,93 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertFalse(app.buttons["safariDefault.alreadyUsing"].exists)
         app.buttons["safariDefault.open"].tap()
         app.activate()
-        XCTAssertTrue(app.buttons["safariDefault.continue"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["safariDefault.check"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["safariDefault.openAgain"].exists)
         // Shoo is on, so ON-04 would pass again: Back stays there and offers Next.
         app.buttons["onboarding.back"].tap()
         XCTAssertTrue(app.buttons["extension.continue"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["extension.continue"].tap()
+        app.passExtensionReady()
         XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5))
+    }
+
+    /// Transition B (Figma 2502:5418): ON-04's Next shows "Shoo extension is on!" with step 1 of 2 done, then
+    /// Safari Default with "Step 2 of 2". Back from there goes to ON-04, not to the celebration screen.
+    @MainActor
+    func testExtensionReadyCelebratesBeforeSafariDefault() {
+        let app = launch()
+        app.onboardName("Rina")
+        XCTAssertTrue(app.descendants(matching: .any)["extension.video"].waitForExistence(timeout: UITestTimeout.screen))
+        let consent = app.buttons["extension.consent"]
+        if consent.exists, !consent.isSelected { consent.tapWhenHittable() }
+        app.buttons["extension.continue"].tapWhenHittable()
+        let title = app.staticTexts["extensionReady.title"]
+        XCTAssertTrue(title.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertEqual(title.label, "Shoo extension is on!")
+        let dots = app.descendants(matching: .any)["onboarding.progressDots"].firstMatch
+        XCTAssertTrue(dots.exists, app.debugDescription)
+        XCTAssertEqual(dots.label, "Step 1 of 2 done")
+        XCTAssertFalse(app.buttons["onboarding.back"].exists)
+        XCTAssertFalse(app.buttons["extensionOn.video"].exists)
+        app.passExtensionReady()
+        XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertEqual(app.staticTexts["safariDefault.stepChip"].label.uppercased(), "STEP 2 OF 2")
+        app.buttons["onboarding.back"].tap()
+        XCTAssertTrue(app.buttons["extension.continue"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.staticTexts["extensionReady.title"].exists)
+    }
+
+    /// "Cek & lanjutkan" (Figma 2497:4919, screens 7–9): a heartbeat newer than the tap with every site allowed goes
+    /// straight to the success screen.
+    @MainActor
+    func testSafariCheckPassesToSuccess() {
+        let app = launch()
+        app.onboardName("Rina")
+        app.passTurnOnExtension()
+        app.buttons["safariDefault.open"].tapWhenHittable()
+        app.comeBackFromSettings()
+        XCTAssertTrue(app.staticTexts["Tap Check & continue. Shoo opens one page to check, then you come back to Shoo."]
+            .waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["safariDefault.check"].tapWhenHittable()
+        app.comeBackFromSettings()
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 15), app.debugDescription)
+    }
+
+    /// Branch 8a: the heartbeat says Safari asks per site. Toast B, "Open Safari settings", "Check again".
+    @MainActor
+    func testSafariCheckSomeSitesOnlyShowsToastB() {
+        // ON-04 never offers Next while Safari asks per site, so this starts on Safari Default itself.
+        let app = XCUIApplication.mock([
+            "-settings.language", "en", "-UITestNotifications", "denied",
+            "-UITestExtensionStatus", "someSitesOnly", "-debug.onboardingStep", "safariDefault",
+        ])
+        app.buttons["safariDefault.open"].tapWhenHittable()
+        app.comeBackFromSettings()
+        app.buttons["safariDefault.check"].tapWhenHittable()
+        app.comeBackFromSettings()
+        let toast = app.descendants(matching: .any)["safariDefault.toast.text"].firstMatch
+        XCTAssertTrue(toast.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(toast.label.contains("All Websites"), toast.label)
+        XCTAssertTrue(app.buttons["safariDefault.openSafariSettings"].exists)
+        XCTAssertTrue(app.buttons["safariDefault.checkAgain"].exists)
+    }
+
+    /// Branch 8b: nothing came back (another default browser, or Safari still asks). "Try again" or "Continue anyway".
+    @MainActor
+    func testSafariCheckWithoutHeartbeatOffersRetryAndSkip() {
+        let app = launch(extensionActive: false, extensionStatus: "unchecked")
+        app.onboardName("Rina")
+        app.passTurnOnExtension()
+        app.buttons["safariDefault.open"].tapWhenHittable()
+        app.comeBackFromSettings()
+        app.buttons["safariDefault.check"].tapWhenHittable()
+        app.comeBackFromSettings()
+        let toast = app.descendants(matching: .any)["safariDefault.toast.text"].firstMatch
+        XCTAssertTrue(toast.waitForExistence(timeout: 30), app.debugDescription)
+        XCTAssertTrue(toast.label.contains("couldn't be checked"), toast.label)
+        XCTAssertTrue(app.buttons["safariDefault.retry"].exists)
+        app.buttons["safariDefault.skip"].tap()
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5), app.debugDescription)
     }
 
     /// On a device the link opens PiP. iPhone simulators report no PiP support, so the link falls back to

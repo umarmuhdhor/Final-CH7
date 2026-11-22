@@ -87,12 +87,62 @@
         }
       }
     },
+    "Changed it?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah diganti?"
+          }
+        }
+      }
+    },
+    "Check & continue" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cek & lanjutkan"
+          }
+        }
+      }
+    },
+    "Check again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cek lagi"
+          }
+        }
+      }
+    },
+    "Checking" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengecek"
+          }
+        }
+      }
+    },
     "Code expired" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kode kedaluwarsa"
+          }
+        }
+      }
+    },
+    "Continue anyway" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut saja"
           }
         }
       }
@@ -117,12 +167,92 @@
         }
       }
     },
+    "Go back to Shoo, then tap Check & continue." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali ke Shoo, lalu tekan Cek & lanjutkan."
+          }
+        }
+      }
+    },
+    "In Safari settings, tap All Websites, then choose Allow." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di pengaturan Safari, ketuk Semua Situs Web, lalu pilih Izinkan."
+          }
+        }
+      }
+    },
     "No connection" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tidak ada koneksi"
+          }
+        }
+      }
+    },
+    "Not changed yet?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum diganti?"
+          }
+        }
+      }
+    },
+    "One more step: make Safari your main browser, so links you tap open with Shoo's protection." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Satu langkah lagi: jadikan Safari browser utama, supaya link yang kamu ketuk terbuka dengan perlindungan Shoo."
+          }
+        }
+      }
+    },
+    "Open Settings again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan lagi"
+          }
+        }
+      }
+    },
+    "Safari isn't your main browser yet, or Shoo isn't allowed in Safari yet." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari belum jadi browser utama, atau Shoo belum diizinkan di Safari."
+          }
+        }
+      }
+    },
+    "Shoo couldn't be checked yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo belum bisa dicek"
+          }
+        }
+      }
+    },
+    "Shoo extension is on!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstensi Shoo sudah aktif!"
           }
         }
       }
@@ -157,12 +287,52 @@
         }
       }
     },
+    "Step %lld of %lld" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langkah %1$lld dari %2$lld"
+          }
+        }
+      }
+    },
+    "Step %lld of %lld done" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langkah %1$lld dari %2$lld selesai"
+          }
+        }
+      }
+    },
+    "Still not working?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masih gagal?"
+          }
+        }
+      }
+    },
     "Still protecting someone" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Masih melindungi orang"
+          }
+        }
+      }
+    },
+    "Tap Check & continue. Shoo opens one page to check, then you come back to Shoo." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekan Cek & lanjutkan. Shoo membuka satu halaman untuk mengecek, lalu kembali ke Shoo."
           }
         }
       }
@@ -2534,7 +2704,6 @@
       }
     },
     "Continue" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -6876,16 +7045,6 @@
         }
       }
     },
-    "Go back to Shoo, then tap Keep going." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kembali ke Shoo, lalu tekan Lanjutkan."
-          }
-        }
-      }
-    },
     "Go to Apps › Default Apps › Browser App, then choose Safari." : {
       "localizations" : {
         "id" : {
@@ -6922,16 +7081,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sudah pakai Safari"
-          }
-        }
-      }
-    },
-    "Keep going" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lanjutkan"
           }
         }
       }

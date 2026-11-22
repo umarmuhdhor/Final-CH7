@@ -516,7 +516,33 @@ struct OnboardingStepRow: View {
     }
 }
 
-/// ON-04 passed (Figma "Yeay, kamu berhasil lebih terlindungi!").
+/// ON-04 passed, step 1 of 2 done (Figma 2502:5639 "B2 · Layar selamat · Ekstensi aktif"): the success page
+/// with the celebrating owl, then Next to Safari Default. Without it ON-04 and Safari Default look alike and
+/// "Next" seemed to do nothing (transition B, 22 Nov 2026).
+struct ExtensionReadyView: View {
+    let onContinue: () -> Void
+
+    var body: some View {
+        OnboardingSuccessPage(
+            title: Text("Shoo extension is on!"),
+            message: Text("One more step: make Safari your main browser, so links you tap open with Shoo's protection."),
+            idPrefix: "extensionReady",
+            onContinue: onContinue,
+            largeTitle: false,
+            celebrates: true,
+            progress: OnboardingProgress(done: 1, count: 2),
+            buttonTitle: "Continue"
+        ) {
+            // Figma: the owl about 300 pt tall from y 90, the headline under it.
+            MascotImage(pose: .celebrate, height: 300)
+                .successCelebrationHero(ringSize: 220)
+                .padding(.top, 44)
+                .padding(.bottom, 16)
+        }
+    }
+}
+
+/// Safari Default passed (Figma "Yeay, kamu berhasil lebih terlindungi!").
 struct ExtensionOnView: View {
     let onContinue: () -> Void
 
@@ -553,6 +579,10 @@ struct ExtensionOnView: View {
         refreshStatus: { .off(lastSeen: Date(), reason: .someSitesOnly) }, onBack: {},
         consent: OnboardingExtensionConsent(isChecked: $checked, prepare: { true })
     )
+}
+
+#Preview("Extension ready") {
+    ExtensionReadyView(onContinue: {})
 }
 
 #Preview("Turned on") {

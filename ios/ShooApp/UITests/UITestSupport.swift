@@ -125,7 +125,7 @@ extension XCUIApplication {
     }
 
     /// ON-04: ticks the consent box (once, when it shows) and taps the main button. With Shoo already on that
-    /// is Next, which moves to Safari Default; otherwise Turn on, which opens Settings, so the test comes back
+    /// is Next, which moves on through "Shoo extension is on!" (`passExtensionReady`) to Safari Default; otherwise Turn on, which opens Settings, so the test comes back
     /// to Shoo and taps Next (ON-04 never moves on by itself). The box shows only while the question is
     /// unanswered (fase 27d K6): the mock answers it unless `-debug.askDataConsent YES`.
     @MainActor
@@ -141,8 +141,16 @@ extension XCUIApplication {
             buttons["extension.turnOn"].tapWhenHittable(file: file, line: line)
             comeBackFromSettings()
             // Shoo still off (the mock's status): the screen stays, as the caller expects.
-            if next.waitForExistence(timeout: UITestTimeout.optional) { next.tapWhenHittable(file: file, line: line) }
+            guard next.waitForExistence(timeout: UITestTimeout.optional) else { return }
+            next.tapWhenHittable(file: file, line: line)
         }
+        passExtensionReady(file: file, line: line)
+    }
+
+    /// "Shoo extension is on!" (transition B, Figma 2502:5639) after ON-04's Next: its Next goes to Safari Default.
+    @MainActor
+    func passExtensionReady(file: StaticString = #filePath, line: UInt = #line) {
+        buttons["extensionReady.continue"].tapWhenHittable(file: file, line: line)
     }
 
     /// The first tap registers the device before Settings opens: wait until Shoo has really left, or
@@ -154,12 +162,18 @@ extension XCUIApplication {
         activate()
     }
 
-    /// Safari Default has no skip in Figma: open Settings, come back, Keep going.
+    /// Safari Default (Figma 2497:4919): open Settings, come back, "Check & continue" opens the check page in the
+    /// browser, come back. With `-UITestExtensionActive YES` the check passes; otherwise "Continue anyway".
     @MainActor
     func passSafariDefault(file: StaticString = #filePath, line: UInt = #line) {
         buttons["safariDefault.open"].tapWhenHittable(file: file, line: line)
         comeBackFromSettings()
-        buttons["safariDefault.continue"].tapWhenHittable(file: file, line: line)
+        buttons["safariDefault.check"].tapWhenHittable(file: file, line: line)
+        comeBackFromSettings()
+        let skip = buttons["safariDefault.skip"]
+        let end = Date().addingTimeInterval(UITestTimeout.screen + 25)
+        while Date() < end, !buttons["extensionOn.continue"].exists, !skip.exists { Thread.sleep(forTimeInterval: 0.3) }
+        if skip.exists { skip.tapWhenHittable(file: file, line: line) }
     }
 
     /// ON (Figma 1205:4696): the whole onboarding as Pribadi, ending on Home. Needs `-UITestExtensionActive YES`

@@ -94,9 +94,9 @@ final class LiveQAUITests: XCTestCase {
     private func finishOnboarding(_ app: XCUIApplication) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let steps = [
-            "extension.continue", "extension.skipCheck", "safariDefault.continue", "extensionOn.continue", "notificationAsk.allow", "reminder.notNow",
+            "extension.continue", "extension.skipCheck", "extensionReady.continue", "safariDefault.skip", "extensionOn.continue", "notificationAsk.allow", "reminder.notNow",
         ]
-        let opensSettings = ["extension.turnOn", "safariDefault.open"]
+        let opensSettings = ["extension.turnOn", "safariDefault.open", "safariDefault.check", "safariDefault.retry"]
         let end = Date().addingTimeInterval(90)
         while Date() < end, !app.buttons["profileButton"].exists {
             for label in ["Allow", "Izinkan"] where springboard.alerts.buttons[label].exists {
