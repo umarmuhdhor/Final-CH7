@@ -127,6 +127,16 @@
         }
       }
     },
+    "Shoo isn't on in Safari yet." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo belum menyala di Safari."
+          }
+        }
+      }
+    },
     "Sign-up limit reached" : {
       "localizations" : {
         "id" : {

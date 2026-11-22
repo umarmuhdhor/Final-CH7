@@ -136,7 +136,11 @@ final class GuardianUITests: XCTestCase {
             "-UITestExtensionStatus", "switchedOff",
         ])
         XCTAssertTrue(app.descendants(matching: .any)["home.status.off"].waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(app.buttons["home.turnOn"].exists)
+        // 29g option B: the hero keeps its headline; "Turn on now" sits on the orange card under it, once.
+        XCTAssertTrue(app.descendants(matching: .any)["home.offBanner"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(app.buttons.matching(identifier: "home.turnOn").count, 1, app.debugDescription)
+        app.buttons["home.turnOn"].tapWhenHittable()
+        XCTAssertTrue(app.descendants(matching: .any)["home.offBanner"].exists)
     }
 
     /// F5 (goldfish 21 Nov 2026): Shoo is on but Safari still asks per site. The fix is in Safari settings, so

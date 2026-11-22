@@ -2,11 +2,11 @@ import SwiftUI
 
 /// "Matikan Shoo" (GD-01, Figma "Sheet · Matikan Shoo" 1681:5372): how to switch Shoo off in Safari. Only a guide;
 /// Shoo never switches itself off, and Home shows "not protected" once Safari reports the switch off.
-/// Opened from the active "Safari extension" row in Profile.
+/// Opened from the active "Safari extension" row in Profile, as a `peekSheet` (fase 29g: Shoo peeks over the top
+/// edge, Figma 2447:13710).
 struct TurnOffExtensionSheet: View {
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closePeekSheet) private var close
     @Environment(\.shooReduceMotion) private var reduceMotion
-    @State private var height: CGFloat = 451
     @State private var shown = false
 
     private let steps = TurnOffExtensionSheet.steps(for: ProcessInfo.processInfo.operatingSystemVersion)
@@ -38,7 +38,7 @@ struct TurnOffExtensionSheet: View {
                     .foregroundStyle(HomeTheme.navy)
                     .accessibilityAddTraits(.isHeader)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Button { dismiss() } label: {
+                Button { close() } label: {
                     Image("ProfileSheetClose")
                         .resizable()
                         .frame(width: 30, height: 30)
@@ -93,11 +93,6 @@ struct TurnOffExtensionSheet: View {
         .padding(.top, 8)
         .padding(.bottom, 6)
         .fixedSize(horizontal: false, vertical: true)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
-        .presentationDetents([.height(height)])
-        .presentationDragIndicator(.hidden)
-        .presentationCornerRadius(32)
-        .presentationBackground(.white)
         .environment(\.colorScheme, .light)
         .sensoryFeedback(.warning, trigger: shown) { _, now in now }
         .onAppear { shown = true }
@@ -120,5 +115,5 @@ struct TurnOffExtensionSheet: View {
 }
 
 #Preview {
-    Color.gray.sheet(isPresented: .constant(true)) { TurnOffExtensionSheet() }
+    Color.gray.peekSheet(isPresented: .constant(true)) { TurnOffExtensionSheet() }
 }

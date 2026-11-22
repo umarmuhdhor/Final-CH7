@@ -144,6 +144,11 @@ struct GuardianHomeView: View {
 
     // MARK: Hero and status
 
+    /// Pribadi with Shoo off (or on for some sites only) and the page loaded: `HomeOffBanner` under the hero.
+    private var showsOffBanner: Bool {
+        !isFamily && model.extensionChecked && !model.extensionStatus.isActive && model.state == .loaded
+    }
+
     @ViewBuilder
     private var hero: some View {
         if !isFamily {
@@ -162,15 +167,17 @@ struct GuardianHomeView: View {
                 : isChecking ? "Shoo is on" : level.title
             let identifier = isUnread ? "home.status.extensionChecking"
                 : isOff ? "home.status.off" : isChecking ? "home.status.checking" : level.titleIdentifier
+            // Option B (29g): once the page is in, the orange card under the hero carries "Turn on now".
+            let showsLink = isOff && !showsOffBanner
             HomeHero(
                 style: level.heroStyle,
                 title: title,
                 titleIdentifier: identifier,
                 shieldOn: !isOff,
                 shieldTint: level.shieldTint,
-                bottomPadding: isOff ? 20 : nil
+                bottomPadding: showsLink ? 20 : nil
             ) {
-                if isOff {
+                if showsLink {
                     Button { env.router.isTurnOnPresented = true } label: {
                         Text("Turn on now")
                             .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
@@ -253,6 +260,15 @@ struct GuardianHomeView: View {
                     if model.refreshFailed {
                         refreshFailedNotice
                             .padding(.bottom, 24)
+                    }
+                    if showsOffBanner {
+                        HomeOffBanner(someSitesOnly: model.extensionStatus.isSomeSitesOnly, turnOnIdentifier: "home.turnOn") {
+                            env.router.isTurnOnPresented = true
+                        }
+                        // The card's top sits where the Guardian card's would (31 under the sheet); 29 to the next.
+                        .padding(.top, 1 - HomeOffBanner.Style.poseOverhang)
+                        .padding(.bottom, 29)
+                        .transition(.opacity)
                     }
                     if model.showsGuardianCard {
                         // "Menjadi Guardian": the same way as Profile's card ("To be guardian" the first time).
