@@ -135,11 +135,14 @@ struct SafeReasonSheet: View {
             // A new value cancels the wait, so a drag or the resize itself does not queue a scroll per frame.
             .task(id: [keyboardTop ?? -1, scrollBottom, viewport]) {
                 guard keyboardTop != nil, noteFocused else { return }
-                // Past the keyboard's own slide (0.25 s), so the scroll is not lost in it.
-                try? await Task.sleep(for: .milliseconds(300))
-                guard !Task.isCancelled else { return }
-                withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) {
-                    proxy.scrollTo(Self.endID, anchor: .bottom)
+                // Once soon, then again after the keyboard's slide: a scroll made while the sheet is still moving
+                // for the keys can be lost (the peek sheet's cover moves with them on some runs, not on others).
+                for delay in [300, 450] {
+                    try? await Task.sleep(for: .milliseconds(delay))
+                    guard !Task.isCancelled else { return }
+                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) {
+                        proxy.scrollTo(Self.endID, anchor: .bottom)
+                    }
                 }
             }
         }
