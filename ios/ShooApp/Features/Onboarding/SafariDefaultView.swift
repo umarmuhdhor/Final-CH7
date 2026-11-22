@@ -70,9 +70,14 @@ enum SafariCheck {
     /// A heartbeat can land a moment after the user is back (same as ON-04, #135).
     static let recheck = (times: 10, every: Duration.seconds(2))
 
-    /// The page the check opens (backend `GET /safari-check`), in the app's language.
-    static func pageURL(language: AppLanguage) -> URL {
-        AppConfig.legalPage("/safari-check", language: language)
+    /// The page the check opens (backend `GET /safari-check`), in the app's language. On `join.shoo.ai.id`, the
+    /// public Custom Domain of the same Worker: its AASA lists only `/j/*`, so iOS opens this path in the browser,
+    /// not in Shoo. A local `wrangler dev` (simulator) serves it on its own host.
+    static func pageURL(language: AppLanguage, api: URL = AppConfig.apiBaseURL) -> URL {
+        let base = api == AppConfig.cloudAPIURL ? AppConfig.publicBaseURL : api
+        var components = URLComponents(url: base.appending(path: "safari-check"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "lang", value: language.code)]
+        return components.url!
     }
 
     /// What `status` says about a check started at `start`; nil while nothing newer than the tap has arrived.

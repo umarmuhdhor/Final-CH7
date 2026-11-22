@@ -582,12 +582,17 @@ struct SafariCheckTests {
         #expect(SafariCheckToast(.notSeen)?.pose == .think)
     }
 
-    @Test func thePageIsTheBackendCheckPageInTheAppLanguage() {
-        let url = SafariCheck.pageURL(language: .indonesian)
-        #expect(url.path() == "/safari-check")
-        #expect(url.query() == "lang=id")
-        // Not the invite host: `/j/*` there is a Universal Link, so the app would open instead of the browser.
-        #expect(url.host() != AppConfig.publicBaseURL.host())
+    @Test func thePageIsOnJoinShooAiIdInTheAppLanguage() {
+        let url = SafariCheck.pageURL(language: .indonesian, api: AppConfig.cloudAPIURL)
+        #expect(url.absoluteString == "https://join.shoo.ai.id/safari-check?lang=id")
+        // Only `/j/*` is a Universal Link there (backend app-site-association.ts), so this opens in the browser.
+        #expect(!url.path().hasPrefix("/j/"))
+        #expect(SafariCheck.pageURL(language: .english, api: AppConfig.cloudAPIURL).query() == "lang=en")
+    }
+
+    @Test func aLocalWorkerServesThePageItself() {
+        let local = URL(string: "http://localhost:8787")!
+        #expect(SafariCheck.pageURL(language: .indonesian, api: local).absoluteString == "http://localhost:8787/safari-check?lang=id")
     }
 }
 

@@ -1047,7 +1047,7 @@ Link (the AASA lists only `/j/*`), so it never opens the app instead of the brow
 `GET /safari-check/shoo.png` (`Cache-Control: public, max-age=604800`).
 
 - **Auth:** none. No database, no script. `noindex`. Language as for `/privacy`.
-- Served on the API host only; `shoo.ai.id` does not pass this path through.
+- The app opens it on `https://join.shoo.ai.id/safari-check` (Custom Domain of this Worker; its AASA lists only `/j/*`). The bare `shoo.ai.id` (landing Worker) does not pass this path through.
 
 ### `GET /get`
 
