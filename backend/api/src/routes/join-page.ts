@@ -89,8 +89,8 @@ const csp = (nonce: string) =>
 // Figma 1326:12651 tokens, with the app's Shield home sky (blue; orange "Perlu Waspada" for a dead link).
 // Light only. SF Pro Rounded comes from the system (ui-rounded); the CSP loads no web fonts.
 const STYLE = `*{box-sizing:border-box}
-body{margin:0;background:#fff;color:#191d2f;font:17px/22px -apple-system,system-ui,sans-serif;text-align:center;-webkit-text-size-adjust:100%}
-.sky{position:relative;height:280px;overflow:hidden;background:linear-gradient(180deg,#1f7fdc 0%,#46a6ec 45%,#9ad3f6 80%,#fff 100%)}
+body{margin:0;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;background:#fff;color:#191d2f;font:17px/22px -apple-system,system-ui,sans-serif;text-align:center;-webkit-text-size-adjust:100%}
+.sky{position:relative;flex:none;height:280px;overflow:hidden;background:linear-gradient(180deg,#1f7fdc 0%,#46a6ec 45%,#9ad3f6 80%,#fff 100%)}
 .sky.warn{background:linear-gradient(180deg,#e9862a 0%,#f3a457 45%,#f9d3a8 80%,#fff 100%)}
 .sky i{position:absolute;left:50%;top:140px;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
 .sky .glow{width:220px;height:220px;background:radial-gradient(circle,rgba(255,255,255,.55),rgba(255,255,255,0) 70%)}
@@ -102,7 +102,7 @@ body{margin:0;background:#fff;color:#191d2f;font:17px/22px -apple-system,system-
 @keyframes pop{from{transform:translateY(24px) scale(.9);opacity:0}to{transform:none;opacity:1}}
 @keyframes bob{0%,100%{transform:none}50%{transform:translateY(-5px)}}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-main{position:relative;max-width:402px;margin:-28px auto 0;padding:28px 24px 40px;background:#fff;border-radius:32px 32px 0 0;display:flex;flex-direction:column;align-items:center}
+main{position:relative;flex:1;width:100%;max-width:402px;margin:-28px auto 0;padding:28px 24px 40px;background:#fff;border-radius:32px 32px 0 0;display:flex;flex-direction:column;align-items:center}
 .enter>*{animation:rise .3s cubic-bezier(.2,.8,.2,1) .15s both}
 .enter>.actions{animation-delay:.23s}
 h1{margin:4px 0 0;font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.01em}
@@ -117,7 +117,7 @@ h1{margin:4px 0 0;font-size:28px;line-height:34px;font-weight:700;letter-spacing
 .meta{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:8px}
 .ttl{display:flex;align-items:center;gap:6px;color:#6a717e;font-size:13px;line-height:18px;letter-spacing:-.08px}
 .copy{display:flex;align-items:center;gap:6px;min-height:44px;padding:0;border:0;background:none;color:#186fb9;font:inherit;font-weight:600;letter-spacing:-.01em;cursor:pointer}
-.actions{width:100%;margin-top:40px;display:flex;flex-direction:column;gap:10px}
+.actions{width:100%;margin-top:auto;padding-top:40px;display:flex;flex-direction:column;gap:10px}
 .btn{width:100%;font:inherit;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .12s ease,filter .12s ease;display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:16px 20px 16px 16px;border:1.5px solid #191d2f;border-radius:999px;background:linear-gradient(180deg,#446eb4 -4%,#214889 75%);color:#fff;font-weight:600;text-decoration:none;text-shadow:0 4px 4px rgba(0,0,0,.2)}
 .btn:active{transform:scale(.97);filter:brightness(.92)}
 .copy{transition:transform .12s ease}.copy:active{transform:scale(.97)}
@@ -130,6 +130,8 @@ h1{margin:4px 0 0;font-size:28px;line-height:34px;font-weight:700;letter-spacing
 /* Last, so it wins over the motion rules above. */
 @media (prefers-reduced-motion:reduce){.mascot,.enter>*{animation:none}.btn,.copy{transition:none}.btn:active,.copy:active{transform:none}}`;
 
+// The actions sit at the bottom of the screen (main fills the rest of the viewport), like the app's CTAs;
+// on a short screen they follow the content with a 40 px gap and the page scrolls.
 // Mascot motion: Shoo pops up over the sheet edge, then bobs gently (like the app's mascots). CSS only
 // (no script); off under prefers-reduced-motion. The image is decorative (alt=""): the heading says it.
 
