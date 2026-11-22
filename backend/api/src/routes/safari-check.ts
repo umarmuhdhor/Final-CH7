@@ -31,7 +31,7 @@ const TEXT: Record<"en" | "id", Text> = {
     lead: "This page opened in your main browser. If it's Safari, Shoo has already checked. Go back to Shoo to see the result.",
     askTitle: "Is Safari asking about Shoo?",
     // Labels as Safari shows them (iOS 26.5 / 27.0, English).
-    askBody: `Tap the ${MENU_BUTTON} button left of the site name (usually at the bottom of the screen) → Shoo → Always Allow… → Always Allow on Every Website. Don't choose "Allow for One Day" (the blue button).`,
+    askBody: `Tap the ${MENU_BUTTON} button left of the site name (usually at the bottom of the screen) → Shoo → Always Allow… → Always Allow on Every Website.`,
     back: "Back to Shoo",
     imageAlt: "Shoo the owl waving",
   },
@@ -40,7 +40,7 @@ const TEXT: Record<"en" | "id", Text> = {
     lead: "Halaman ini terbuka di browser utamamu. Kalau ini Safari, Shoo sudah mengecek. Kembali ke Shoo untuk lihat hasilnya.",
     askTitle: "Safari bertanya soal Shoo?",
     // Label persis seperti di Safari iOS 26.5 / 27.0 berbahasa Indonesia.
-    askBody: `Ketuk tombol ${MENU_BUTTON} di kiri nama situs (biasanya di bawah layar) → Shoo → Selalu Izinkan… → Selalu Izinkan di Semua Situs Web. Jangan pilih "Izinkan selama Satu Hari" (tombol biru).`,
+    askBody: `Ketuk tombol ${MENU_BUTTON} di kiri nama situs (biasanya di bawah layar) → Shoo → Selalu Izinkan… → Selalu Izinkan di Semua Situs Web.`,
     back: "Kembali ke Shoo",
     imageAlt: "Shoo si burung hantu melambai",
   },
