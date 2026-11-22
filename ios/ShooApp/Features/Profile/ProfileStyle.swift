@@ -45,6 +45,9 @@ enum ProfileStyle {
     /// `arrow.left.arrow.right` stands in for Figma's "icon/switch".
     static let switchSymbol = "arrow.left.arrow.right"
 
+    /// "Punya kode undangan?": the code is scanned or typed (goldfish F8: the Safari glyph read as a browser).
+    static let inviteCodeSymbol = "qrcode.viewfinder"
+
     /// Figma's Safari extension glyph (`macwindow.stack`) is iOS 26+; older systems get `macwindow`.
     static var extensionSymbol: String {
         UIImage(systemName: "macwindow.stack") != nil ? "macwindow.stack" : "macwindow"
@@ -378,6 +381,8 @@ struct ProfileToggleRow: View {
     let title: Text
     var subtitle: Text?
     var style: Style = .profile
+    /// Grey for a switch that can't change yet ("Segera hadir", V1), so it doesn't read as a live setting.
+    var tint: Color = ProfileStyle.green
     @Binding var isOn: Bool
 
     var body: some View {
@@ -397,7 +402,7 @@ struct ProfileToggleRow: View {
                 }
             }
         }
-        .tint(ProfileStyle.green)
+        .tint(tint)
         .padding(.horizontal, 17)
         .padding(.vertical, style == .settings ? 12 : 11)
         // Figma: 60 with an icon, 55 without ("Jam tenang").

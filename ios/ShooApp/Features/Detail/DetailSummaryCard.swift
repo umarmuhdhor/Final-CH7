@@ -125,6 +125,7 @@ extension DetailLook {
         switch self {
         case .danger: DetailStyle.hex(0xE5483B).opacity(0.06)
         case .caution: DetailStyle.hex(0xFF9500).opacity(0.08)
+        case .safe: DetailStyle.hex(0x34C759).opacity(0.08)
         }
     }
 }

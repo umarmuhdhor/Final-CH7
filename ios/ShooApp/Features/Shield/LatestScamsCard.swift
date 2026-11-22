@@ -2,10 +2,13 @@ import SwiftUI
 
 /// Figma "Frame 1618872186" (Pribadi/Home 1115:13601, protected/Home 1115:17238): the newest scam cases among Shoo
 /// users. A red shield and the title (SF Pro Rounded 17, #6A717E), 16 pt, then the cases as 96 pt cards two to a
-/// row, 8 apart; more than two scroll sideways.
+/// row, 8 apart; more than two scroll sideways. A tap opens how that scam works (goldfish V3, option A): the cards
+/// looked tappable and did nothing.
 struct LatestScamsCard: View {
     let cases: [ScamCase]
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.locale) private var locale
+    @State private var shown: ScamCase?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -25,13 +28,13 @@ struct LatestScamsCard: View {
             }
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(spacing: 8) {
-                    ForEach(cases) { ScamCaseCard(scamCase: $0) }
+                    ForEach(cases) { card($0) }
                 }
             } else {
                 ScrollView(.horizontal) {
                     HStack(alignment: .top, spacing: 8) {
                         ForEach(cases) { scamCase in
-                            ScamCaseCard(scamCase: scamCase)
+                            card(scamCase)
                                 .containerRelativeFrame(.horizontal, count: 2, spacing: 8)
                         }
                     }
@@ -48,6 +51,19 @@ struct LatestScamsCard: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.scamCases")
+        .sheet(item: $shown) { scamCase in
+            ScamModusSheet(scamCase: scamCase)
+                .environment(\.locale, locale)
+        }
+    }
+
+    private func card(_ scamCase: ScamCase) -> some View {
+        Button { shown = scamCase } label: {
+            ScamCaseCard(scamCase: scamCase)
+        }
+        .buttonStyle(OnboardingPressButtonStyle())
+        .accessibilityHint(Text("Shows how this scam works"))
+        .accessibilityIdentifier("home.scamCase.\(scamCase.id)")
     }
 }
 
