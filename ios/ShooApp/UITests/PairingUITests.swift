@@ -64,7 +64,8 @@ final class PairingUITests: XCTestCase {
     /// 29g (Figma "alief notif" section 8): Copy on the invite sheet shows Shoo's small "Copied" toast.
     @MainActor
     func testCopyOnTheInviteSheetShowsTheCopiedToast() {
-        let app = launch(mode: "guardian")
+        // 1.5 s was too short for a slow CI runner to see between the tap and its next snapshot.
+        let app = launch(mode: "guardian", extra: ["-UITestMiniToastSeconds", "6"])
         app.buttons["profileButton"].tapWhenHittable()
         app.buttons["profile.invite"].tapWhenHittable()
         XCTAssertTrue(app.descendants(matching: .any)["invite.code"].firstMatch.waitForExistence(timeout: UITestTimeout.screen))
@@ -72,7 +73,7 @@ final class PairingUITests: XCTestCase {
         let toast = app.descendants(matching: .any)["miniToast"].firstMatch
         XCTAssertTrue(toast.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertTrue(toast.label.contains("Copied"), toast.label)
-        XCTAssertTrue(toast.waitForNonExistence(timeout: 5), "Leaves by itself")
+        XCTAssertTrue(toast.waitForNonExistence(timeout: 10), "Leaves by itself")
     }
 
     /// PR-03: a new install opened from an invite link onboards as Pribadi like everyone else (no Connect step,
@@ -114,6 +115,12 @@ final class PairingUITests: XCTestCase {
         app.confirmJoin()
         XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen))
         XCTAssertTrue(error.label.contains("expired"), error.label)
+        // 29g: the card says it in a headline, and "Retype code" empties the boxes.
+        XCTAssertTrue(app.staticTexts["Code expired"].exists, app.debugDescription)
+        let retype = app.buttons["connect.retype"]
+        XCTAssertTrue(retype.exists, app.debugDescription)
+        retype.tap()
+        XCTAssertTrue(error.waitForNonExistence(timeout: UITestTimeout.screen), "Retype clears the card")
 
         enter("482193", in: app)
         tapWhenSettled(join)

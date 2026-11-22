@@ -121,17 +121,6 @@ struct ConnectView: View {
                             // 16 of the footer's 24 pt fade: the boxes end 8 pt above the button.
                             .background { Color.clear.id(Self.codeBoxesID).padding(.bottom, 16) }
                             problemLabel
-                            // Figma "Kode salah" (1681:4712): "Ketik ulang kode" under the line empties the boxes.
-                            if model.problem == .invalid {
-                                Button("Retype code") {
-                                    model.retype()
-                                    focusRequests += 1
-                                }
-                                .buttonStyle(ConnectInlineLinkStyle())
-                                .padding(.top, 12)
-                                .transition(StateMotion.transition(reduceMotion: reduceMotion, edge: .top))
-                                .accessibilityIdentifier("connect.retype")
-                            }
                         }
                         // Fades in; editing the code clears it at once (no fade-out to wait for).
                         .animation(model.problem == nil ? nil : StateMotion.enter(reduceMotion: reduceMotion), value: model.problem)
@@ -237,17 +226,113 @@ struct ConnectView: View {
         if model.problem == .full, onBack != nil { 1 } else if model.retryAt != nil { 2 } else { 0 }
     }
 
+    /// Figma "alief notif" section 6: the join's answer as a card with Shoo, and what to do next when there is
+    /// something to do on this screen. A wait counts down on the button below instead (Figma "tombol jadi hitung mundur").
     @ViewBuilder
     private var problemLabel: some View {
         if let problem = model.problem {
-            ConnectProblemLabel(
-                text: Text(verbatim: L10n.string(problem.message, language: language)),
-                systemImage: problem.isWait ? "clock" : (problem == .expired ? "clock.arrow.circlepath" : "exclamationmark.triangle.fill"),
-                tint: problem.isWait ? ConnectProblemLabel.waitInk : ConnectProblemLabel.errorInk
-            )
-            .accessibilityIdentifier("connect.error")
+            ConnectProblemCard(
+                pose: problem.pose,
+                title: Text(verbatim: L10n.string(problem.title, language: language)),
+                message: Text(verbatim: L10n.string(problem.message, language: language))
+            ) {
+                // Figma "Kode salah" / "Kode kedaluwarsa": "Ketik ulang kode" empties the boxes.
+                if problem == .invalid || problem == .expired {
+                    Button("Retype code") {
+                        model.retype()
+                        focusRequests += 1
+                    }
+                    .buttonStyle(ConnectCardLinkStyle())
+                    .accessibilityIdentifier("connect.retype")
+                } else if problem.canRetry {
+                    Button("Try again") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        Task { await model.join() }
+                    }
+                    .buttonStyle(ConnectCardLinkStyle())
+                    .disabled(!model.canJoin)
+                    .accessibilityIdentifier("connect.retry")
+                }
+            }
             .transition(.opacity)
         }
+    }
+}
+
+/// Figma "Error kode · …" (2447:13849–13897, drawn at 2x): a pale red card, r 22, with Shoo standing on its left
+/// and peeking 14 pt over the top; the headline SF Pro Semibold 16, the line Regular 13 red, a link under it.
+private enum ConnectProblemCardStyle {
+    static let fill = Color.dynamic(0xFEF2F2, dark: 0x2B1515)
+    static let stroke = Color.dynamic(0xFECACA, dark: 0x5C2525)
+    static let titleInk = Color.dynamic(0x111111, dark: 0xF7F8FA)
+    static let messageInk = Color.dynamic(0xB91C1C, dark: 0xFCA5A5, contrastLight: 0x8F1414)
+    // Figma: Shoo 92 tall in a 100 pt column 10 from the left, the text 126 from the left.
+    static let poseHeight: CGFloat = 92
+    static let overhang: CGFloat = 14
+    static let textInset: CGFloat = 126
+}
+
+private struct ConnectProblemCard<Action: View>: View {
+    private typealias Style = ConnectProblemCardStyle
+
+    let pose: Mascot
+    let title: Text
+    let message: Text
+    @ViewBuilder var action: Action
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            title
+                .onboardingFont(16, weight: .semibold, relativeTo: .headline)
+                .foregroundStyle(Style.titleInk)
+                .accessibilityAddTraits(.isHeader)
+            message
+                .onboardingFont(13, relativeTo: .footnote)
+                .figmaLineHeight(15.5, relativeTo: .footnote)
+                .foregroundStyle(Style.messageInk)
+                .padding(.top, 2)
+                .accessibilityIdentifier("connect.error")
+            action
+                .padding(.top, 7)
+        }
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(EdgeInsets(top: 16, leading: Style.textInset, bottom: 16, trailing: 18))
+        .frame(minHeight: 96, alignment: .top)
+        .background(Style.fill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(Style.stroke, lineWidth: 1)
+        }
+        .overlay(alignment: .topLeading) {
+            MascotImage(pose: pose, height: Style.poseHeight)
+                .frame(width: 100, height: Style.poseHeight, alignment: .bottom)
+                .offset(x: 10, y: -Style.overhang)
+                .accessibilityHidden(true)
+        }
+        .padding(.top, Style.overhang)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("connect.problem")
+    }
+}
+
+/// The card's link (Figma "Ketik ulang kode", "Coba lagi"): SF Pro Semibold 14, #0A66D9, 44 pt to tap.
+private struct ConnectCardLinkStyle: ButtonStyle {
+    static let ink = Color.dynamic(0x0A66D9, dark: 0x5AA9F5, contrastLight: 0x0850A8)
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onboardingFont(14, weight: .semibold, relativeTo: .subheadline)
+            .foregroundStyle(Self.ink)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.6 : 1) : 0.4)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1, anchor: .leading)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .padding(.vertical, -13)
     }
 }
 
@@ -255,7 +340,6 @@ struct ConnectView: View {
 /// red #C81414 for a refusal, orange #C2610C for a wait.
 private struct ConnectProblemLabel: View {
     static let errorInk = Color(hex: 0xC81414)
-    static let waitInk = Color(hex: 0xC2610C)
 
     let text: Text
     var systemImage = "exclamationmark.triangle.fill"

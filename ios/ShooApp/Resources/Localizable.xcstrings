@@ -57,6 +57,16 @@
         }
       }
     },
+    "Already connected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah terhubung"
+          }
+        }
+      }
+    },
     "Applies to every phone in your family. You can't change it until %@." : {
       "localizations" : {
         "id" : {
@@ -77,6 +87,16 @@
         }
       }
     },
+    "Code expired" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode kedaluwarsa"
+          }
+        }
+      }
+    },
     "Copy code" : {
       "localizations" : {
         "id" : {
@@ -87,12 +107,82 @@
         }
       }
     },
+    "Family full" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga penuh"
+          }
+        }
+      }
+    },
+    "No connection" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada koneksi"
+          }
+        }
+      }
+    },
     "Shoo isn't on in Safari yet." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shoo belum menyala di Safari."
+          }
+        }
+      }
+    },
+    "Sign-up limit reached" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Batas pendaftaran"
+          }
+        }
+      }
+    },
+    "Something went wrong" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada yang salah"
+          }
+        }
+      }
+    },
+    "Still protecting someone" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masih melindungi orang"
+          }
+        }
+      }
+    },
+    "Too many tries" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak percobaan"
+          }
+        }
+      }
+    },
+    "Wrong code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode salah"
           }
         }
       }
