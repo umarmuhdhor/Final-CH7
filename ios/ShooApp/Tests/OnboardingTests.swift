@@ -582,11 +582,11 @@ struct SafariCheckTests {
         #expect(SafariCheckToast(.notSeen)?.pose == .think)
     }
 
-    @Test func thePageIsOnJoinShooAiIdInTheAppLanguage() {
+    @Test func thePageIsOnShooAiIdInTheAppLanguage() {
         let url = SafariCheck.pageURL(language: .indonesian, api: AppConfig.cloudAPIURL)
-        #expect(url.absoluteString == "https://join.shoo.ai.id/safari-check?lang=id")
-        // Only `/j/*` is a Universal Link there (backend app-site-association.ts), so this opens in the browser.
-        #expect(!url.path().hasPrefix("/j/"))
+        #expect(url.absoluteString == "https://shoo.ai.id/safari-check?lang=id")
+        // Not a Universal Link host (applinks lists only join.shoo.ai.id), so this opens in the browser.
+        #expect(url.host() != AppConfig.publicBaseURL.host())
         #expect(SafariCheck.pageURL(language: .english, api: AppConfig.cloudAPIURL).query() == "lang=en")
     }
 

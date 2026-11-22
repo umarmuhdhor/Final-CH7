@@ -70,11 +70,11 @@ enum SafariCheck {
     /// A heartbeat can land a moment after the user is back (same as ON-04, #135).
     static let recheck = (times: 10, every: Duration.seconds(2))
 
-    /// The page the check opens (backend `GET /safari-check`), in the app's language. On `join.shoo.ai.id`, the
-    /// public Custom Domain of the same Worker: its AASA lists only `/j/*`, so iOS opens this path in the browser,
-    /// not in Shoo. A local `wrangler dev` (simulator) serves it on its own host.
+    /// The page the check opens (backend `GET /safari-check`), in the app's language. On the website `shoo.ai.id`,
+    /// which passes this path through to the API: that host has no Universal Links, so iOS always opens it in the
+    /// browser, not in Shoo. A local `wrangler dev` (simulator) serves it on its own host.
     static func pageURL(language: AppLanguage, api: URL = AppConfig.apiBaseURL) -> URL {
-        let base = api == AppConfig.cloudAPIURL ? AppConfig.publicBaseURL : api
+        let base = api == AppConfig.cloudAPIURL ? AppConfig.siteURL : api
         var components = URLComponents(url: base.appending(path: "safari-check"), resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "lang", value: language.code)]
         return components.url!

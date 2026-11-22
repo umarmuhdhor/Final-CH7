@@ -1047,7 +1047,7 @@ Link (the AASA lists only `/j/*`), so it never opens the app instead of the brow
 `GET /safari-check/shoo.png` (`Cache-Control: public, max-age=604800`).
 
 - **Auth:** none. No database, no script. `noindex`. Language as for `/privacy`.
-- The app opens it on `https://join.shoo.ai.id/safari-check` (Custom Domain of this Worker; its AASA lists only `/j/*`). The bare `shoo.ai.id` (landing Worker) does not pass this path through.
+- The app opens it on `https://shoo.ai.id/safari-check`: the website (landing Worker, Nisrinathifal/shoo-landing#18) passes `/safari-check` and `/safari-check/shoo.png` through to this Worker, like `/privacy`. That host has no Universal Links. It also answers on `join.shoo.ai.id` (Custom Domain of this Worker).
 
 ### `GET /get`
 
