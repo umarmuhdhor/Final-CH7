@@ -21,8 +21,22 @@ extension View {
 }
 
 extension EnvironmentValues {
-    /// Slides the peek sheet down, then closes it. Does nothing outside a peek sheet.
+    /// Slides the peek sheet down, then closes it, even while `peekSheetDismissDisabled`. Does nothing outside a
+    /// peek sheet.
     @Entry var closePeekSheet: @MainActor () -> Void = {}
+}
+
+extension View {
+    /// Like `interactiveDismissDisabled`: no drag, tap on the dimming or escape closes the peek sheet (e.g. while
+    /// saving). `closePeekSheet` still does.
+    func peekSheetDismissDisabled(_ disabled: Bool = true) -> some View {
+        preference(key: PeekSheetDismissDisabledKey.self, value: disabled)
+    }
+}
+
+private struct PeekSheetDismissDisabledKey: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
 }
 
 private struct PeekSheetPresenter<Sheet: View>: ViewModifier {
@@ -30,6 +44,8 @@ private struct PeekSheetPresenter<Sheet: View>: ViewModifier {
     let onDismiss: (() -> Void)?
     @ViewBuilder let sheet: () -> Sheet
     @State private var coverShown = false
+    @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
@@ -41,6 +57,9 @@ private struct PeekSheetPresenter<Sheet: View>: ViewModifier {
             }) {
                 PeekSheetHost(isPresented: $isPresented, removeCover: { show(false) }, content: sheet)
                     .presentationBackground(.clear)
+                    // As ShooDialog does: the app's language and motion setting reach into the cover.
+                    .environment(\.locale, locale)
+                    .environment(\.shooReduceMotion, reduceMotion)
             }
     }
 
@@ -61,6 +80,7 @@ private struct PeekSheetHost<Content: View>: View {
     @State private var shown = false
     @State private var closing = false
     @State private var drag: CGFloat = 0
+    @State private var dismissDisabled = false
 
     /// Pulled down this far (or flicked), the sheet closes; less, it springs back.
     static var closeDistance: CGFloat { 110 }
@@ -81,21 +101,22 @@ private struct PeekSheetHost<Content: View>: View {
                     .gesture(dragToClose)
                     .transition(reduceMotion ? .opacity : .move(edge: .bottom))
                     .accessibilityAddTraits(.isModal)
+                    .onPreferenceChange(PeekSheetDismissDisabledKey.self) { dismissDisabled = $0 }
             }
         }
-        .environment(\.closePeekSheet, close)
+        .environment(\.closePeekSheet, { close(force: true) })
         .accessibilityAction(.escape) { close() }
         .onAppear { withAnimation(motion) { shown = true } }
         // The presenter set its binding to false (e.g. a done flow): slide down too.
-        .onChange(of: isPresented) { _, now in if !now { close() } }
+        .onChange(of: isPresented) { _, now in if !now { close(force: true) } }
     }
 
     private var dragToClose: some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
-                // Down follows the finger; up gives a little, as a sheet does.
+                // Down follows the finger (a little only while closing is off); up gives a little, as a sheet does.
                 let dy = value.translation.height
-                drag = dy > 0 ? dy : dy / 6
+                drag = dy > 0 && !dismissDisabled ? dy : dy / 6
             }
             .onEnded { value in
                 if value.translation.height > Self.closeDistance || value.predictedEndTranslation.height > Self.closeDistance * 2.5 {
@@ -106,8 +127,12 @@ private struct PeekSheetHost<Content: View>: View {
             }
     }
 
-    private func close() {
+    private func close(force: Bool = false) {
         guard !closing else { return }
+        guard force || !dismissDisabled else {
+            withAnimation(motion) { drag = 0 }
+            return
+        }
         closing = true
         withAnimation(motion) {
             shown = false

@@ -98,6 +98,28 @@ final class DetailUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["detail.verdictLocked"].exists, app.debugDescription)
     }
 
+    /// 29g peek sheet: "Tandai aman" still closes like a sheet: a drag down and a tap on the dimming drop it, and
+    /// nothing is saved.
+    @MainActor
+    func testSafeReasonSheetClosesOnDragAndDimming() {
+        let app = openDetail(Self.blocked92)
+        let safe = app.buttons["detail.verdict.safe"]
+        let sheet = app.descendants(matching: .any)["safeReason.sheet"]
+        let reason = app.buttons["safeReason.chip.official_site"]
+
+        safe.tap()
+        XCTAssertTrue(reason.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        let start = reason.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 500)))
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
+
+        safe.tapWhenHittable()
+        XCTAssertTrue(reason.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.12)).tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertTrue(safe.isHittable, app.debugDescription)
+    }
+
     /// A-02 (fase 28c, K5): "Aman" was saved but its answer was lost; the retry gets `409 verdict_locked`.
     /// Detail reloads and shows the server's safe verdict, so the badge, buttons and footer agree.
     @MainActor

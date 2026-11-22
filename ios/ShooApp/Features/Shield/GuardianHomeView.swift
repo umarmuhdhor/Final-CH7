@@ -321,7 +321,7 @@ struct GuardianHomeView: View {
                     },
                     onRetry: { await model.retryDecision() }
                 )
-                .sheet(isPresented: Binding(get: { safeReasonScanId != nil }, set: { if !$0 { safeReasonScanId = nil } })) {
+                .peekSheet(isPresented: Binding(get: { safeReasonScanId != nil }, set: { if !$0 { safeReasonScanId = nil } })) {
                     SafeReasonSheet { notes in
                         guard let scanId = safeReasonScanId else { return true }
                         return await model.decide(.safe, notes: notes, scanId: scanId)
