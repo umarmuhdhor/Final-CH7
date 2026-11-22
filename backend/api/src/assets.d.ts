@@ -13,3 +13,8 @@ declare module "*.ico" {
   const data: ArrayBuffer;
   export default data;
 }
+
+declare module "*.webp" {
+  const data: ArrayBuffer;
+  export default data;
+}

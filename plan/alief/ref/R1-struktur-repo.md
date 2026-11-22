@@ -24,7 +24,7 @@ backend/
 │   │   ├── app.ts                Hono app: requestId, batas body awal (413), Cache-Control no-store, header keamanan, mount routes
 │   │   ├── env.ts                tipe Env (bindings + vars + secrets)
 │   │   ├── policy.ts             RETENTION_DAYS = 14 (satu sumber angka retensi)
-│   │   ├── assets/               og-invite.jpg, join-hero.png (halaman undangan)
+│   │   ├── assets/               og-invite.jpg, mascot-wave.webp, mascot-sorry.webp (halaman undangan)
 │   │   ├── cron/
 │   │   │   ├── retention.ts      harian (R4 §5)
 │   │   │   └── notifications.ts  per jam: "Perlindungan mati" + ringkasan mingguan (PF-01)

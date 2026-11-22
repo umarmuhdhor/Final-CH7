@@ -8,7 +8,8 @@ import { ipAttemptsExhausted, lockIpAttempts, recordAttempt } from "../db/repo/j
 import { ApiError } from "../http/errors";
 import { errorInfo } from "../http/logError";
 import ogImage from "../assets/og-invite.jpg";
-import heroImage from "../assets/join-hero.png";
+import mascotWave from "../assets/mascot-wave.webp";
+import mascotSorry from "../assets/mascot-sorry.webp";
 import { ICON_LINKS } from "./site-icons";
 
 // Invite page behind `inviteUrl` (R3 §4, SECURITY T13, PR-03 issue #128). No auth. Only a strict 6-digit
@@ -21,8 +22,9 @@ import { ICON_LINKS } from "./site-icons";
 // navigation (Sec-Fetch-Mode navigate, Sec-Fetch-Dest document) is looked up: an <img>, iframe or fetch
 // from another site cannot spend a visitor's join budget, it gets the normal invite.
 // With the app installed the link is a Universal Link (issue #129) and this page never shows.
-// Layout: Figma "Undangan keluarga · Web · Redesign" (1326:12651). The design names the inviter;
-// this page never names anyone (T13), so the heading stays generic.
+// Layout: Figma "Undangan keluarga · Web · Redesign" (1326:12651), restyled to the app's current look:
+// a sky gradient with dotted halos (Shield home) and the Shoo owl peeking over a white sheet (peekSheet).
+// The design names the inviter; this page never names anyone (T13), so the heading stays generic.
 
 const TTL_MINUTES = CODE_TTL_SECONDS / 60;
 
@@ -35,6 +37,7 @@ const TEXT = {
     validity: `Valid for up to ${TTL_MINUTES} min`,
     copy: "Copy code",
     copied: "Copied",
+    invalidHeading: "This invite code doesn't work",
     noCode: "This invite link has no valid code.",
     requestNew: "Ask for a new code",
     requestMsg: "The Shoo invite code doesn't work anymore. Could you send me a new one?",
@@ -44,7 +47,6 @@ const TEXT = {
     installHint: "After installing, open this invite link again to join.",
     preview: "Tap to join and get protected from scam sites.",
     imageAlt: "Shoo logo",
-    heroAlt: "Your family on Shoo, and you",
   },
   id: {
     title: "Bergabung ke keluarga di Shoo",
@@ -54,6 +56,7 @@ const TEXT = {
     validity: `Berlaku maks. ${TTL_MINUTES} menit`,
     copy: "Salin kode",
     copied: "Tersalin",
+    invalidHeading: "Kode undangan tidak berlaku",
     noCode: "Link undangan ini tidak berisi kode yang valid.",
     requestNew: "Minta kode baru",
     requestMsg: "Kode undangan Shoo-nya sudah tidak berlaku. Bisa kirim kode baru?",
@@ -63,7 +66,6 @@ const TEXT = {
     installHint: "Setelah install, buka lagi link undangan ini untuk bergabung.",
     preview: "Ketuk untuk bergabung dan terlindungi dari situs penipuan.",
     imageAlt: "Logo Shoo",
-    heroAlt: "Keluargamu di Shoo, dan kamu",
   },
 } as const;
 
@@ -84,41 +86,38 @@ export function storeUrl(value: string | undefined): string {
 const csp = (nonce: string) =>
   `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`;
 
-// Figma 1326:12651 tokens. Light only, like the frame. SF Pro Rounded and Geist come from the system
-// (ui-rounded); the CSP loads no web fonts.
+// Figma 1326:12651 tokens, with the app's Shield home sky (blue; orange "Perlu Waspada" for a dead link).
+// Light only. SF Pro Rounded comes from the system (ui-rounded); the CSP loads no web fonts.
 const STYLE = `*{box-sizing:border-box}
-body{margin:0;background:#faf9fb;color:#191d2f;font:17px/22px -apple-system,system-ui,sans-serif;text-align:center;-webkit-text-size-adjust:100%}
-main{max-width:402px;margin:0 auto;padding:32px 24px 40px;display:flex;flex-direction:column;align-items:center}
-.hero{position:relative;width:232px;height:96px}
-.hero img{position:relative;z-index:1;display:block;width:232px;height:96px}
-.hero i{position:absolute;pointer-events:none;border-radius:50%;opacity:0}
-.hero .glow{left:12px;top:16px;width:64px;height:64px;background:radial-gradient(circle,rgba(68,110,180,.5) 0,rgba(68,110,180,0) 70%);animation:travel 3s ease-in-out infinite}
-.hero .beam{left:24px;top:47px;width:40px;height:2px;border-radius:1px;background:linear-gradient(90deg,rgba(24,111,185,0),#186fb9,rgba(24,111,185,0));animation:travel 3s ease-in-out infinite}
-.hero .ring{left:86px;top:18px;width:60px;height:60px;border:2px solid rgba(24,111,185,.4);animation:ring 3s ease-out infinite}
-@keyframes travel{0%{transform:translateX(0);opacity:0}10%,60%{opacity:1}70%,100%{transform:translateX(144px);opacity:0}}
-@keyframes ring{0%,25%{transform:scale(.8);opacity:0}35%{transform:scale(1);opacity:1}55%,100%{transform:scale(1.3);opacity:0}}
+body{margin:0;background:#fff;color:#191d2f;font:17px/22px -apple-system,system-ui,sans-serif;text-align:center;-webkit-text-size-adjust:100%}
+.sky{position:relative;height:280px;overflow:hidden;background:linear-gradient(180deg,#1f7fdc 0%,#46a6ec 45%,#9ad3f6 80%,#fff 100%)}
+.sky.warn{background:linear-gradient(180deg,#e9862a 0%,#f3a457 45%,#f9d3a8 80%,#fff 100%)}
+.sky i{position:absolute;left:50%;top:140px;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
+.sky .glow{width:220px;height:220px;background:radial-gradient(circle,rgba(255,255,255,.55),rgba(255,255,255,0) 70%)}
+.sky .halo{width:220px;height:220px;border:1.5px dotted rgba(255,255,255,.5)}
+.sky .halo+.halo{width:330px;height:330px;opacity:.6}
+.sky .halo+.halo+.halo{width:440px;height:440px;opacity:.35}
+.mascot{position:absolute;left:50%;bottom:-6px;height:180px;width:auto;margin-left:-74px;filter:drop-shadow(0 10px 14px rgba(20,40,80,.25));animation:pop .5s cubic-bezier(.34,1.56,.64,1) both,bob 3.2s ease-in-out .5s infinite}
+.warn .mascot{margin-left:-67px}
+@keyframes pop{from{transform:translateY(24px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+@keyframes bob{0%,100%{transform:none}50%{transform:translateY(-5px)}}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.enter>*{animation:rise .3s cubic-bezier(.2,.8,.2,1) both}
-.enter>.actions{animation-delay:.08s}
-.badge{position:relative;display:flex;align-items:center;justify-content:center;width:80px;height:80px;border-radius:50%;background:#ef871c;box-shadow:inset 0 0 0 5px rgba(255,255,255,.1),0 10px 27px rgba(127,69,27,.36);color:#fff;font:700 48px/1 ui-rounded,-apple-system,system-ui,sans-serif;animation:pop .45s cubic-bezier(.34,1.56,.64,1) .1s both}
-.badge::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid #ef871c;opacity:0;animation:halo 1.6s ease-out .6s 3}
-.badge span{display:block;animation:nudge .6s ease-in-out .6s 3}
-@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
-@keyframes halo{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.5);opacity:0}}
-@keyframes nudge{0%,100%{transform:none}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
-h1{margin:20px 0 0;font-size:28px;line-height:34px;font-weight:600;letter-spacing:.02em}
+main{position:relative;max-width:402px;margin:-28px auto 0;padding:28px 24px 40px;background:#fff;border-radius:32px 32px 0 0;display:flex;flex-direction:column;align-items:center}
+.enter>*{animation:rise .3s cubic-bezier(.2,.8,.2,1) .15s both}
+.enter>.actions{animation-delay:.23s}
+h1{margin:4px 0 0;font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.01em}
 .rounded{font-family:ui-rounded,-apple-system,system-ui,sans-serif}
-.label{margin:24px 0 0;color:#6a717e;letter-spacing:-.01em}
-.code{display:flex;align-items:center;gap:6px;margin:16px 0 0;padding:0}
-.digit{display:flex;align-items:center;justify-content:center;width:44px;height:58px;background:#fff;border:1px solid #e4e8ef;border-radius:12px;font:600 26px/32px ui-rounded,-apple-system,system-ui,sans-serif;color:#151617;font-variant-numeric:tabular-nums}
+.label{margin:20px 0 0;color:#6a717e;letter-spacing:-.01em}
+.code{display:flex;align-items:center;gap:6px;margin:14px 0 0;padding:0}
+.digit{display:flex;align-items:center;justify-content:center;width:44px;height:58px;background:#f4f6fa;border:1px solid #e4e8ef;border-radius:12px;font:600 26px/32px ui-rounded,-apple-system,system-ui,sans-serif;color:#151617;font-variant-numeric:tabular-nums}
 .dash{width:8px;height:2px;background:#c7c7ce}
 /* U-13: 6 x 44 + 6 gaps x 6 + dash 8 = 308 px is wider than the 272 px inside main's padding at a 320 px
    viewport (SE with Display Zoom). Below 360 px: 6 x 38 + 6 x 4 + 8 = 260 px. */
 @media (max-width:359px){.digit{width:38px}.code{gap:4px}}
 .meta{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:8px}
 .ttl{display:flex;align-items:center;gap:6px;color:#6a717e;font-size:13px;line-height:18px;letter-spacing:-.08px}
-.copy{display:flex;align-items:center;gap:6px;min-height:44px;padding:0;border:0;background:none;color:#186fb9;font:inherit;letter-spacing:-.01em;cursor:pointer}
-.actions{width:100%;margin-top:80px;display:flex;flex-direction:column;gap:10px}
+.copy{display:flex;align-items:center;gap:6px;min-height:44px;padding:0;border:0;background:none;color:#186fb9;font:inherit;font-weight:600;letter-spacing:-.01em;cursor:pointer}
+.actions{width:100%;margin-top:40px;display:flex;flex-direction:column;gap:10px}
 .btn{width:100%;font:inherit;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .12s ease,filter .12s ease;display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:16px 20px 16px 16px;border:1.5px solid #191d2f;border-radius:999px;background:linear-gradient(180deg,#446eb4 -4%,#214889 75%);color:#fff;font-weight:600;text-decoration:none;text-shadow:0 4px 4px rgba(0,0,0,.2)}
 .btn:active{transform:scale(.97);filter:brightness(.92)}
 .copy{transition:transform .12s ease}.copy:active{transform:scale(.97)}
@@ -126,16 +125,13 @@ h1{margin:20px 0 0;font-size:28px;line-height:34px;font-weight:600;letter-spacin
 .install{display:flex;align-items:center;justify-content:center;min-height:54px;margin:0;letter-spacing:-.01em}
 .install a{margin-left:.25em;color:#186fb9;font-weight:600;text-decoration:none}
 .hint{margin:0;color:#6a717e;font-size:13px;line-height:18px}
-.invalid{padding-top:88px}
-.invalid h1{margin-top:20px;letter-spacing:-.02em;font-weight:700}
 .nocode{margin:8px 0 0;color:#6a717e;letter-spacing:-.01em}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 /* Last, so it wins over the motion rules above. */
-@media (prefers-reduced-motion:reduce){.hero i,.enter>*,.badge,.badge::after,.badge span{animation:none}.btn,.copy{transition:none}.btn:active,.copy:active{transform:none}}`;
+@media (prefers-reduced-motion:reduce){.mascot,.enter>*{animation:none}.btn,.copy{transition:none}.btn:active,.copy:active{transform:none}}`;
 
-// Hero motion: a soft glow and a thin beam travel behind the image from the inviter's avatar, past the
-// Shoo shield (a ring pulses as they cross it), to the "you" circle, so the three read as connecting.
-// CSS only (no script), behind the PNG's transparent gaps; off under prefers-reduced-motion.
+// Mascot motion: Shoo pops up over the sheet edge, then bobs gently (like the app's mascots). CSS only
+// (no script); off under prefers-reduced-motion. The image is decorative (alt=""): the heading says it.
 
 // Figma "Button" icon (compass, 22pt) and the clock and copy glyphs from "Meta kode", as inline SVG.
 const ICON_OPEN = `<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path fill="#fff" d="M11 2.06a8.94 8.94 0 1 0 8.94 8.94A8.95 8.95 0 0 0 11 2.06Zm4.43 4.97-2.75 5.5a.34.34 0 0 1-.15.15l-5.5 2.75a.34.34 0 0 1-.46-.46l2.75-5.5a.34.34 0 0 1 .15-.15l5.5-2.75a.34.34 0 0 1 .46.46Z"/></svg>`;
@@ -168,8 +164,11 @@ const escapeHtml = (s: string) =>
 
 /** Link preview image (Open Graph): what WhatsApp, Messages and Telegram show above the invite text. */
 const OG_IMAGE_PATH = "/og/invite.jpg";
-/** Page hero (Figma "Hero · Pengundang ↔ Kamu"), 3x of 232×96. */
-const HERO_IMAGE_PATH = "/og/join-hero.png";
+/** Shoo waving (valid invite) and saying sorry (dead link), as in the app's pairing errors. 3x of 180 pt tall. */
+const MASCOT = {
+  wave: { path: "/og/mascot-wave.webp", data: mascotWave, width: 148 },
+  sorry: { path: "/og/mascot-sorry.webp", data: mascotSorry, width: 134 },
+} as const;
 
 // Link preview tags. Static on purpose: no name, no code, the same for every invite (T13).
 const ogTags = (base: string, lang: "en" | "id") => {
@@ -205,12 +204,14 @@ joinPage.get(OG_IMAGE_PATH, (c) => {
   return c.body(ogImage);
 });
 
-// Same for the hero: static, no user data.
-joinPage.get(HERO_IMAGE_PATH, (c) => {
-  c.header("Content-Type", "image/png");
-  c.header("Cache-Control", "public, max-age=86400");
-  return c.body(heroImage);
-});
+// Same for the mascot poses: static, no user data.
+for (const pose of Object.values(MASCOT)) {
+  joinPage.get(pose.path, (c) => {
+    c.header("Content-Type", "image/webp");
+    c.header("Cache-Control", "public, max-age=86400");
+    return c.body(pose.data);
+  });
+}
 
 /**
  * False only when the code is known to be unknown or expired; that miss is recorded as a failed join
@@ -247,7 +248,8 @@ joinPage.get("/j/:code", async (c) => {
   const nonce = base64url(randomBytes(16));
   const store = escapeHtml(storeUrl(c.env.APP_STORE_URL));
 
-  const hero = `<div class="hero"><i class="glow"></i><i class="beam"></i><i class="ring"></i><img src="${HERO_IMAGE_PATH}" width="232" height="96" alt="${escapeHtml(t.heroAlt)}"></div>`;
+  const pose = code ? MASCOT.wave : MASCOT.sorry;
+  const sky = `<div class="sky${code ? "" : " warn"}" aria-hidden="true"><i class="glow"></i><i class="halo"></i><i class="halo"></i><i class="halo"></i><img class="mascot" src="${pose.path}" width="${pose.width}" height="180" alt=""></div>`;
   const body = code
     ? `<h1>${escapeHtml(t.heading)}</h1>
 <p class="label rounded">${escapeHtml(t.manual)}</p>${codeBoxes(code)}
@@ -256,13 +258,13 @@ joinPage.get("/j/:code", async (c) => {
 <div class="actions"><a class="btn" href="shoo://join?code=${code}">${ICON_OPEN}${escapeHtml(t.open)}</a>
 <p class="install">${escapeHtml(t.installLead)}<a id="install" href="${store}" data-invite="${escapeHtml(`${c.env.INVITE_BASE_URL}/j/${code}`)}">${escapeHtml(t.install)}</a></p>
 <p class="hint">${escapeHtml(t.installHint)}</p></div><script nonce="${nonce}">${ACTIVE_SCRIPT}${INSTALL_SCRIPT}</script>`
-    : `<div class="badge" aria-hidden="true"><span>!</span></div><h1>${escapeHtml(t.title)}</h1><p class="nocode rounded">${escapeHtml(t.noCode)}</p>
+    : `<h1>${escapeHtml(t.invalidHeading)}</h1><p class="nocode rounded">${escapeHtml(t.noCode)}</p>
 <div class="actions"><button id="request" class="btn" type="button" data-msg="${escapeHtml(t.requestMsg)}" data-label="${escapeHtml(t.requestNew)}" data-done="${escapeHtml(t.requested)}">${escapeHtml(t.requestNew)}</button>
 <p class="install">${escapeHtml(t.installLead)}<a href="${store}">${escapeHtml(t.install)}</a></p></div><script nonce="${nonce}">${ACTIVE_SCRIPT}${REQUEST_SCRIPT}</script>`;
   const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(t.title)}</title>${ICON_LINKS}
 ${ogTags(c.env.INVITE_BASE_URL.replace(/\/+$/, ""), lang)}
-<style>${STYLE}</style></head><body><main class="enter${code ? "" : " invalid"}">${code ? hero : ""}${body}</main></body></html>`;
+<style>${STYLE}</style></head><body>${sky}<main class="enter${code ? "" : " invalid"}">${body}</main></body></html>`;
 
   c.header("Content-Security-Policy", csp(nonce));
   c.header("X-Content-Type-Options", "nosniff");

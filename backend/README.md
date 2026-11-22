@@ -64,7 +64,7 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | GET | [`/blocklist?since=`](API.md#get-blocklistsince) | extension | Global approved scam domains for on-device checks |
 | GET | [`/config/public`](API.md#get-configpublic) | extension | Score thresholds set in the admin dashboard (warning / blocked) |
 | GET | [`/j/{code}`](API.md#get-jcode) | browser (WhatsApp / AirDrop link) | Invite page when the app is not installed: open Shoo, or copy + install |
-| GET | [`/og/invite.jpg`](API.md#get-oginvitejpg), `/og/join-hero.png` | WhatsApp / Messages crawler, invite page | Link preview image and hero image for `/j/{code}` |
+| GET | [`/og/invite.jpg`](API.md#get-oginvitejpg), `/og/mascot-wave.webp`, `/og/mascot-sorry.webp` | WhatsApp / Messages crawler, invite page | Link preview image and the Shoo mascot poses for `/j/{code}` |
 | GET | [`/.well-known/apple-app-site-association`](API.md#get-well-knownapple-app-site-association) | iOS | Universal Link for `/j/*` |
 | GET | [`/privacy`](API.md#get-privacylangenid) | browser | Privacy policy, EN/ID |
 | GET | [`/support`](API.md#get-supportlangenid) | browser, App Store Connect | Support page: contact, delete data, EN/ID |
