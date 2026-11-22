@@ -92,6 +92,7 @@ struct SafeReasonSheet: View {
     }
 
     private static let submitID = "safeReason.submit"
+    private static let endID = "safeReason.end"
 
     private var canSubmit: Bool { !reasons.isEmpty && !isSaving }
 
@@ -104,13 +105,19 @@ struct SafeReasonSheet: View {
         // Scrolls once the keyboard leaves less room than the content needs; the header never clips.
         ScrollViewReader { proxy in
             ScrollView {
-                content
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+                VStack(spacing: 0) {
+                    content
+                    // The very end of the content, under its bottom padding: what the keyboard scroll aims at.
+                    Color.clear.frame(height: 1).id(Self.endID)
+                }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
             }
-            // Never taller than the content: the card hugs it and the space above stays dimmed.
-            .frame(maxHeight: height)
+            // Never taller than the content: the card hugs it and the space above stays dimmed. `minHeight: 0` lets
+            // it give way when the screen is short.
+            .frame(minHeight: 0, maxHeight: height)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewport = $0 }
-            .scrollDisabled(height <= viewport + 0.5)
+            // With the keys up it must scroll: the room made for them (contentMargins) is not in `height`.
+            .scrollDisabled(keyboardTop == nil && height <= viewport + 0.5)
             .scrollBounceBehavior(.basedOnSize)
             .scrollDismissesKeyboard(.interactively)
             // U-11: "Mark Safe" sat under the keyboard while typing. On iPhone 17 the sheet makes room for the
@@ -126,12 +133,13 @@ struct SafeReasonSheet: View {
             }
             // Once the keyboard and the room above it have settled while typing (keys up, the sheet resized).
             // A new value cancels the wait, so a drag or the resize itself does not queue a scroll per frame.
-            .task(id: [keyboardTop ?? -1, scrollBottom]) {
+            .task(id: [keyboardTop ?? -1, scrollBottom, viewport]) {
                 guard keyboardTop != nil, noteFocused else { return }
-                try? await Task.sleep(for: .milliseconds(100))
+                // Past the keyboard's own slide (0.25 s), so the scroll is not lost in it.
+                try? await Task.sleep(for: .milliseconds(300))
                 guard !Task.isCancelled else { return }
                 withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) {
-                    proxy.scrollTo(Self.submitID, anchor: .bottom)
+                    proxy.scrollTo(Self.endID, anchor: .bottom)
                 }
             }
         }
