@@ -11,6 +11,18 @@ import shooImage from "../assets/safari-check-shoo.png";
 
 const IMAGE_PATH = "/safari-check/shoo.png";
 
+// Safari's page-menu button, left of the site name (at the bottom with the default "Compact" tabs). Its glyph
+// differs by iOS version, so both are drawn inline (no image request, CSP stays img-src 'self'): iOS 26 a box
+// over two lines, iOS 27 three lines (≡). Checked on simulators 22 Nov 2026 (iOS 26.5 and 27.0, language id).
+// The page never says "aA" or "address bar": users don't see either (goldfish F5, 22 Nov 2026).
+const ICON_IOS26 =
+  '<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="8" rx="2"/><path d="M3.5 14h13M3.5 17.5h9"/></svg>';
+const ICON_IOS27 =
+  '<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h10"/></svg>';
+// One pill, the two looks split by "/": the user sees one of them, never both.
+const MENU_BUTTON = `<span class="ics">${ICON_IOS26}<span class="sep">/</span>${ICON_IOS27}</span>`;
+
+// askBody is HTML built only from the constants above (no user input).
 type Text = { title: string; lead: string; askTitle: string; askBody: string; back: string; imageAlt: string };
 
 const TEXT: Record<"en" | "id", Text> = {
@@ -18,7 +30,8 @@ const TEXT: Record<"en" | "id", Text> = {
     title: "Almost done!",
     lead: "This page opened in your main browser. If it's Safari, Shoo has already checked. Go back to Shoo to see the result.",
     askTitle: "Is Safari asking about Shoo?",
-    askBody: "Tap aA in the address bar → Shoo → Always Allow → Always Allow on Every Website. Don't choose \"Allow for One Day\".",
+    // Labels as Safari shows them (iOS 26.5 / 27.0, English).
+    askBody: `Tap the ${MENU_BUTTON} button left of the site name (usually at the bottom of the screen) → Shoo → Always Allow… → Always Allow on Every Website. Don't choose "Allow for One Day" (the blue button).`,
     back: "Back to Shoo",
     imageAlt: "Shoo the owl waving",
   },
@@ -26,7 +39,8 @@ const TEXT: Record<"en" | "id", Text> = {
     title: "Hampir selesai!",
     lead: "Halaman ini terbuka di browser utamamu. Kalau ini Safari, Shoo sudah mengecek. Kembali ke Shoo untuk lihat hasilnya.",
     askTitle: "Safari bertanya soal Shoo?",
-    askBody: "Ketuk aA di bilah alamat → Shoo → Selalu Izinkan → Izinkan di Semua Situs Web. Jangan pilih \"Izinkan Satu Hari\".",
+    // Label persis seperti di Safari iOS 26.5 / 27.0 berbahasa Indonesia.
+    askBody: `Ketuk tombol ${MENU_BUTTON} di kiri nama situs (biasanya di bawah layar) → Shoo → Selalu Izinkan… → Selalu Izinkan di Semua Situs Web. Jangan pilih "Izinkan selama Satu Hari" (tombol biru).`,
     back: "Kembali ke Shoo",
     imageAlt: "Shoo si burung hantu melambai",
   },
@@ -43,9 +57,13 @@ main{max-width:480px;margin:0 auto;padding:24px 20px 40px;text-align:center}
 h1{font-size:26px;line-height:1.2;margin:8px 0 10px}p{margin:0}.lead{color:#6a717e;font-size:16px}
 .card{margin:24px 0;padding:16px;border-radius:18px;background:#fff;box-shadow:0 6px 20px rgba(13,26,51,.08);text-align:left}
 .card h2{font-size:16px;margin:0 0 6px}.card p{color:#6a717e;font-size:15px}
+.ics{display:inline-flex;gap:2px;padding:1px 5px;border-radius:7px;background:#e9edf3;color:#191d2f;vertical-align:-4px}
+.sep{opacity:.45;font-size:14px;line-height:18px}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
 .btn{display:block;padding:16px;border-radius:999px;background:linear-gradient(180deg,#446eb4,#214889);color:#fff;font-weight:600;text-decoration:none}
 @media (prefers-color-scheme:dark){body{color:#f2f4f8;background:#0e1116}.lead,.card p{color:#a3a9b3}
-.hero{background:linear-gradient(180deg,#1d4f8c 0%,#163a66 70%,#0e1116 100%)}.card{background:#1b1f26;box-shadow:none}}`;
+.hero{background:linear-gradient(180deg,#1d4f8c 0%,#163a66 70%,#0e1116 100%)}.card{background:#1b1f26;box-shadow:none}
+.ics{background:#2a303a;color:#f2f4f8}}`;
 
 export const safariCheck = new Hono<AppEnv>();
 

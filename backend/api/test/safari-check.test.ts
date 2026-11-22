@@ -19,20 +19,29 @@ describe("GET /safari-check (ON-04)", () => {
       "Hampir selesai!",
       "Halaman ini terbuka di browser utamamu. Kalau ini Safari, Shoo sudah mengecek.",
       "Safari bertanya soal Shoo?",
-      "Izinkan di Semua Situs Web",
-      'Jangan pilih "Izinkan Satu Hari"',
+      "di kiri nama situs (biasanya di bawah layar)",
+      "Selalu Izinkan… → Selalu Izinkan di Semua Situs Web",
+      'Jangan pilih "Izinkan selama Satu Hari" (tombol biru)',
+      '<svg class="ic"',
       '<a class="btn" href="shoo://">Kembali ke Shoo</a>',
       'src="/safari-check/shoo.png"',
       '<meta name="robots" content="noindex">',
     ]) expect(html).toContain(s);
     expect(html).not.toContain("<script");
+    // Users see neither "aA" nor an "address bar" in Safari 26/27 (goldfish F5).
+    expect(html).not.toContain("aA");
+    expect(html).not.toContain("bilah alamat");
   });
 
   it("English with ?lang=en or Accept-Language; English by default", async () => {
     for (const res of [await call("/safari-check?lang=en"), await call("/safari-check")]) {
       const html = await res.text();
       expect(html).toContain('<html lang="en">');
-      for (const s of ["Almost done!", "Is Safari asking about Shoo?", "Always Allow on Every Website", "Back to Shoo"]) expect(html).toContain(s);
+      for (const s of [
+        "Almost done!", "Is Safari asking about Shoo?", "left of the site name", "Always Allow… → Always Allow on Every Website",
+        'Don\'t choose "Allow for One Day"', "Back to Shoo",
+      ]) expect(html).toContain(s);
+      expect(html).not.toContain("address bar");
     }
     const id = await (await call("/safari-check", { headers: { "accept-language": "id-ID,id;q=0.9" } })).text();
     expect(id).toContain("Kembali ke Shoo");
