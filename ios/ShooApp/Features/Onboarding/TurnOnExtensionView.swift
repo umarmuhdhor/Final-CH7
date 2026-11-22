@@ -220,7 +220,7 @@ struct TurnOnExtensionView: View {
         .fullScreenCover(isPresented: $isVideoPresented) {
             TutorialVideoPlayer(startTime: videoStartTime)
         }
-        .sheet(isPresented: $isDataSheetPresented) {
+        .peekSheet(isPresented: $isDataSheetPresented, background: OnboardingTheme.card) {
             DataSentSheet()
         }
     }
@@ -384,9 +384,13 @@ private struct ConsentCheckbox: View {
     }
 }
 
-/// Figma "Sheet · Data yang dikirim" (1328:13313): what leaves the phone with the online check on.
+/// Figma "Sheet · Data yang dikirim" (1328:13313): what leaves the phone with the online check on. Presented with
+/// `peekSheet` (fase 29g): Shoo peeks over the top edge.
 struct DataSentSheet: View {
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closePeekSheet) private var close
+    /// The rows' height and the room they got: while they fit, the list stays still so a drag moves the sheet.
+    @State private var rowsHeight: CGFloat = 0
+    @State private var rowsViewport: CGFloat = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -401,7 +405,7 @@ struct DataSentSheet: View {
                         .foregroundStyle(OnboardingTheme.bodyInk)
                 }
                 Spacer(minLength: 12)
-                Button { dismiss() } label: {
+                Button { close() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(OnboardingTheme.secondaryInk)
@@ -426,9 +430,12 @@ struct DataSentSheet: View {
                         title: "Without the online check", text: "Shoo checks on your iPhone only, with less protection.")
                 }
                 .padding(.top, 20)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowsHeight = $0 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowsViewport = $0 }
+            .scrollDisabled(rowsHeight <= rowsViewport + 0.5)
             .scrollBounceBehavior(.basedOnSize)
-            Button("Got it") { dismiss() }
+            Button("Got it") { close() }
                 .buttonStyle(OnboardingCapsuleButtonStyle())
                 .padding(.top, 20)
                 .accessibilityIdentifier("dataSent.done")
@@ -436,11 +443,14 @@ struct DataSentSheet: View {
         .padding(.horizontal, 24)
         .padding(.top, 25)
         .padding(.bottom, 8)
-        .background(OnboardingTheme.card)
-        // Figma: a 618 pt sheet; larger text scrolls, and can be pulled up.
-        .presentationDetents([.height(618), .large])
-        .presentationDragIndicator(.visible)
-        .presentationCornerRadius(32)
+        // Figma: a 618 pt sheet; larger text (or a shorter screen) scrolls the rows.
+        .frame(maxHeight: 618, alignment: .top)
+        // The grabber the system sheet drew.
+        .overlay(alignment: .top) {
+            Capsule().fill(ProfileStyle.sheetGrabber).frame(width: 36, height: 5)
+                .padding(.top, 8)
+                .accessibilityHidden(true)
+        }
     }
 
     private func row(_ symbol: String, tint: UInt32, fill: UInt32, title: LocalizedStringKey, text: LocalizedStringKey) -> some View {
