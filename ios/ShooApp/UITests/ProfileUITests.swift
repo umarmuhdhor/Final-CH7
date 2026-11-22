@@ -50,6 +50,33 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["invite.code"].waitForExistence(timeout: 5), app.debugDescription)
     }
 
+    /// 29g peek sheet: "Matikan Shoo" closes from its ✕, a tap on the dimming, and a drag down.
+    @MainActor
+    func testTurnOffSheetClosesLikeASheet() {
+        let app = openProfile(mode: "guardian")
+        let row = app.buttons["profile.extension.active"]
+        let openSettings = app.buttons["turnOff.openSettings"]
+        XCTAssertTrue(row.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+
+        row.tapWhenHittable()
+        XCTAssertTrue(openSettings.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        app.buttons["turnOff.close"].tapWhenHittable()
+        XCTAssertTrue(openSettings.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
+
+        row.tapWhenHittable()
+        XCTAssertTrue(openSettings.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.15)).tap()
+        XCTAssertTrue(openSettings.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
+
+        row.tapWhenHittable()
+        let warning = app.descendants(matching: .any)["turnOff.warning"]
+        XCTAssertTrue(warning.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        let start = warning.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 400)))
+        XCTAssertTrue(openSettings.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertTrue(row.isHittable, app.debugDescription)
+    }
+
     @MainActor
     func testModeSwitchShowsTheFamily() {
         let app = openProfile(mode: "guardian")

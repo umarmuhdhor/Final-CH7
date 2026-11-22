@@ -75,7 +75,7 @@ struct ProfileView: View {
         .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
             TurnOnExtensionSheet()
         }
-        .sheet(isPresented: $isTurnOffPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
+        .peekSheet(isPresented: $isTurnOffPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
             TurnOffExtensionSheet()
         }
         .sheet(isPresented: $isInvitePresented, onDismiss: { Task { await model.load() } }) {

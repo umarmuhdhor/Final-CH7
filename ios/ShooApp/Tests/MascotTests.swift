@@ -1,4 +1,5 @@
 import Testing
+import SwiftUI
 import UIKit
 @testable import Shoo
 
@@ -14,5 +15,12 @@ struct MascotTests {
         let body = try #require(UIImage(named: Mascot.peek.assetName))
         let hands = try #require(UIImage(named: Mascot.peekHandsAssetName))
         #expect(body.size == hands.size)
+    }
+
+    /// Figma 2447:13710: the peek pose is 147 x 104 and the sheet's edge cuts it 97 pt down.
+    @Test func peekSheetPlacesShooLikeFigma() {
+        #expect(PeekSheetChrome<EmptyView>.rise == 97)
+        #expect(abs(PeekSheetChrome<EmptyView>.poseWidth - 147) < 0.5)
+        #expect(PeekSheetChrome<EmptyView>.trailingInset == 56)
     }
 }
