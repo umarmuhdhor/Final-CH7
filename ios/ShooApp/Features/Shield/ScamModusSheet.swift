@@ -69,11 +69,12 @@ struct ScamModus: Equatable {
 }
 
 /// The sheet: the case's own label, then the example in two steps (Alief's pick for V3: a fake SMS link, then the
-/// fake site asking for a PIN), what it costs, and three ways to stay safe.
+/// fake site asking for a PIN), what it costs, and three ways to stay safe. Presented with `peekSheet` (fase 29g):
+/// Shoo peeks over the top edge; the page scrolls, so the grabber strip is where a drag closes it.
 struct ScamModusSheet: View {
     let scamCase: ScamCase
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closePeekSheet) private var close
     @Environment(\.locale) private var locale
 
     private var modus: ScamModus { .forCategory(scamCase.id) }
@@ -83,9 +84,11 @@ struct ScamModusSheet: View {
             content
         }
         .scrollBounceBehavior(.basedOnSize)
+        // On the page only: set after the inset it would rename "Mengerti" too.
+        .accessibilityIdentifier("scamModus.sheet")
         // Taller than most screens: the page scrolls, "Mengerti" stays in reach.
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            Button("Got it") { dismiss() }
+            Button("Got it") { close() }
                 .buttonStyle(OnboardingCapsuleButtonStyle())
                 .padding(.horizontal, 24)
                 .padding(.top, 12)
@@ -93,12 +96,15 @@ struct ScamModusSheet: View {
                 .background(.white)
                 .accessibilityIdentifier("scamModus.done")
         }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
-        .presentationCornerRadius(32)
-        .presentationBackground(.white)
+        // The grabber the system sheet drew. Its strip is a handle: the page under it scrolls, the strip moves the sheet.
+        .overlay(alignment: .top) {
+            Capsule().fill(ProfileStyle.sheetGrabber).frame(width: 36, height: 5)
+                .padding(.top, 8)
+                .frame(maxWidth: .infinity, minHeight: 24, alignment: .top)
+                .background(.white.opacity(0.001), in: UnevenRoundedRectangle(topLeadingRadius: 32, topTrailingRadius: 32))
+                .accessibilityHidden(true)
+        }
         .environment(\.colorScheme, .light)
-        .accessibilityIdentifier("scamModus.sheet")
     }
 
     private var content: some View {
@@ -131,7 +137,7 @@ struct ScamModusSheet: View {
                     .accessibilityAddTraits(.isHeader)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Button { dismiss() } label: {
+            Button { close() } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(HomeTheme.secondaryInk)

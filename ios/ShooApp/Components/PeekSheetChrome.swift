@@ -22,6 +22,41 @@ extension View {
     }
 }
 
+extension View {
+    /// Like `.sheet(item:onDismiss:content:)`, with Shoo peeking over the card. The last item stays on the card
+    /// while it slides down.
+    func peekSheet<Item: Identifiable, Sheet: View>(
+        item: Binding<Item?>,
+        background: Color = .white,
+        onDismiss: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping (Item) -> Sheet
+    ) -> some View {
+        modifier(PeekSheetItemPresenter(item: item, background: background, onDismiss: onDismiss, sheet: content))
+    }
+}
+
+private struct PeekSheetItemPresenter<Item: Identifiable, Sheet: View>: ViewModifier {
+    @Binding var item: Item?
+    let background: Color
+    let onDismiss: (() -> Void)?
+    @ViewBuilder let sheet: (Item) -> Sheet
+    @State private var lastItem: Item?
+
+    func body(content: Content) -> some View {
+        content
+            .peekSheet(
+                isPresented: Binding(get: { item != nil }, set: { if !$0 { item = nil } }),
+                background: background,
+                onDismiss: onDismiss
+            ) {
+                if let shown = item ?? lastItem { sheet(shown) }
+            }
+            .onChange(of: item?.id, initial: true) { _, _ in
+                if let item { lastItem = item }
+            }
+    }
+}
+
 extension EnvironmentValues {
     /// Slides the peek sheet down, then closes it, even while `peekSheetDismissDisabled`. Does nothing outside a
     /// peek sheet.
