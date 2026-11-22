@@ -56,7 +56,7 @@ describe("GET /j/:code", () => {
     // The button sits at the bottom of the screen: main fills the viewport, the actions take the free space above.
     expect(html).toContain("body{margin:0;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;");
     expect(html).toContain("main{position:relative;flex:1;");
-    expect(html).toContain(".actions{width:100%;margin-top:auto;padding-top:40px;");
+    expect(html).toContain(".actions{width:100%;margin-top:auto;padding-top:24px;");
   });
 
   it("Install copies the invite link, then goes to the store; the only script carries the header's nonce", async () => {
