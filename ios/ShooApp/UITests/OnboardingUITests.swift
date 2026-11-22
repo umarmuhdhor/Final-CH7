@@ -123,9 +123,13 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertFalse(app.buttons["mode.continue"].exists)
         app.passTurnOnExtension()
         app.passSafariDefault()
-        // Next asks for notifications; the mock answers "denied".
+        // Next shows Shoo's dialog first (F6); Turn on asks, and the mock answers "denied".
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
         app.buttons["extensionOn.continue"].tap()
+        let ask = app.descendants(matching: .any)["notificationAsk"]
+        XCTAssertTrue(ask.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Turn on notifications?"].exists, app.debugDescription)
+        app.buttons["notificationAsk.allow"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 5))
         let reminder = app.buttons["reminder.notNow"]
         XCTAssertTrue(reminder.waitForExistence(timeout: 5), app.debugDescription)
@@ -134,6 +138,21 @@ final class OnboardingUITests: XCTestCase {
         // Pribadi Home that has never been Guardian: no ⇆, the "Jadi Penjaga" card instead (Figma 1382:10567).
         XCTAssertTrue(app.descendants(matching: .any)["home.guardianCard"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertFalse(app.descendants(matching: .any)["familyModeToggle"].exists)
+    }
+
+    @MainActor
+    func testNotNowOnTheNotificationDialogEndsOnboardingWithoutAsking() {
+        // F6: "Nanti saja" ends onboarding and leaves the one-time iOS prompt for later.
+        let app = launch(notifications: "denied", scenario: "empty")
+        app.onboardName("Rina")
+        app.passTurnOnExtension()
+        app.passSafariDefault()
+        app.buttons["extensionOn.continue"].tapWhenHittable()
+        let notNow = app.buttons["notificationAsk.notNow"]
+        XCTAssertTrue(notNow.waitForExistence(timeout: 5), app.debugDescription)
+        notNow.tap()
+        XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["notificationAsk"].exists)
     }
 
     @MainActor
@@ -169,7 +188,7 @@ final class OnboardingUITests: XCTestCase {
         on.terminate()
         let last = XCUIApplication.mock(["-settings.language", "en", "-UITestNotifications", "denied"], reset: false)
         XCTAssertTrue(last.buttons["extensionOn.continue"].waitForExistence(timeout: 10), last.debugDescription)
-        last.buttons["extensionOn.continue"].tapWhenHittable()
+        last.finishOnboarding()
         XCTAssertTrue(last.tabBars.buttons["Shield"].waitForExistence(timeout: 10), last.debugDescription)
     }
 

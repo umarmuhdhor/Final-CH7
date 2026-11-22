@@ -41,7 +41,7 @@ final class LiveReinstallUITests: XCTestCase {
         app.passTurnOnExtension()
         if !app.buttons["safariDefault.open"].waitForExistence(timeout: 10) { app.activate() }
         app.passSafariDefault()
-        app.buttons["extensionOn.continue"].tapWhenHittable()
+        app.finishOnboarding()
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 15), app.debugDescription)
         try joinAndCheck(app, code: code)
     }

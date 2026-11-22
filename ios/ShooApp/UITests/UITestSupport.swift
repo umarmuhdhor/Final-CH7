@@ -170,7 +170,16 @@ extension XCUIApplication {
         // Back from Settings with Shoo on, ON-04 shows Next (it never moves on by itself).
         passTurnOnExtension(file: file, line: line)
         passSafariDefault(file: file, line: line)
+        finishOnboarding(file: file, line: line)
+    }
+
+    /// The success screen's Next. While the permission is undecided Shoo's "Turn on notifications?" dialog
+    /// (F6) comes first: Turn on goes to the iOS prompt (or the `-UITestNotifications` answer).
+    @MainActor
+    func finishOnboarding(file: StaticString = #filePath, line: UInt = #line) {
         buttons["extensionOn.continue"].tapWhenHittable(file: file, line: line)
+        let allow = buttons["notificationAsk.allow"]
+        if allow.waitForExistence(timeout: UITestTimeout.optional) { allow.tapWhenHittable(file: file, line: line) }
     }
 
     /// GD-02: Pribadi to Guardian. Never Guardian yet: Home has no ⇆, so its "Jadi Penjaga" card, then "To be

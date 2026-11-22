@@ -74,7 +74,7 @@ final class PairingUITests: XCTestCase {
         XCTAssertFalse(app.buttons["consent.allow"].exists, "Consent screen before ON-04")
         app.passTurnOnExtension()
         app.passSafariDefault()
-        app.buttons["extensionOn.continue"].tapWhenHittable()
+        app.finishOnboarding()
 
         let field = app.textFields["connect.code"]
         XCTAssertTrue(field.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
@@ -124,7 +124,7 @@ final class PairingUITests: XCTestCase {
         XCTAssertFalse(app.buttons["consent.allow"].exists, app.debugDescription)
         app.passTurnOnExtension()
         app.passSafariDefault()
-        app.buttons["extensionOn.continue"].tapWhenHittable()
+        app.finishOnboarding()
 
         let field = app.textFields["connect.code"]
         XCTAssertTrue(field.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
