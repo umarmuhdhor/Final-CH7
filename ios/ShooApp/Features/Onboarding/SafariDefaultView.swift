@@ -137,8 +137,13 @@ struct SafariDefaultView: View {
 
     var body: some View {
         OnboardingFormPage(title: "Set Safari as default", onBack: onBack) {
-            // Figma "image 1" at y 72.5, the headline right under it at 373.
-            OnboardingHeroImage(name: "SafariDefaultIllustration", top: 10.5, bottom: 0.5)
+            // Figma "image 1" at y 72.5, the headline right under it at 373; "Step 2 of 2" between them
+            // (transition B, 2502:5418), so this screen is not taken for ON-04.
+            VStack(spacing: 0) {
+                OnboardingHeroImage(name: "SafariDefaultIllustration", top: 10.5, bottom: 0.5)
+                OnboardingStepChip(done: 2, count: 2)
+                    .padding(.bottom, 8)
+            }
         } content: {
             // Figma "stack": 16 between rows, 40 under the headline.
             VStack(alignment: .leading, spacing: 16) {
@@ -341,4 +346,21 @@ enum SafariCheckToast: Equatable {
 
 #Preview {
     SafariDefaultView(onBack: {}, onContinue: {}, readStatus: { .active(lastSeen: nil) })
+}
+
+/// "STEP 2 OF 2" above the headline (transition B): a small pill, #E3EEFB with #1F5FAF SF Rounded Semibold 13.
+private struct OnboardingStepChip: View {
+    let done: Int
+    let count: Int
+
+    var body: some View {
+        Text("Step \(done) of \(count)")
+            .textCase(.uppercase)
+            .onboardingFont(13, weight: .semibold, design: .rounded, tracking: 0.4, relativeTo: .footnote)
+            .foregroundStyle(Color(hex: 0x1F5FAF))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Color(hex: 0xE3EEFB), in: Capsule())
+            .accessibilityIdentifier("safariDefault.stepChip")
+    }
 }

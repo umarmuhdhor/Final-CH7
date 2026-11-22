@@ -125,7 +125,7 @@ extension XCUIApplication {
     }
 
     /// ON-04: ticks the consent box (once, when it shows) and taps the main button. With Shoo already on that
-    /// is Next, which moves to Safari Default; otherwise Turn on, which opens Settings, so the test comes back
+    /// is Next, which moves on through "Shoo extension is on!" (`passExtensionReady`) to Safari Default; otherwise Turn on, which opens Settings, so the test comes back
     /// to Shoo and taps Next (ON-04 never moves on by itself). The box shows only while the question is
     /// unanswered (fase 27d K6): the mock answers it unless `-debug.askDataConsent YES`.
     @MainActor
@@ -141,8 +141,16 @@ extension XCUIApplication {
             buttons["extension.turnOn"].tapWhenHittable(file: file, line: line)
             comeBackFromSettings()
             // Shoo still off (the mock's status): the screen stays, as the caller expects.
-            if next.waitForExistence(timeout: UITestTimeout.optional) { next.tapWhenHittable(file: file, line: line) }
+            guard next.waitForExistence(timeout: UITestTimeout.optional) else { return }
+            next.tapWhenHittable(file: file, line: line)
         }
+        passExtensionReady(file: file, line: line)
+    }
+
+    /// "Shoo extension is on!" (transition B, Figma 2502:5639) after ON-04's Next: its Next goes to Safari Default.
+    @MainActor
+    func passExtensionReady(file: StaticString = #filePath, line: UInt = #line) {
+        buttons["extensionReady.continue"].tapWhenHittable(file: file, line: line)
     }
 
     /// The first tap registers the device before Settings opens: wait until Shoo has really left, or

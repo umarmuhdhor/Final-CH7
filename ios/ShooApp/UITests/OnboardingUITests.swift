@@ -358,7 +358,34 @@ final class OnboardingUITests: XCTestCase {
         app.buttons["onboarding.back"].tap()
         XCTAssertTrue(app.buttons["extension.continue"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["extension.continue"].tap()
+        app.passExtensionReady()
         XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5))
+    }
+
+    /// Transition B (Figma 2502:5418): ON-04's Next shows "Shoo extension is on!" with step 1 of 2 done, then
+    /// Safari Default with "Step 2 of 2". Back from there goes to ON-04, not to the celebration screen.
+    @MainActor
+    func testExtensionReadyCelebratesBeforeSafariDefault() {
+        let app = launch()
+        app.onboardName("Rina")
+        XCTAssertTrue(app.descendants(matching: .any)["extension.video"].waitForExistence(timeout: UITestTimeout.screen))
+        let consent = app.buttons["extension.consent"]
+        if consent.exists, !consent.isSelected { consent.tapWhenHittable() }
+        app.buttons["extension.continue"].tapWhenHittable()
+        let title = app.staticTexts["extensionReady.title"]
+        XCTAssertTrue(title.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertEqual(title.label, "Shoo extension is on!")
+        let dots = app.descendants(matching: .any)["onboarding.progressDots"].firstMatch
+        XCTAssertTrue(dots.exists, app.debugDescription)
+        XCTAssertEqual(dots.label, "Step 1 of 2 done")
+        XCTAssertFalse(app.buttons["onboarding.back"].exists)
+        XCTAssertFalse(app.buttons["extensionOn.video"].exists)
+        app.passExtensionReady()
+        XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertEqual(app.staticTexts["safariDefault.stepChip"].label.uppercased(), "STEP 2 OF 2")
+        app.buttons["onboarding.back"].tap()
+        XCTAssertTrue(app.buttons["extension.continue"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.staticTexts["extensionReady.title"].exists)
     }
 
     /// "Cek & lanjutkan" (Figma 2497:4919, screens 7–9): a heartbeat newer than the tap with every site allowed goes

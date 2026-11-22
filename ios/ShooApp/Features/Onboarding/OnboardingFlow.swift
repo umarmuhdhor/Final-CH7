@@ -30,11 +30,12 @@ struct OnboardingFlow: View {
 
 #if DEBUG
 extension OnboardingFlow {
-    /// `-debug.onboardingStep name|turnOnExtension|safariDefault|extensionOn`
+    /// `-debug.onboardingStep name|turnOnExtension|extensionReady|safariDefault|extensionOn`
     static var screenshotStep: OnboardingStep? {
         switch UserDefaults.standard.string(forKey: "debug.onboardingStep") {
         case "name": .name
         case "turnOnExtension": .turnOnExtension
+        case "extensionReady": .extensionReady
         case "safariDefault": .safariDefault
         case "extensionOn": .extensionOn
         default: nil
@@ -53,6 +54,7 @@ private struct OnboardingStepView: View {
             case .splash: SplashView(model: model)
             case .name: NameView(model: model)
             case .turnOnExtension: OnboardingExtensionStep(model: model)
+            case .extensionReady: ExtensionReadyView(onContinue: model.continueFromExtensionReady)
             case .safariDefault:
                 SafariDefaultView(
                     onBack: model.goBack, onContinue: model.continueFromSafariDefault, readStatus: model.safariCheckStatus

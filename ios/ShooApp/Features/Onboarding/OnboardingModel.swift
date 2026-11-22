@@ -49,7 +49,10 @@ enum OnboardingStep: Equatable {
     case name
     /// ON-04, with the online check question (`DataConsent`) as a checkbox (Figma 1328:13421).
     case turnOnExtension
-    /// ON-04 passed (Figma "Jadikan Safari Default"): Shoo only runs in Safari.
+    /// ON-04 passed: "Shoo extension is on!" (Figma 2502:5639, transition B), step 1 of 2 done, so the next
+    /// screen, which looks a lot like ON-04, is not taken for the same one. Not saved: a relaunch skips it.
+    case extensionReady
+    /// Step 2 of 2 (Figma "Jadikan Safari Default"): Shoo only runs in Safari.
     case safariDefault
     /// "Yeay, you're better protected!" Its Next asks for notifications (ON-05 has no screen of its own).
     case extensionOn
@@ -207,16 +210,23 @@ final class OnboardingModel {
     }
 
     /// ON-04 Next once Shoo is on: back from Settings, after Back from Safari Default, or when Shoo was already
-    /// on before the first tap.
+    /// on before the first tap. The celebration screen comes first.
     func skipExtensionCheck() async {
         guard await activateExtension() else { return }
+        movedBack = false
+        step = .extensionReady
+    }
+
+    /// Next on "Shoo extension is on!": Safari Default.
+    func continueFromExtensionReady() {
+        guard step == .extensionReady else { return }
         movedBack = false
         step = .safariDefault
     }
 
     /// F6: once per launch that resumed at ON-04. Shoo already on and checked in (switch on, every site
-    /// allowed), with the online check answered: straight on to Safari Default. Otherwise ON-04 stays, with
-    /// the step that is still missing.
+    /// allowed), with the online check answered: straight on to Safari Default, without the celebration screen
+    /// (it was seen before the relaunch). Otherwise ON-04 stays, with the step that is still missing.
     func resumeAfterRelaunch() async {
         guard resumesAtTurnOn else { return }
         resumesAtTurnOn = false

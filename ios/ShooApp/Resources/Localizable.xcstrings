@@ -207,6 +207,16 @@
         }
       }
     },
+    "One more step: make Safari your main browser, so links you tap open with Shoo's protection." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Satu langkah lagi: jadikan Safari browser utama, supaya link yang kamu ketuk terbuka dengan perlindungan Shoo."
+          }
+        }
+      }
+    },
     "Open Settings again" : {
       "localizations" : {
         "id" : {
@@ -237,6 +247,16 @@
         }
       }
     },
+    "Shoo extension is on!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstensi Shoo sudah aktif!"
+          }
+        }
+      }
+    },
     "Shoo isn't on in Safari yet." : {
       "localizations" : {
         "id" : {
@@ -263,6 +283,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ada yang salah"
+          }
+        }
+      }
+    },
+    "Step %lld of %lld" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langkah %1$lld dari %2$lld"
+          }
+        }
+      }
+    },
+    "Step %lld of %lld done" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langkah %1$lld dari %2$lld selesai"
           }
         }
       }
@@ -2664,7 +2704,6 @@
       }
     },
     "Continue" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {

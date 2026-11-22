@@ -253,7 +253,28 @@ struct OnboardingModelTests {
         #expect(!settings.onboardingCompleted)
     }
 
-    /// F6: Shoo was switched on in Settings before iOS closed the app: on to Safari Default.
+    /// ON-04 Next: the celebration screen (step 1 of 2 done), which has no Back; its Next goes to Safari Default,
+    /// whose Back goes to ON-04, not to the celebration screen.
+    @Test func turnOnNextCelebratesBeforeSafariDefault() async {
+        let model = await registeredPersonal()
+        box.status = .active(lastSeen: Date())
+        await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.goBack()
+        #expect(model.step == .extensionReady)
+        model.continueFromSafariDefault()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
+        #expect(model.step == .safariDefault)
+        #expect(!settings.onboardingSafariDefaultPassed)
+        model.goBack()
+        #expect(model.step == .turnOnExtension)
+        model.continueFromExtensionReady()
+        #expect(model.step == .turnOnExtension)
+    }
+
+    /// F6: Shoo was switched on in Settings before iOS closed the app: on to Safari Default, without the
+    /// celebration screen again.
     @Test func relaunchWithShooOnResumesAtSafariDefault() async {
         _ = await registeredPersonal()
         box.status = .active(lastSeen: Date())
@@ -319,6 +340,8 @@ struct OnboardingModelTests {
         await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
         // "Check & continue" reads the same status the rest of the app uses.
         #expect(await model.safariCheckStatus() == box.status)
@@ -337,6 +360,8 @@ struct OnboardingModelTests {
         #expect(model.step == .turnOnExtension)
         model.consentChecked = true
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
         #expect(settings.mode == .guardian)
     }
@@ -346,6 +371,8 @@ struct OnboardingModelTests {
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
         model.goBack()
         #expect(model.step == .turnOnExtension)
@@ -353,6 +380,8 @@ struct OnboardingModelTests {
         await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
     }
 
@@ -364,6 +393,8 @@ struct OnboardingModelTests {
         #expect(status == .active(lastSeen: nil))
         #expect(model.step == .turnOnExtension)
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
     }
 
@@ -376,6 +407,8 @@ struct OnboardingModelTests {
         await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
     }
 
@@ -391,6 +424,8 @@ struct OnboardingModelTests {
         model.consentChecked = true
         #expect(settings.dataConsent == .granted)
         await model.skipExtensionCheck()
+        #expect(model.step == .extensionReady)
+        model.continueFromExtensionReady()
         #expect(model.step == .safariDefault)
         #expect(settings.dataConsent == .granted)
     }
@@ -401,6 +436,7 @@ struct OnboardingModelTests {
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
         await model.skipExtensionCheck()
+        model.continueFromExtensionReady()
         model.continueFromSafariDefault()
     }
 

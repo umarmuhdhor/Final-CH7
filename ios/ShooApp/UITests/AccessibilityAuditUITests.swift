@@ -18,6 +18,7 @@ final class AccessibilityAuditUITests: XCTestCase {
         ("ON03-mode", ["-UITestReset", "YES", "-debug.onboardingStep", "mode"]),
         ("ON03-invite", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "invite"]),
         ("ON04-extension", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "turnOnExtension"]),
+        ("ON04-extension-ready", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "extensionReady"]),
         ("ON04-safari-default", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "safariDefault"]),
         ("ON04-extension-on", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "extensionOn"]),
         ("PR04-shield-on", protected + active),
