@@ -205,7 +205,7 @@ struct DetailView: View {
         // A new text size can shrink the footer again: decide afresh.
         .onChange(of: dynamicTypeSize) { _, _ in footerRoom.footer = 0 }
         .sensoryFeedback(.success, trigger: model.verdictSaves)
-        .sheet(isPresented: $askingSafeReason) {
+        .peekSheet(isPresented: $askingSafeReason) {
             SafeReasonSheet { notes in
                 let outcome = await model.setVerdict(.safe, notes: notes)
                 announce(outcome)

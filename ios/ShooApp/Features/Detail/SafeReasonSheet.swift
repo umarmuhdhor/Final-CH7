@@ -61,17 +61,20 @@ enum SafeReasonNotes {
 /// Figma "Sheet · Tandai bahaya" (1668:11234, states 1668:10768 / 1668:11093 / 1668:11261), turned around for
 /// "Aman": the Guardian picks at least one reason and may add a note before the site counts as safe.
 /// X or a swipe down closes it and drops the input. A failed save keeps the sheet and the input.
+/// Presented with `peekSheet` (fase 29g): Shoo peeks over the top edge.
 struct SafeReasonSheet: View {
     /// Sends the verdict; `true` once the server saved it (the sheet then closes).
     let onSubmit: @MainActor (String) async -> Bool
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closePeekSheet) private var close
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var reasons: Set<SafeReason> = []
     @State private var note = ""
     @State private var isSaving = false
     @State private var failed = false
     @State private var height: CGFloat = 600
+    /// Height the scroll view got; while the content fits it, the scroll view stays still so a drag moves the sheet.
+    @State private var viewport: CGFloat = 0
     @FocusState private var noteFocused: Bool
     /// Screen y of the keyboard's top edge, suggestion bar included; `nil` while it is down. Screen and window
     /// coordinates are the same here: the app is iPhone only, always full screen.
@@ -96,6 +99,10 @@ struct SafeReasonSheet: View {
                 content
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
             }
+            // Never taller than the content: the card hugs it and the space above stays dimmed.
+            .frame(maxHeight: height)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewport = $0 }
+            .scrollDisabled(height <= viewport + 0.5)
             .scrollBounceBehavior(.basedOnSize)
             .scrollDismissesKeyboard(.interactively)
             // U-11: "Mark Safe" sat under the keyboard while typing. On iPhone 17 the sheet makes room for the
@@ -120,12 +127,14 @@ struct SafeReasonSheet: View {
                 }
             }
         }
-        .presentationDetents([.height(height)])
-        .presentationDragIndicator(.visible)
-        .presentationCornerRadius(32)
-        .presentationBackground(.white)
+        // The grabber the system sheet drew.
+        .overlay(alignment: .top) {
+            Capsule().fill(ProfileStyle.sheetGrabber).frame(width: 36, height: 5)
+                .padding(.top, 8)
+                .accessibilityHidden(true)
+        }
         .environment(\.colorScheme, .light)
-        .interactiveDismissDisabled(isSaving)
+        .peekSheetDismissDisabled(isSaving)
         .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: failed)
         .sensoryFeedback(.error, trigger: failed) { _, now in now }
         .accessibilityIdentifier("safeReason.sheet")
@@ -186,7 +195,7 @@ struct SafeReasonSheet: View {
                     .accessibilityIdentifier("safeReason.familyNote")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Button { dismiss() } label: {
+            Button { close() } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(DetailStyle.secondary)
@@ -328,7 +337,7 @@ struct SafeReasonSheet: View {
         isSaving = true
         let saved = await onSubmit(SafeReasonNotes.compose(reasons: reasons, note: note))
         isSaving = false
-        if saved { dismiss() } else { failed = true }
+        if saved { close() } else { failed = true }
     }
 }
 
