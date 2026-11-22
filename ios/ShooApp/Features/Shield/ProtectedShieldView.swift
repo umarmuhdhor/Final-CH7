@@ -24,6 +24,9 @@ struct ProtectedShieldView: View {
     /// Loaded and nobody looks after this phone: no pill, the "Mode Terawasi" card (1382:2393).
     private var hasNoGuardian: Bool { isLoaded && model.guardian == nil }
     private var showsSupervisedCard: Bool { hasNoGuardian && !env.settings.supervisedCardDismissed }
+    /// Option B (29g): Shoo off (or on for some sites only) and the page loaded: `HomeOffBanner` under the hero
+    /// carries "Turn on now" instead of the hero's link.
+    private var showsOffBanner: Bool { isLoaded && model.extensionChecked && !model.extensionStatus.isActive }
 
     var body: some View {
         ScrollView {
@@ -141,7 +144,7 @@ struct ProtectedShieldView: View {
         }
         // The sheet starts at 403 under the pill (24.4 below it) and at 379 without one.
         let bottom: CGFloat = showsPill ? 24.38 : 379 - layout.titleBottom
-        let showsNextStep = phase == .status && model.extensionStatus.nextStep != nil
+        let showsNextStep = phase == .status && model.extensionStatus.nextStep != nil && !showsOffBanner
         let title: LocalizedStringKey = switch phase {
         case .checking: "Checking Shoo…"
         case .failed: "Status not available yet"
@@ -250,6 +253,14 @@ struct ProtectedShieldView: View {
         case (false, false): (32, 0, 58)
         }
         Color.clear.frame(height: gaps.top)
+        if showsOffBanner {
+            HomeOffBanner(someSitesOnly: model.extensionStatus.isSomeSitesOnly, turnOnIdentifier: "shield.turnOn") {
+                env.router.isTurnOnPresented = true
+            }
+            .padding(.top, -HomeOffBanner.Style.poseOverhang)
+            .padding(.bottom, 24)
+            .transition(.opacity)
+        }
         // A-01 (fase 28b K4, D-alief-A12): what is shown stays, the pill included, and this says it may be old.
         // The same notice as Activity's and Guardian Home's. Only the notice animates: the rows a good refresh
         // brings in the same update do not.

@@ -87,6 +87,16 @@
         }
       }
     },
+    "Shoo isn't on in Safari yet." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo belum menyala di Safari."
+          }
+        }
+      }
+    },
     "detail.summary.asksOf %@ %@" : {
       "localizations" : {
         "en" : {
