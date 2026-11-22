@@ -51,7 +51,7 @@ struct LatestScamsCard: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.scamCases")
-        .sheet(item: $shown) { scamCase in
+        .peekSheet(item: $shown) { scamCase in
             ScamModusSheet(scamCase: scamCase)
                 .environment(\.locale, locale)
         }

@@ -19,6 +19,29 @@ final class ProtectedUITests: XCTestCase {
         return XCUIApplication.mock(arguments)
     }
 
+    /// 29g peek sheet: "Modus penipuan" opens from a Latest Scams card; "Mengerti" and a drag on the grabber strip
+    /// close it (the page under the strip scrolls).
+    @MainActor
+    func testScamModusSheetClosesFromDoneAndGrabber() {
+        let app = launch(extra: ["-mock.scenario", "protectedQuiet"])
+        let card = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'home.scamCase.'")).firstMatch
+        for _ in 0..<5 where !card.exists || !card.isHittable { app.swipeUp() }
+        XCTAssertTrue(card.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        let done = app.buttons["scamModus.done"]
+
+        card.tapWhenHittable()
+        XCTAssertTrue(done.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        done.tapWhenHittable()
+        XCTAssertTrue(done.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
+
+        card.tapWhenHittable()
+        let close = app.buttons["scamModus.close"]
+        XCTAssertTrue(close.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        let strip = close.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: -150, dy: -14))
+        strip.press(forDuration: 0.05, thenDragTo: strip.withOffset(CGVector(dx: 0, dy: 450)))
+        XCTAssertTrue(done.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
+    }
+
     @MainActor
     func testShieldShowsGuardian() {
         let app = launch()
