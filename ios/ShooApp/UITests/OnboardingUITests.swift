@@ -32,7 +32,7 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
-    func testSplashHasTwoSlidesSkipAndBack() {
+    func testSplashHasThreeSlidesSkipAndBack() {
         let app = launch()
         XCTAssertTrue(app.staticTexts["Browse calmer, feeling safe."].waitForExistence(timeout: 10))
         // Figma: no demo link on the splash.
@@ -43,6 +43,8 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Browse calmer, feeling safe."].waitForExistence(timeout: 5))
         app.buttons["splash.next"].tap()
         XCTAssertTrue(app.staticTexts["Looks real, may not be safe.\nLet Shoo check."].waitForExistence(timeout: 5))
+        app.buttons["splash.next"].tap()
+        XCTAssertTrue(app.staticTexts["Far apart, still\nlooking out for each other."].waitForExistence(timeout: 5))
         app.buttons["splash.skip"].tap()
         XCTAssertTrue(app.textFields["name.field"].waitForExistence(timeout: 5))
         app.buttons["onboarding.back"].tap()
