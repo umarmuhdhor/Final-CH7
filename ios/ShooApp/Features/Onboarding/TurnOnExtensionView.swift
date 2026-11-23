@@ -218,7 +218,7 @@ struct TurnOnExtensionView: View {
             ).post()
         }
         .fullScreenCover(isPresented: $isVideoPresented) {
-            TutorialVideoPlayer(startTime: videoStartTime)
+            TutorialVideoPlayer(video: .turnOnExtension, startTime: videoStartTime)
         }
         .peekSheet(isPresented: $isDataSheetPresented, background: OnboardingTheme.card) {
             DataSentSheet()
@@ -271,6 +271,7 @@ struct TurnOnExtensionView: View {
     /// "Watch the tutorial": straight into PiP so the steps stay on screen; full screen where PiP can't run.
     private func watchTutorial() {
         TutorialPiP.shared.start(
+            .turnOnExtension,
             fallback: {
                 videoStartTime = .zero
                 isVideoPresented = true

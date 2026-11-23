@@ -6,16 +6,13 @@ import SwiftUI
 /// window lands (`startTime` = the moment PiP was at).
 struct TutorialVideoPlayer: View {
     @Environment(\.dismiss) private var dismiss
+    var video: TutorialVideo = .turnOnExtension
     var startTime: CMTime = .zero
-
-    /// Silent 64 s screen recording of the real enable flow, 1080 x 1080 so the text stays readable in PiP.
-    /// Source: `.video/` HyperFrames project (not in git).
-    static let videoURL = Bundle.main.url(forResource: "onboarding-tutorial", withExtension: "mp4")
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
-            if let url = Self.videoURL {
+            if let url = video.url {
                 PlayerController(url: url, startTime: startTime)
                     .ignoresSafeArea()
             } else {
@@ -35,6 +32,21 @@ struct TutorialVideoPlayer: View {
             .accessibilityLabel(Text("Close"))
             .accessibilityIdentifier("video.close")
             .padding(16)
+        }
+    }
+}
+
+/// One silent 1080 x 1080 video per onboarding page, so the text stays readable in PiP.
+enum TutorialVideo {
+    /// ON-04: 64 s, the 8 steps that turn Shoo on in Safari. Source: `.video/` HyperFrames project (not in git).
+    case turnOnExtension
+    /// Safari default: the 5 steps from "Make Safari default" to "Check & continue".
+    case safariDefault
+
+    var url: URL? {
+        switch self {
+        case .turnOnExtension: Bundle.main.url(forResource: "onboarding-tutorial", withExtension: "mp4")
+        case .safariDefault: Bundle.main.url(forResource: "onboarding-tutorial-safari-default", withExtension: "mp4")
         }
     }
 }

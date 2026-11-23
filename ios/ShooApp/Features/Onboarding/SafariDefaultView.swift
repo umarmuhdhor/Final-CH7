@@ -197,7 +197,7 @@ struct SafariDefaultView: View {
         }
         .animation(StateMotion.enter(reduceMotion: reduceMotion), value: toast)
         .fullScreenCover(isPresented: $isVideoPresented) {
-            TutorialVideoPlayer(startTime: videoStartTime)
+            TutorialVideoPlayer(video: .safariDefault, startTime: videoStartTime)
         }
     }
 
@@ -276,6 +276,7 @@ struct SafariDefaultView: View {
     /// "Watch the tutorial": straight into PiP so the steps stay on screen; full screen where PiP can't run.
     private func watchTutorial() {
         TutorialPiP.shared.start(
+            .safariDefault,
             fallback: {
                 videoStartTime = .zero
                 isVideoPresented = true
