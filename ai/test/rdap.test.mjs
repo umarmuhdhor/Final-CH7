@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { createApp } from "../src/app.js";
 import { registrableDomain } from "../src/rdap/domain.js";
 import { createMemoryCache, createKvCache } from "../src/rdap/cache.js";
-import { createRdapClient, BOOTSTRAP_URL, TIMEOUT_MS } from "../src/rdap/rdap.js";
+import { createRdapClient, BOOTSTRAP_URL, TIMEOUT_MS, BACKGROUND_MS } from "../src/rdap/rdap.js";
 import { page, post, ids, field } from "./helpers.mjs";
 
 const NOW = Date.parse("2026-10-22T00:00:00Z");
@@ -97,8 +97,8 @@ test("rdap bootstrap entries with unsafe servers are never contacted", async () 
     }
 });
 
-test("rdap timeout: a hanging server gives null after the 1 s budget (D-imelda-47)", async () => {
-    assert.equal(TIMEOUT_MS, 1000);
+test("rdap timeout: a hanging server gives null after the 3 s budget (layer 4 off since 19 Nov 2026)", async () => {
+    assert.equal(TIMEOUT_MS, 3000);
     const hang = (_u, init) => new Promise((_res, rej) => init.signal.addEventListener("abort", () => rej(new DOMException("aborted", "AbortError"))));
     const t0 = performance.now();
     const age = await createRdapClient({ fetch: mockFetch({ rdap: hang }), cache: createMemoryCache({ now: () => NOW }), now: () => NOW, timeoutMs: 80 }).lookupAgeDays("example.com");
@@ -158,6 +158,115 @@ test("failed lookup is cached briefly (10 min) then retried; success lasts 24 h"
     t += 2 * 3_600_000;
     await c.lookupAgeDays("example.com");
     assert.equal(f.rdapCalls().length, 3, "expired after 24 h");
+});
+
+test("a timed-out lookup is not cached: the next visit asks RDAP again (jnex.cc, 23 Nov 2026)", async () => {
+    const cache = createMemoryCache({ now: () => NOW });
+    let slow = true;
+    const f = mockFetch({
+        rdap: (_u, init) =>
+            slow
+                ? new Promise((_res, rej) => init.signal.addEventListener("abort", () => rej(new DOMException("aborted", "AbortError"))))
+                : json({ events: [{ eventAction: "registration", eventDate: iso(3) }] }),
+    });
+    const c = createRdapClient({ fetch: f, cache, now: () => NOW, timeoutMs: 80 });
+    assert.equal(await c.lookupAgeDays("example.com"), null, "first visit times out");
+    slow = false;
+    assert.equal(await c.lookupAgeDays("example.com"), 3, "second visit gets the age instead of a cached failure");
+    assert.equal(f.rdapCalls().length, 2);
+});
+
+test("a network error is not cached either; a real answer without a date still is", async () => {
+    const cache = createMemoryCache({ now: () => NOW });
+    let broken = true;
+    const f = mockFetch({ rdap: () => { if (broken) throw new TypeError("fetch failed"); return json({ events: [{ eventAction: "registration", eventDate: iso(3) }] }); } });
+    const c = createRdapClient({ fetch: f, cache, now: () => NOW });
+    assert.equal(await c.lookupAgeDays("example.com"), null);
+    broken = false;
+    assert.equal(await c.lookupAgeDays("example.com"), 3, "retried after a network error");
+
+    const noDate = mockFetch({ rdap: () => json({ events: [] }) });
+    const c2 = createRdapClient({ fetch: noDate, cache: createMemoryCache({ now: () => NOW }), now: () => NOW });
+    await c2.lookupAgeDays("example.com");
+    await c2.lookupAgeDays("example.com");
+    assert.equal(noDate.rdapCalls().length, 1, "an answer with no registration date is cached (10 min)");
+});
+
+// ---- background lookup (23 Nov 2026): the answer waits 3 s, the lookup itself may run on to 15 s -----------------
+const slowRdap = (ms, daysAgo = 3) => (_u, init) =>
+    new Promise((resolve, reject) => {
+        const t = setTimeout(() => resolve(json({ events: [{ eventAction: "registration", eventDate: iso(daysAgo) }] })), ms);
+        init.signal.addEventListener("abort", () => { clearTimeout(t); reject(new DOMException("aborted", "AbortError")); });
+    });
+const collector = () => {
+    const promises = [];
+    const waitUntil = (p) => promises.push(p);
+    waitUntil.settled = () => Promise.allSettled(promises);
+    waitUntil.count = () => promises.length;
+    return waitUntil;
+};
+
+test("BACKGROUND_MS: a slow lookup may run on for 15 s in total", () => {
+    assert.equal(BACKGROUND_MS, 15_000);
+});
+
+test("slow registry: the answer comes back at the deadline, the lookup finishes in the background and is cached", async () => {
+    const f = mockFetch({ rdap: slowRdap(150) });
+    const c = createRdapClient({ fetch: f, cache: createMemoryCache({ now: () => NOW }), now: () => NOW, timeoutMs: 40, backgroundMs: 2000 });
+    const waitUntil = collector();
+    const t0 = performance.now();
+    const first = await c.lookup("example.com", { waitUntil });
+    assert.ok(performance.now() - t0 < 120, "did not wait for the slow registry");
+    assert.deepEqual(first, { registeredAt: null, ageDays: null });
+    assert.equal(waitUntil.count(), 1, "the running lookup was handed to waitUntil");
+    await waitUntil.settled();
+    assert.equal((await c.lookup("example.com")).ageDays, 3, "the next visit gets the age from the cache");
+    assert.equal(f.rdapCalls().length, 1, "no second network call");
+});
+
+test("background lookup stops at backgroundMs and caches nothing", async () => {
+    const f = mockFetch({ rdap: (_u, init) => new Promise((_res, rej) => init.signal.addEventListener("abort", () => rej(new DOMException("aborted", "AbortError")))) });
+    const c = createRdapClient({ fetch: f, cache: createMemoryCache({ now: () => NOW }), now: () => NOW, timeoutMs: 30, backgroundMs: 120 });
+    const waitUntil = collector();
+    await c.lookup("example.com", { waitUntil });
+    const t0 = performance.now();
+    await waitUntil.settled();
+    assert.ok(performance.now() - t0 < 400, "the background work ends near backgroundMs");
+    await c.lookup("example.com");
+    assert.equal(f.rdapCalls().length, 2, "a lookup cut at 15 s is not cached: asked again");
+});
+
+test("a second request for the same domain joins the running lookup instead of starting another", async () => {
+    const f = mockFetch({ rdap: slowRdap(150) });
+    const c = createRdapClient({ fetch: f, cache: createMemoryCache({ now: () => NOW }), now: () => NOW, timeoutMs: 40, backgroundMs: 2000 });
+    const w1 = collector();
+    const w2 = collector();
+    await c.lookup("a.example.com", { waitUntil: w1 });
+    await c.lookup("b.example.com", { waitUntil: w2 });
+    await Promise.all([w1.settled(), w2.settled()]);
+    assert.equal(f.rdapCalls().length, 1);
+});
+
+test("without waitUntil (tests, dev server) a slow lookup is cut at the deadline, as before", async () => {
+    const f = mockFetch({ rdap: slowRdap(150) });
+    const c = createRdapClient({ fetch: f, cache: createMemoryCache({ now: () => NOW }), now: () => NOW, timeoutMs: 40, backgroundMs: 2000 });
+    assert.equal((await c.lookup("example.com")).ageDays, null);
+    await new Promise((r) => setTimeout(r, 200));
+    await c.lookup("example.com");
+    assert.equal(f.rdapCalls().length, 2, "nothing finished in the background, so it is asked again");
+});
+
+test("analyze: the Worker's waitUntil lets a slow lookup finish; the next /analyze on the domain gets new_domain", async () => {
+    const f = mockFetch({ rdap: slowRdap(150) });
+    const app = createApp({ fetch: f, now: () => NOW, rdapTimeoutMs: 40, rdapBackgroundMs: 2000 });
+    const waitUntil = collector();
+    const ctx = { waitUntil, passThroughOnException() {} };
+    const call = () => app.request("/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body()) }, {}, ctx);
+    assert.deepEqual(ids((await (await call()).json()).signals), ["asks_pin"], "first answer: no domain age yet");
+    await waitUntil.settled();
+    const second = (await (await call()).json()).signals;
+    assert.equal(second.find((s) => s.id === "new_domain")?.weight, 30, "second answer: age from the background lookup");
+    assert.equal(f.rdapCalls().length, 1);
 });
 
 test("memory cache keeps at most `max` entries and drops the oldest", async () => {

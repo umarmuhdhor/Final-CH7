@@ -81,7 +81,7 @@ function waitUntilOf(c) {
 export const BLOCKLIST_RATE = Object.freeze({ limit: 30, windowMs: 10 * 60 * 1000 });
 
 /**
- * @param {{ fetch?: typeof fetch, cache?: object, now?: () => number, rdapTimeoutMs?: number, llm?: object, llmFetch?: typeof fetch, llmClientCallsPerHour?: number, devStats?: boolean, blocklistSource?: object, rateLimit?: { limit: number, windowMs: number }, analyzeRateLimit?: { limit: number, windowMs: number } }} [opts]
+ * @param {{ fetch?: typeof fetch, cache?: object, now?: () => number, rdapTimeoutMs?: number, rdapBackgroundMs?: number, llm?: object, llmFetch?: typeof fetch, llmClientCallsPerHour?: number, devStats?: boolean, blocklistSource?: object, rateLimit?: { limit: number, windowMs: number }, analyzeRateLimit?: { limit: number, windowMs: number } }} [opts]
  *   fetch: network for RDAP (the Worker entry passes the real one). Without it new_domain is off, so tests never touch the network.
  *   cache: { get, set } for RDAP answers; defaults to an in-memory cache that lives as long as this app (one Worker isolate).
  *     With an RDAP_KV binding in the request's env, Workers KV is a second tier behind it (rdap/cache.js createTieredCache).
@@ -97,18 +97,23 @@ export const BLOCKLIST_RATE = Object.freeze({ limit: 30, windowMs: 10 * 60 * 100
  *   l3Model: run the layer 3 impersonation model (layer3/model/impersonation.js). null (default) = follow the request's env:
  *     on only when SHOO_L3_MODEL is "impersonation" (a Worker var; the dev server passes process.env). Off = old behaviour.
  */
-export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdapTimeoutMs, blocklistSource = emptySource, rateLimit = BLOCKLIST_RATE, analyzeRateLimit = ANALYZE_RATE, llm = null, llmFetch = null, llmClientCallsPerHour = CLIENT_CALLS_PER_HOUR, devStats = false, cases: fixedCases = null, l3Model = null } = {}) {
+export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdapTimeoutMs, rdapBackgroundMs, blocklistSource = emptySource, rateLimit = BLOCKLIST_RATE, analyzeRateLimit = ANALYZE_RATE, llm = null, llmFetch = null, llmClientCallsPerHour = CLIENT_CALLS_PER_HOUR, devStats = false, cases: fixedCases = null, l3Model = null } = {}) {
     let envLlm = { key: "", checker: null }; // built once per distinct configuration, so the daily counter survives requests
     const memoryCache = cache ?? createMemoryCache({ now });
-    const rdap = rdapFetch ? createRdapClient({ fetch: rdapFetch, cache: memoryCache, now, timeoutMs: rdapTimeoutMs }) : null;
+    const rdap = rdapFetch ? createRdapClient({ fetch: rdapFetch, cache: memoryCache, now, timeoutMs: rdapTimeoutMs, backgroundMs: rdapBackgroundMs }) : null;
     const kvBudget = createKvBudget({ now }); // lives with the isolate, like the memory cache
     const loadCases = createCasesLoader({ now });
-    /** The RDAP client for one request: memory only, or memory + KV when the Worker has the RDAP_KV binding. */
+    /**
+     * The RDAP client for one request: memory only, or memory + KV when the Worker has the RDAP_KV binding. The request's
+     * waitUntil lets a lookup still running at the 3 s answer deadline finish in the background (rdap.js BACKGROUND_MS).
+     */
     function rdapFor(c) {
+        if (!rdap) return rdap;
+        const waitUntil = waitUntilOf(c);
         const kv = c.env?.RDAP_KV;
-        if (!rdap || typeof kv?.get !== "function" || typeof kv?.put !== "function") return rdap;
-        const requestCache = createTieredCache({ memory: memoryCache, kv: createKvCache(kv, { now }), budget: kvBudget, waitUntil: waitUntilOf(c) });
-        return { lookup: (host) => rdap.lookup(host, { cache: requestCache }) };
+        if (typeof kv?.get !== "function" || typeof kv?.put !== "function") return { lookup: (host) => rdap.lookup(host, { waitUntil }) };
+        const requestCache = createTieredCache({ memory: memoryCache, kv: createKvCache(kv, { now }), budget: kvBudget, waitUntil });
+        return { lookup: (host) => rdap.lookup(host, { cache: requestCache, waitUntil }) };
     }
     const blocklist = createBlocklist({ source: blocklistSource, now });
     const kvBlocklist = createKvBlocklist({ now });

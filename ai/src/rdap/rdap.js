@@ -8,8 +8,19 @@ import { registrableDomain, isPublicHostname } from "./domain.js";
 import { SUCCESS_TTL_MS, FAIL_TTL_MS } from "./cache.js";
 
 export const BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json";
-/** D-imelda-08, shortened by D-imelda-47: RDAP timeout. Covers bootstrap + domain lookup together. Layer 4 waits for it. */
-export const TIMEOUT_MS = 1000;
+/**
+ * RDAP timeout. Covers bootstrap + domain lookup together. D-imelda-47 cut it to 1 s to leave layer 4 (LLM) its time; layer 4
+ * has been off since 19 Nov 2026 (SHOO_L4=off), and a cold .cc lookup (Verisign) takes 0.6-1.0 s plus the bootstrap, so 1 s
+ * often missed it and the page lost new_domain AND the young-domain model warning (jnex.cc, 23 Nov 2026). Well inside the
+ * 6.5 s server deadline.
+ */
+export const TIMEOUT_MS = 3000;
+/**
+ * A lookup still running at TIMEOUT_MS goes on in the background (Worker waitUntil) up to this long in total, then its
+ * result is cached for the next check. Measured from a Mac on 23 Nov 2026 (150 lab domains): lookups over 3 s took 3.6-5.5 s
+ * (one .ca 9.9 s, one .nl over 15 s), and the same domains answered in 0.1-0.5 s when asked again.
+ */
+export const BACKGROUND_MS = 15_000;
 const MAX_BOOTSTRAP_BYTES = 1_500_000;
 const MAX_RDAP_BYTES = 256 * 1024;
 const BOOTSTRAP_FAIL_TTL_MS = 60_000;
@@ -75,9 +86,9 @@ function registrationDate(data, now) {
 }
 
 /**
- * @param {{ fetch: typeof fetch, cache: { get(d: string): Promise<{registeredAt:number|null}|null>, set(d: string, v: {registeredAt:number|null}, ttl: number): Promise<void> }, now?: () => number, timeoutMs?: number }} deps
+ * @param {{ fetch: typeof fetch, cache: { get(d: string): Promise<{registeredAt:number|null}|null>, set(d: string, v: {registeredAt:number|null}, ttl: number): Promise<void> }, now?: () => number, timeoutMs?: number, backgroundMs?: number }} deps
  */
-export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeoutMs = TIMEOUT_MS }) {
+export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeoutMs = TIMEOUT_MS, backgroundMs = BACKGROUND_MS }) {
     let bootstrap = null; // { map, expires }
 
     let inflight = null; // one bootstrap download at a time, shared by concurrent requests
@@ -117,14 +128,20 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
         return text ? parseBootstrap(JSON.parse(text)) : null;
     }
 
-    /** `state.serversReady` tells the caller whether a failure is about this domain (cacheable) or about a missing bootstrap. */
+    /**
+     * `state.answered` tells the caller whether a null is about this domain (cacheable: the TLD has no RDAP server, or the
+     * registry replied without a usable date) or just bad luck (no bootstrap, network error, timeout: ask again next visit).
+     */
     async function fetchRegistration(domain, signal, state) {
         const servers = await getServers();
         if (!servers) return null; // no bootstrap: says nothing about this domain
-        state.serversReady = true;
         const server = servers.get(domain.slice(domain.lastIndexOf(".") + 1));
-        if (!server) return null;
+        if (!server) {
+            state.answered = true; // no RDAP server for this TLD: asking again will not help
+            return null;
+        }
         const res = await doFetch(`${server}domain/${domain}`, { method: "GET", headers: { accept: "application/rdap+json, application/json" }, redirect: "manual", signal });
+        state.answered = true; // the registry replied; its status or body is about this domain
         if (res.status !== 200) {
             res.body?.cancel().catch(() => {});
             return null;
@@ -133,24 +150,48 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
         return text ? registrationDate(JSON.parse(text), now()) : null;
     }
 
-    /** One deadline for the whole lookup, even if fetch ignores the abort signal. */
-    async function withDeadline(domain, budgetMs) {
+    /**
+     * One network lookup with a hard stop at `hardMs`, even if fetch ignores the abort signal.
+     * @returns {Promise<{ registeredAt: number|null, cacheable: boolean }>} never rejects
+     */
+    function runLookup(domain, hardMs) {
         const controller = new AbortController();
-        const state = { serversReady: false };
+        const state = { answered: false, timedOut: false };
         let timer;
-        const deadline = new Promise((resolve) => {
+        const hardStop = new Promise((resolve) => {
             timer = setTimeout(() => {
+                state.timedOut = true; // set before the abort, so a reply cut off mid-body is never cached as "no date"
                 controller.abort();
                 resolve(null);
-            }, budgetMs);
+            }, hardMs);
         });
         const work = fetchRegistration(domain, controller.signal, state).catch(() => null);
-        try {
-            const registeredAt = await Promise.race([work, deadline]);
-            return { registeredAt, cacheable: state.serversReady };
-        } finally {
+        return Promise.race([work, hardStop]).then((registeredAt) => {
             clearTimeout(timer);
-        }
+            // Cached only when the registry (or the bootstrap) really answered. A timeout or a network error is not cached:
+            // before 23 Nov 2026 it was, for 10 min, so a slow first lookup kept a new scam domain at no signal.
+            return { registeredAt, cacheable: state.answered && !state.timedOut };
+        });
+    }
+
+    /** domain -> running lookup (already writing its result to the cache), so concurrent requests share one network call. */
+    const running = new Map();
+
+    function startLookup(domain, hardMs, requestCache) {
+        const pending = runLookup(domain, hardMs)
+            .then(async (fresh) => {
+                if (fresh.cacheable) {
+                    try {
+                        await requestCache.set(domain, { registeredAt: fresh.registeredAt }, fresh.registeredAt === null ? FAIL_TTL_MS : SUCCESS_TTL_MS);
+                    } catch {
+                        /* ignore */
+                    }
+                }
+                return fresh;
+            })
+            .finally(() => running.delete(domain));
+        running.set(domain, pending);
+        return pending;
     }
 
     const ageOf = (registeredAt) => (registeredAt === null ? null : Math.max(0, Math.floor((now() - registeredAt) / DAY_MS)));
@@ -159,12 +200,15 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
 
     /**
      * Registration date and age, both null for anything that goes wrong. Never throws, never logs.
-     * The cache read and the network share one deadline (`timeoutMs`).
+     * The answer waits at most `timeoutMs` (cache read + network). With `waitUntil` (the Worker's), a lookup that is still
+     * running then goes on in the background up to `backgroundMs` in total and caches its result, so the next check of the
+     * page, or the next page on the domain, gets the age. Without `waitUntil` it is cut at `timeoutMs`, as before.
      * @param {string} host hostname of the page
-     * @param {{ cache?: object }} [opts] cache for this request only (memory + KV tiers, app.js); default: the client's cache
+     * @param {{ cache?: object, waitUntil?: (p: Promise<unknown>) => void }} [opts] cache for this request only (memory + KV
+     *   tiers, app.js); default: the client's cache. waitUntil: keeps the background lookup alive after the response.
      * @returns {Promise<{ registeredAt: string|null, ageDays: number|null }>} registeredAt = `YYYY-MM-DD` (UTC), #270
      */
-    async function lookup(host, { cache: requestCache = cache } = {}) {
+    async function lookup(host, { cache: requestCache = cache, waitUntil } = {}) {
         const domain = registrableDomain(host);
         if (!domain) return { registeredAt: null, ageDays: null };
         const startedAt = now();
@@ -176,14 +220,18 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
             /* a broken cache must not break the answer */
         }
         if (registeredAt === undefined) {
-            const fresh = await withDeadline(domain, Math.max(0, timeoutMs - (now() - startedAt)));
-            registeredAt = fresh.registeredAt;
-            if (fresh.cacheable) {
-                try {
-                    await requestCache.set(domain, { registeredAt }, registeredAt === null ? FAIL_TTL_MS : SUCCESS_TTL_MS);
-                } catch {
-                    /* ignore */
-                }
+            const budget = Math.max(0, timeoutMs - (now() - startedAt));
+            const background = typeof waitUntil === "function";
+            const pending = running.get(domain) ?? startLookup(domain, background ? Math.max(budget, backgroundMs - (now() - startedAt)) : budget, requestCache);
+            let timer;
+            const answerBy = new Promise((resolve) => (timer = setTimeout(resolve, budget, null)));
+            const fresh = await Promise.race([pending, answerBy]);
+            clearTimeout(timer);
+            if (fresh) {
+                registeredAt = fresh.registeredAt;
+            } else {
+                registeredAt = null; // not yet: answer without an age
+                if (background) waitUntil(pending);
             }
         }
         return { registeredAt: dateOf(registeredAt), ageDays: ageOf(registeredAt) };
