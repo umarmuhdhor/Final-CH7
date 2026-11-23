@@ -5123,6 +5123,26 @@
         }
       }
     },
+    "Connect with a QR code. If someone opens a dangerous site, your family knows right away." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan lewat kode QR. Saat ada yang buka situs berbahaya, keluarga langsung tahu."
+          }
+        }
+      }
+    },
+    "Far apart, still\nlooking out for each other." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jauh di mata,\ntetap saling menjaga."
+          }
+        }
+      }
+    },
     "Looks real, may not be safe.\nLet Shoo check." : {
       "extractionState" : "stale",
       "localizations" : {

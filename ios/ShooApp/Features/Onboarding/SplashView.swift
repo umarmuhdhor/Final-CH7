@@ -26,6 +26,12 @@ struct SplashView: View {
             title: "Looks real, may not be safe.\nLet Shoo check.",
             message: "Shoo checks the pages you open and blocks fake sites before they can hurt you."
         ),
+        Slide(
+            id: 2,
+            image: "OnboardingSlide3",
+            title: "Far apart, still\nlooking out for each other.",
+            message: "Connect with a QR code. If someone opens a dangerous site, your family knows right away."
+        ),
     ]
 
     private var isLast: Bool { page == slides.count - 1 }
