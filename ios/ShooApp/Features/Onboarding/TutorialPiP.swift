@@ -18,13 +18,14 @@ final class TutorialPiP: NSObject {
     private var endObserver: NSObjectProtocol?
     private var fallback: (() -> Void)?
     private var restore: ((CMTime) -> Void)?
+    private var video: TutorialVideo?
     /// Set by `willStart`: iOS took the start, so stop retrying.
     private var isStarting = false
 
     /// Starts the tutorial in PiP. `fallback` runs when PiP can't start; `restore` runs with the current
     /// time when the user taps "back to app" in the PiP window.
-    func start(fallback: @escaping () -> Void, restore: @escaping (CMTime) -> Void) {
-        guard let url = TutorialVideoPlayer.videoURL,
+    func start(_ video: TutorialVideo, fallback: @escaping () -> Void, restore: @escaping (CMTime) -> Void) {
+        guard let url = video.url,
               AVPictureInPictureController.isPictureInPictureSupported(),
               let window = Self.keyWindow() else {
             fallback()
@@ -33,8 +34,13 @@ final class TutorialPiP: NSObject {
         self.fallback = fallback
         self.restore = restore
 
-        // Already playing: start again from the beginning.
+        // Already playing: start again from the beginning, with this page's video.
         if let player, controller != nil {
+            if self.video != video {
+                player.replaceCurrentItem(with: AVPlayerItem(url: url))
+                loopAtEnd(of: player)
+                self.video = video
+            }
             player.seek(to: .zero)
             player.play()
             return
@@ -68,14 +74,8 @@ final class TutorialPiP: NSObject {
         self.player = player
         self.hostView = host
         self.controller = controller
-
-        // Loop: older users may need the steps more than once.
-        endObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: .main
-        ) { [weak player] _ in
-            player?.seek(to: .zero)
-            player?.play()
-        }
+        self.video = video
+        loopAtEnd(of: player)
 
         possibleObservation = controller.observe(\.isPictureInPicturePossible, options: [.initial, .new]) { controller, _ in
             guard controller.isPictureInPicturePossible else { return }
@@ -85,6 +85,17 @@ final class TutorialPiP: NSObject {
             }
         }
         player.play()
+    }
+
+    /// Loop: older users may need the steps more than once.
+    private func loopAtEnd(of player: AVPlayer) {
+        if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: .main
+        ) { [weak player] _ in
+            player?.seek(to: .zero)
+            player?.play()
+        }
     }
 
     /// `isPictureInPicturePossible` can turn true a moment before the controller accepts a start
@@ -130,6 +141,7 @@ final class TutorialPiP: NSObject {
         player = nil
         fallback = nil
         restore = nil
+        video = nil
         isStarting = false
         do {
             try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
