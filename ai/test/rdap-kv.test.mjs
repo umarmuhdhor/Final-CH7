@@ -89,7 +89,7 @@ test("RDAP_KV miss: RDAP lookup, then one background write of the registrable do
     assert.equal(f2.rdapCalls().length, 0);
 });
 
-test("RDAP_KV: a failed lookup is not written to KV (memory only, 10 min)", async () => {
+test("RDAP_KV: a failed lookup is not written to KV (nor to memory)", async () => {
     const kv = fakeKv();
     const ctx = fakeCtx();
     const app = createApp({ fetch: mockFetch({ rdap: () => json({}, 404) }), now: () => NOW });
