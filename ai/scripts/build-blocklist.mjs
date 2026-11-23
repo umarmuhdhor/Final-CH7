@@ -3,6 +3,7 @@
 //
 //   BLOCKLIST_CF_API_TOKEN=… BLOCKLIST_CF_ACCOUNT_ID=… BLOCKLIST_KV_NAMESPACE_ID=… node ai/scripts/build-blocklist.mjs
 //   node ai/scripts/build-blocklist.mjs --out /tmp/blocklist   (no KV: writes the files to a folder, starts from an empty state)
+//   BLOCKLIST_ALLOW_FLOOD=1 …   ONE deliberate run past the MAX_NEW_SHARE guard (the switch to full hostnames, #643)
 //
 // Prints counts only. The token is never printed; a failed Cloudflare call reports its HTTP status, not its body.
 import { gzipSync, gunzipSync } from "node:zlib";
@@ -23,10 +24,11 @@ const decode = (bytes) => new TextDecoder().decode(bytes);
 
 /**
  * @param {{ kv: { get(key: string): Promise<Uint8Array | null>, putMany(items: { key: string, value: string | Uint8Array, expirationTtl?: number }[]): Promise<void> },
- *           fetchText: (url: string) => Promise<string>, now?: () => number, minHosts?: number }} deps
+ *           fetchText: (url: string) => Promise<string>, now?: () => number, minHosts?: number, allowFlood?: boolean }} deps
+ *   allowFlood skips the MAX_NEW_SHARE guard for one deliberate run (#643); the drop guard still applies.
  * @returns {Promise<object>} the meta that was written
  */
-export async function runBuild({ kv, fetchText, now = Date.now, minHosts }) {
+export async function runBuild({ kv, fetchText, now = Date.now, minHosts, allowFlood = false }) {
     const builtAt = new Date(Math.floor(now() / 1000) * 1000).toISOString();
     const [metaBytes, stateBytes] = await Promise.all([kv.get(PREBUILT.META_KEY), kv.get(PREBUILT.STATE_KEY)]);
     const previousMeta = metaBytes ? JSON.parse(decode(metaBytes)) : null;
@@ -41,7 +43,7 @@ export async function runBuild({ kv, fetchText, now = Date.now, minHosts }) {
     }
     // Counted in the served list, not the feed: the cap keeps the newest, so a flood can push old domains out.
     const added = full.domains.filter((d) => d.addedAt === builtAt).length;
-    if (before && added > before * PREBUILT.MAX_NEW_SHARE) {
+    if (!allowFlood && before && added > before * PREBUILT.MAX_NEW_SHARE) {
         throw new Error(`list would add ${added} new domains to ${before}; refusing to publish (check the feed)`);
     }
     await kv.putMany([
@@ -131,7 +133,9 @@ async function main(argv) {
         if (missing.length) throw new Error(`missing environment variable(s): ${missing.join(", ")}`);
         kv = createKvRest(Object.fromEntries(Object.entries(env).map(([k, name]) => [k, process.env[name]])));
     }
-    const meta = await runBuild({ kv, fetchText: (url) => fetchFeed(url) });
+    const allowFlood = process.env.BLOCKLIST_ALLOW_FLOOD === "1";
+    if (allowFlood) console.log("BLOCKLIST_ALLOW_FLOOD=1: the new-domain guard is off for this run");
+    const meta = await runBuild({ kv, fetchText: (url) => fetchFeed(url), allowFlood });
     console.log(`public blocklist built at ${meta.builtAt}: ${meta.active} domains, ${meta.removed} removed, ${meta.builds.length - 1} delta(s)`);
 }
 

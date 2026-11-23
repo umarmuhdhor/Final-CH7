@@ -9,7 +9,8 @@ import { gzipSync, gunzipSync } from "node:zlib";
 import { PHISHING_DATABASE, parseHostList, trackFirstSeen, createPhishingDatabaseSource } from "../src/blocklist/phishing-database.js";
 import { PREBUILT, buildArtifacts, deltaKey } from "../src/blocklist/prebuilt.js";
 import { runBuild, createKvRest } from "../scripts/build-blocklist.mjs";
-import { MAX_ENTRIES, applyPage } from "../../ios/ShooExtension/Resources/lists.js";
+import { MAX_ENTRIES, applyPage, candidates } from "../../ios/ShooExtension/Resources/lists.js";
+import { toListed } from "../src/blocklist/domains.js";
 
 const T = (s) => `2026-10-${s}:00:00.000Z`;
 const entry = (host, addedAt, removedAt) => ({ host, addedAt, ...(removedAt ? { removedAt } : {}) });
@@ -78,19 +79,20 @@ test("removed: reported only for since, never in a full list", async () => {
     assert.equal(inc.nextSince, T("04T10"));
 });
 
-test("entries are reduced to the registrable domain and de-duplicated", async () => {
+test("#643: entries are published as the feed's full hostname and de-duplicated", async () => {
     const app = appWith([
         entry("login.shoo-fixture-a.xyz", T("01T10")),
         entry("www.shoo-fixture-a.xyz", T("02T10")),
         entry("shoo-fixture-b.co.id", T("01T10")),
         entry("x.y.shoo-fixture-b.co.id", T("03T10")),
         entry("SHOO-FIXTURE-C.XYZ.", T("01T10")),
+        entry("shoo-fixture-c.xyz", T("02T10")),
     ]);
     const names = (await (await get(app)).json()).domains.map((d) => d.domain).sort();
-    assert.deepEqual(names, ["shoo-fixture-a.xyz", "shoo-fixture-b.co.id", "shoo-fixture-c.xyz"]);
+    assert.deepEqual(names, ["login.shoo-fixture-a.xyz", "shoo-fixture-b.co.id", "shoo-fixture-c.xyz", "www.shoo-fixture-a.xyz", "x.y.shoo-fixture-b.co.id"]);
 });
 
-test("#290: under ac.id, sch.id, go.id, mil.id and desa.id the feed's full hostname is published, never the institution", async () => {
+test("#290: under ac.id, sch.id, mil.id and desa.id the hacked host is published, never the institution", async () => {
     const app = appWith([
         entry("biotek.fsm.shoo-fixture-kampus.ac.id", T("01T10")),
         entry("https://judi.shoo-fixture-sekolah.sch.id/slot", T("01T10")),
@@ -99,13 +101,13 @@ test("#290: under ac.id, sch.id, go.id, mil.id and desa.id the feed's full hostn
         entry("login.shoo-fixture-c.co.id", T("01T10")),
     ]);
     const names = (await (await get(app)).json()).domains.map((d) => d.domain).sort();
-    assert.deepEqual(names, ["biotek.fsm.shoo-fixture-kampus.ac.id", "judi.shoo-fixture-sekolah.sch.id", "shoo-fixture-c.co.id", "shoo-fixture-desa.desa.id", "x.shoo-fixture-kodim.mil.id"]);
+    assert.deepEqual(names, ["biotek.fsm.shoo-fixture-kampus.ac.id", "judi.shoo-fixture-sekolah.sch.id", "login.shoo-fixture-c.co.id", "shoo-fixture-desa.desa.id", "x.shoo-fixture-kodim.mil.id"]);
 });
 
 test("a duplicate keeps the earliest addedAt", async () => {
-    const app = appWith([entry("a.shoo-fixture-a.xyz", T("05T10")), entry("b.shoo-fixture-a.xyz", T("01T10"))]);
+    const app = appWith([entry("a.shoo-fixture-a.xyz", T("05T10")), entry("https://A.shoo-fixture-a.xyz/x", T("01T10"))]);
     const body = await (await get(app)).json();
-    assert.deepEqual(body.domains, [{ domain: "shoo-fixture-a.xyz", addedAt: T("01T10") }]);
+    assert.deepEqual(body.domains, [{ domain: "a.shoo-fixture-a.xyz", addedAt: T("01T10") }]);
 });
 
 test("allowlist: official domains (and subdomains), popular sites and shared hosts never appear", async () => {
@@ -123,7 +125,40 @@ test("allowlist: official domains (and subdomains), popular sites and shared hos
 test("a customer site on a shared host stays its own domain; the platform itself is dropped", async () => {
     const app = appWith([entry("shoo-fixture-fake.github.io", T("01T10")), entry("github.io", T("01T10")), entry("a.shoo-fixture-fake.vercel.app", T("01T10"))]);
     const names = (await (await get(app)).json()).domains.map((d) => d.domain).sort();
-    assert.deepEqual(names, ["shoo-fixture-fake.github.io", "shoo-fixture-fake.vercel.app"]);
+    assert.deepEqual(names, ["a.shoo-fixture-fake.vercel.app", "shoo-fixture-fake.github.io"]);
+});
+
+test("#643: a host on a shared platform outside the Public Suffix List stays allowlisted; official and popular parents too", async () => {
+    const app = appWith([
+        entry("tenant.sharepoint.com", T("01T10")),
+        entry("x.weebly.com", T("01T10")),
+        entry("login.bca.co.id", T("01T10")),
+        entry("a.b.google.com", T("01T10")),
+        entry("kodepos.dinas-x.go.id", T("01T10")),
+        entry("shop.shoo-fixture-weeblysite.com", T("01T10")),
+    ]);
+    const names = (await (await get(app)).json()).domains.map((d) => d.domain);
+    assert.deepEqual(names, ["shop.shoo-fixture-weeblysite.com"]);
+});
+
+test("#643: one bad subdomain no longer lists its apex or siblings (vercel.com case), an apex the feed names is still listed", async () => {
+    const list = await (await get(appWith([entry("login-bca.shoo-fixture-vercel.com", T("01T10")), entry("shoo-fixture-rotator.club", T("01T10")), entry("a1.shoo-fixture-rotator.club", T("01T10"))]))).json();
+    const listed = new Set(list.domains.map((d) => d.domain));
+    const reg = (h) => h.split(".").slice(-2).join(".");
+    const blocked = (h) => candidates(h, reg(h)).some((c) => listed.has(c));
+    assert.equal(blocked("login-bca.shoo-fixture-vercel.com"), true);
+    assert.equal(blocked("x.login-bca.shoo-fixture-vercel.com"), true);
+    assert.equal(blocked("shoo-fixture-vercel.com"), false);
+    assert.equal(blocked("docs.shoo-fixture-vercel.com"), false);
+    assert.equal(blocked("zz9.shoo-fixture-rotator.club"), true, "the feed named the apex itself");
+});
+
+test("#643: toListed keeps the full hostname; suffixes, IPs and junk stay null", () => {
+    assert.equal(toListed("login.tokoku.com"), "login.tokoku.com");
+    assert.equal(toListed("tokoku.com"), "tokoku.com");
+    assert.equal(toListed("a.51-79-240-114.sslip.io"), "a.51-79-240-114.sslip.io");
+    assert.equal(toListed("https://Login.Tokoku.com./x?y=1"), "login.tokoku.com");
+    for (const junk of ["vercel.app", "co.id", "com", "127.0.0.1", "localhost", "", "a b.com"]) assert.equal(toListed(junk), null, junk);
 });
 
 test("junk entries are skipped, not errors", async () => {
@@ -134,7 +169,7 @@ test("junk entries are skipped, not errors", async () => {
 
 test("entries given as URLs are reduced to their host", async () => {
     const app = appWith([entry("https://evil.shoo-fixture-f.xyz/login?a=1", T("01T10"))]);
-    assert.deepEqual((await (await get(app)).json()).domains.map((d) => d.domain), ["shoo-fixture-f.xyz"]);
+    assert.deepEqual((await (await get(app)).json()).domains.map((d) => d.domain), ["evil.shoo-fixture-f.xyz"]);
 });
 
 test("size cap: at most MAX_DOMAINS, newest kept", async () => {
@@ -280,6 +315,7 @@ test("phishing-database: parseHostList keeps one hostname per line, skips blanks
 test("phishing-database: first sight sets addedAt = build time; later builds keep it", () => {
     const first = trackFirstSeen([], ["a.shoo-fixture-a.xyz", "shoo-fixture-a.xyz", "shoo-fixture-b.top"], B("00"));
     assert.deepEqual(first, [
+        { host: "a.shoo-fixture-a.xyz", addedAt: B("00") },
         { host: "shoo-fixture-a.xyz", addedAt: B("00") },
         { host: "shoo-fixture-b.top", addedAt: B("00") },
     ]);
@@ -288,16 +324,18 @@ test("phishing-database: first sight sets addedAt = build time; later builds kee
         { host: "shoo-fixture-a.xyz", addedAt: B("00") },
         { host: "shoo-fixture-b.top", addedAt: B("00") },
         { host: "shoo-fixture-c.site", addedAt: B("06") },
+        { host: "a.shoo-fixture-a.xyz", addedAt: B("00"), removedAt: B("06") },
     ]);
 });
 
-test("#290: a published institution apex is removed once the feed names only its hacked host", () => {
+test("#290/#643: a published apex is removed once the feed names only its hacked host", () => {
     const state = [{ host: "shoo-fixture-kampus.ac.id", addedAt: B("00") }, { host: "shoo-fixture-a.xyz", addedAt: B("00") }];
     const next = trackFirstSeen(state, ["biotek.fsm.shoo-fixture-kampus.ac.id", "login.shoo-fixture-a.xyz"], B("06"));
     assert.deepEqual(next, [
         { host: "biotek.fsm.shoo-fixture-kampus.ac.id", addedAt: B("06") },
-        { host: "shoo-fixture-a.xyz", addedAt: B("00") },
+        { host: "login.shoo-fixture-a.xyz", addedAt: B("06") },
         { host: "shoo-fixture-kampus.ac.id", addedAt: B("00"), removedAt: B("06") },
+        { host: "shoo-fixture-a.xyz", addedAt: B("00"), removedAt: B("06") },
     ]);
 });
 
@@ -588,6 +626,16 @@ test("build script: normal growth is published", async () => {
     const meta = await runBuild({ kv, fetchText: feed(...many, ...grown), now: () => Date.parse(B("06")), minHosts: 1 });
     assert.equal(meta.active, 10 + grown.length);
     assert.equal(JSON.parse(kv.values.get(PREBUILT.META_KEY)).builtAt, B("06"));
+});
+
+test("#643: BLOCKLIST_ALLOW_FLOOD lets one deliberate run past the growth guard, never past the drop guard", async () => {
+    const kv = fakeKvStore();
+    const many = Array.from({ length: 10 }, (_, i) => `shoo-fixture-${i}.xyz`);
+    await runBuild({ kv, fetchText: feed(...many), now: () => Date.parse(B("00")), minHosts: 1 });
+    const flood = Array.from({ length: 10 }, (_, i) => `shoo-flood-${i}.top`);
+    const meta = await runBuild({ kv, fetchText: feed(...many, ...flood), now: () => Date.parse(B("06")), minHosts: 1, allowFlood: true });
+    assert.equal(meta.active, 20);
+    await assert.rejects(runBuild({ kv, fetchText: feed(...many.slice(0, 2)), now: () => Date.parse(B("12")), minHosts: 1, allowFlood: true }), /drop/);
 });
 
 test("build script: the first build is exempt from the growth guard", async () => {
