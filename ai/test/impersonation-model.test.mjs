@@ -127,3 +127,43 @@ test("model stays fast: one page well under 50 ms after the first load", async (
     const ms = await fastestMs(() => scoreImpersonation(snap));
     assert.ok(ms < 50, `took ${ms} ms`);
 });
+
+// ---- the platform's own brand is not a claim (23 Nov 2026) --------------------------------------------------------
+// Ordinary Google Sheets / Drive / Forms / OneDrive / Microsoft Forms pages were warn or block: "… - Google Drive" in the
+// title and google in docs.google.com read as "Google's brand on a site Google doesn't own" (docs.google.com is user
+// content, so not official). The lab taught it: of 201 "scam" rows on these platforms, 180 were empty, "Loading…",
+// "Error" or "access removed" pages from phishing feeds; 1 legit row. The team's own "Shoo Waitlist" sheet was blocked.
+const platformPage = (url, title, text, fields = []) => page(url, fields, { title, text });
+const SHEETS_ID_UI = "Edit dengan apl Spreadsheet. Membuat penyesuaian dan berbagi dengan yang lain agar dapat mengedit secara bersamaan. LAIN KALI DAPATKAN APLIKASI";
+
+test("ordinary pages on Google and Microsoft platforms: no model signal", async () => {
+    for (const [url, title, text] of [
+        ["https://docs.google.com/spreadsheets/u/0/d/abc/htmlview", "Shoo Waitlist - Google Drive", `${SHEETS_ID_UI} Shoo Waitlist Sheet1 Waitlist`],
+        ["https://docs.google.com/spreadsheets/d/abc/htmlview", "Team Schedule - Google Drive", "Make changes and share with others. GET THE APP. Team Schedule Sheet1"],
+        ["https://docs.google.com/forms/d/e/abc/viewform", "Pendaftaran Lomba 17an - Google Formulir", "Pendaftaran Lomba 17an. Isi nama dan kelas. Nama lengkap Kelas Kirim"],
+        ["https://drive.google.com/file/d/abc/view", "laporan.pdf - Google Drive", "Masuk Laporan keuangan bulanan"],
+        ["https://docs.google.com/presentation/d/abc/edit", "Pitch Deck - Google Slide", "Pitch Deck Final Challenge"],
+        ["https://onedrive.live.com/view.aspx?id=abc", "OneDrive", "Dokumen dibagikan dengan Anda"],
+        ["https://forms.office.com/r/abc", "Microsoft Forms", "Survei kepuasan pelanggan. Nama Email Kirim"],
+    ]) {
+        const { signals } = await analyzeWithDomain(platformPage(url, title, text), { model: true });
+        assert.ok(!ids(signals).includes(MODEL_SIGNAL_ID), `${title}: ${JSON.stringify(signals.map((s) => [s.id, s.weight]))}`);
+    }
+});
+
+test("real phishing on those platforms still flagged: another brand, a sensitive ask, a lure or credential words", async () => {
+    const bca = platformPage("https://docs.google.com/forms/d/e/abc/viewform", "Verifikasi Akun BCA - Google Formulir", "Akun BCA anda akan diblokir. Masukkan nomor kartu dan PIN", [field({ name: "pin", label: "PIN" })]);
+    const od = platformPage("https://onedrive.live.com/view.aspx?id=abc", "OneDrive", "Sign in to view the shared document. Email Password", [field({ type: "password", name: "password" })]);
+    for (const snap of [bca, od]) {
+        const r = scoreImpersonation(sanitizeSnapshot(snap), { ruleIds: ids((await analyzeWithDomain(snap)).signals), ageDays: null });
+        assert.ok(r.tier === "warn" || r.tier === "block", `${snap.title}: ${r.tier}`);
+    }
+});
+
+test("the owner rule is only for the owner's own platforms: Google's name on someone else's site still counts", () => {
+    const fake = page("https://google-drive-share.example.xyz/view", [], { title: "Shoo Waitlist - Google Drive", text: SHEETS_ID_UI });
+    const onPlatform = page("https://docs.google.com/spreadsheets/d/abc/htmlview", [], { title: "Shoo Waitlist - Google Drive", text: SHEETS_ID_UI });
+    const ownTier = scoreImpersonation(sanitizeSnapshot(onPlatform), { ageDays: null }).tier;
+    assert.ok(ownTier === "safe" || ownTier === "gate", `on docs.google.com: ${ownTier}`);
+    assert.equal(makesClaim(pageRow(sanitizeSnapshot(fake)), [], 0), true, "off the platform, Google in the title is still a claim");
+});
