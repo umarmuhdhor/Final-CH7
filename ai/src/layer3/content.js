@@ -6,6 +6,7 @@ import { buildIndex, findPhrase, evidenceOf } from "./match.js";
 import { hasAny, vocabulary } from "./text.js";
 import { buildUrgentSignal, buildBrandLogoSignal, buildBrandFormSignal } from "./signals.js";
 import { FIELD_FINGERPRINTS } from "./fingerprints.js";
+import { findCourierLure, buildCourierLureSignal } from "./courier.js";
 
 // Always urgent: an account threat or a countdown that scams use. Bilingual (ID + EN).
 const URGENT_PHRASES = [
@@ -152,7 +153,13 @@ export function contentSignals(snapshot, { official, asksData = true }) {
     const quiet = !asksData;
     const out = [];
     const urgent = findUrgent(snapshot.text) ?? findUrgent(snapshot.title);
-    if (urgent) out.push(buildUrgentSignal(urgent.phrase, urgent.evidence, { quiet }));
+    if (urgent) {
+        out.push(buildUrgentSignal(urgent.phrase, urgent.evidence, { quiet }));
+    } else if (!official) {
+        // One urgent_language at most: an account threat keeps the slot, a courier lure fills it otherwise (courier.js).
+        const lure = findCourierLure(snapshot);
+        if (lure) out.push(buildCourierLureSignal(lure.phrase, lure.evidence));
+    }
     if (!official) {
         // One brand_logo_offsite at most. A copied sign-in form is the stronger claim, so it wins over a logo/title hit.
         const form = findBrandForm(snapshot);
