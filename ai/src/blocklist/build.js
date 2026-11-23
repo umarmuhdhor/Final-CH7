@@ -1,6 +1,7 @@
 // Raw feed entries -> the published list: the feed's full hostnames (#643), allowlist applied, one entry per name.
 import { toListed, toRegistrable } from "./domains.js";
 import { OFFICIAL, POPULAR, SHARED_HOSTS } from "./allowlist.js";
+import { POPULAR_APEX } from "./popular-apex.js";
 
 /** True when `domain` (a registrable domain or a hostname) is, or sits under, an official or popular name, or is a shared platform apex. */
 export function isAllowlisted(domain) {
@@ -20,6 +21,9 @@ export function isAllowlisted(domain) {
  * are their own registrable domains, so their customer sites are still published one by one.
  */
 export function isListedAllowlisted(host) {
+    // A Tranco top-1000 apex is never published as a whole (23 Nov 2026: zendesk.com, gravatar.com, mit.edu ... were, so
+    // every page of them was db_match 100 on the phone). Exact apex only: a host under it is still published.
+    if (POPULAR_APEX.has(host)) return true;
     const reg = toRegistrable(host);
     return isAllowlisted(host) || (reg !== null && reg !== host && isAllowlisted(reg));
 }

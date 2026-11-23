@@ -672,3 +672,18 @@ test("build script: KV REST client uses the bulk API, base64 for bytes, and neve
     const partial = createKvRest({ accountId: "acc", namespaceId: "ns", token: "t", fetch: async () => Response.json({ success: true, result: { unsuccessful_keys: ["a"] } }) });
     await assert.rejects(partial.putMany([{ key: "a", value: "b" }]), /a/);
 });
+
+// ---- popular apex (23 Nov 2026) ------------------------------------------------------------------------------------
+// The live list held 26 Tranco top-1000 domains as a whole (zendesk.com, gravatar.com, primevideo.com, teamviewer.com,
+// mit.edu ...): every page of them was db_match 100 on the phone. With #643 the feed's own apex entries remain
+// (gravatar.com, nflxvideo.net, name.com, mercadolibre.com.ar on 23 Nov). A top-1000 apex is never published as a whole;
+// a host under it (a hacked or rented subdomain) still is.
+test("a Tranco top-1000 apex is never published; hosts under it still are", async () => {
+    const { buildList } = await import("../src/blocklist/build.js");
+    const now = Date.parse("2026-11-23T08:00:00Z");
+    const addedAt = new Date(now - 3_600_000).toISOString();
+    const raw = ["gravatar.com", "zendesk.com", "mit.edu", "phish.gravatar.com", "acme-login.zendesk.com", "evil-login.example.com"].map((host) => ({ host, addedAt, removedAt: null }));
+    const listed = buildList(raw, { maxDomains: 1000, now }).active.map((d) => d.domain);
+    for (const apex of ["gravatar.com", "zendesk.com", "mit.edu"]) assert.ok(!listed.includes(apex), `${apex} must not be listed as a whole`);
+    for (const host of ["phish.gravatar.com", "acme-login.zendesk.com", "evil-login.example.com"]) assert.ok(listed.includes(host), `${host} stays listed`);
+});
