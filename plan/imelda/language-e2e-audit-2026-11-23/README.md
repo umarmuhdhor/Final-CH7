@@ -9,6 +9,7 @@ Kode yang diaudit: `origin/main` @ `265063f4`, build Release untuk simulator. Au
 | File | Isi |
 |---|---|
 | [temuan-bahasa.md](temuan-bahasa.md) | Tabel temuan: 47 Bahasa Indonesia + 13 Bahasa Inggris. Tiap baris berisi layar, teks, masalah, saran, tingkat, dan file:baris. |
+| [wording-lama-vs-baru.md](wording-lama-vs-baru.md) | Tabel wording lama vs usulan baru, berdampingan |
 | [goldfish-review.md](goldfish-review.md) | Hasil reviewer berkonteks segar dengan persona user awam dan lansia (19 temuan gabungan). |
 | [egm/](egm/) | File persona yang dipakai reviewer goldfish. |
 | [screenshots/](screenshots/) | 43 screenshot E2E. Indeksnya ada [di bawah](#daftar-screenshot). |
