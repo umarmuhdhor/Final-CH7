@@ -3,6 +3,7 @@
 import { sanitizeSnapshot } from "./validate.js";
 import { formSignals } from "./layer3/forms.js";
 import { contentSignals } from "./layer3/content.js";
+import { liftCourierCardAsks } from "./layer3/courier.js";
 import { buildNewDomainSignal } from "./layer3/signals.js";
 import { hostOf, isOfficialHost } from "./layer3/official.js";
 import { buildModelSignal, scoreImpersonation } from "./layer3/model/impersonation.js";
@@ -17,7 +18,8 @@ export const SERVER_DEADLINE_MS = 6500;
 const strongestFirst = (signals) => signals.sort((a, b) => b.weight - a.weight || (a.id < b.id ? -1 : 1));
 
 function rules(snapshot, official, impersonation = false) {
-    const forms = formSignals(snapshot, { official });
+    // A card ask on a page that presents itself as a courier weighs enough to block (courier.js); official hosts have none.
+    const forms = liftCourierCardAsks(formSignals(snapshot, { official }), snapshot);
     // Words weigh full when something sensitive is asked, or when the domain itself already looks like impersonation.
     return strongestFirst([...forms, ...contentSignals(snapshot, { official, asksData: forms.length > 0 || impersonation })]);
 }
