@@ -387,6 +387,34 @@ export function makesClaim(row, ruleIds, words) {
     );
 }
 
+// ---- the platform's own brand is not a claim (23 Nov 2026) ---------------------------------------------------------
+// Ordinary Google Sheets / Drive / Forms / OneDrive / Microsoft Forms pages were warn or block: "… - Google Drive" in the
+// title and google in docs.google.com read as Google's brand on a site Google doesn't own (these hosts are user content,
+// so not official). The lab taught it: of 201 "scam" rows on these platforms, 180 were empty, "Loading…", "Error" or
+// "access removed" pages from phishing feeds, and only 1 row was legit. The team's own "Shoo Waitlist" sheet was blocked.
+// Real phishing there still names another brand, asks for a PIN/OTP/card, uses a lure or credential words: still a claim.
+const PLATFORM_OWNERS = [
+    { hosts: ["docs.google.com", "sites.google.com", "drive.google.com", "script.google.com", "storage.googleapis.com"], words: ["google"] },
+    {
+        hosts: ["forms.office.com", "forms.microsoft.com", "sites.live.com", "sway.office.com", "onedrive.live.com", "forms.cloud.microsoft", "sharepoint.com", "1drv.ms"],
+        words: ["microsoft", "onedrive", "sharepoint", "outlook", "office 365", "office365", "office"],
+    },
+];
+const ownerWordsOf = (host) => PLATFORM_OWNERS.find((p) => p.hosts.some((h) => under(host, h)))?.words ?? null;
+const OWNER_RES = new Map(PLATFORM_OWNERS.map((p) => [p.words, new RegExp(`(^|[^a-z0-9])(${p.words.map((w) => w.replace(/ /g, "\\s+")).join("|")})(?=[^a-z0-9]|$)`, "gi")]));
+
+/** True when the page still makes a claim once its platform owner's own name is taken out (always true off those platforms). */
+function ownerFree(snapshot, row, ruleIds, words) {
+    const owner = ownerWordsOf(row.host.toLowerCase());
+    if (!owner) return true;
+    const re = OWNER_RES.get(owner);
+    const strip = (t) => String(t ?? "").replace(re, "$1 ");
+    const bare = pageRow({ ...snapshot, title: strip(snapshot.title), text: strip(snapshot.text) });
+    bare.feats.brandInHost = false; // the brand in the host IS the owner here
+    bare.feats.brandOffsite = Boolean(bare.feats.brandsInTitle);
+    return makesClaim(bare, ruleIds, words);
+}
+
 // ---- tier ------------------------------------------------------------------------------------------------------
 function tierFor(final, indonesian, official) {
     if (official) return "safe";
@@ -408,7 +436,10 @@ export function scoreImpersonation(snapshot, { ruleIds = [], ageDays = null } = 
     const { words, address, final, indonesian } = modelScores(row, ruleIds);
     let tier = tierFor(final, indonesian, official);
     const flagged = tier === "warn" || tier === "block";
-    const claim = flagged ? makesClaim(row, ruleIds, words) : false;
+    let claim = flagged ? makesClaim(row, ruleIds, words) : false;
+    // On a brand's own user-content platform the brand's own name (title "… - Google Drive", google in docs.google.com,
+    // "OneDrive") is the platform, not a claim. Without it the page must still make another claim (ownerFree).
+    if (flagged && claim && !ownerFree(snapshot, row, ruleIds, words)) claim = false;
     if (flagged && !claim) tier = "gate";
     const young = !row.feats.sharedHost && !official && Number.isFinite(ageDays) && ageDays < YOUNG_DAYS;
     if (young && tier !== "warn" && tier !== "block") tier = "warn";
