@@ -28,7 +28,10 @@ export function parseHostList(text) {
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const isIso = (v) => typeof v === "string" && ISO.test(v) && !Number.isNaN(Date.parse(v));
 
-/** Previous entries by published name (registrable domain, or full hostname under institution suffixes); anything malformed is ignored (treated as never seen). */
+/**
+ * Previous entries by published name; anything malformed is ignored (treated as never seen). Builds before #643 stored
+ * registrable domains, which are hostnames too: one the feed no longer lists itself is marked removed by trackFirstSeen.
+ */
 function indexPrevious(previous) {
     const byDomain = new Map();
     for (const e of Array.isArray(previous) ? previous : []) {
@@ -44,7 +47,7 @@ function indexPrevious(previous) {
  * @param {import("./source.js").RawEntry[]} previous entries from the last build ([] on the first)
  * @param {string[]} hosts this build's feed
  * @param {string} builtAt ISO time of this build
- * @returns {import("./source.js").RawEntry[]} one entry per registrable domain: still listed (addedAt kept), new
+ * @returns {import("./source.js").RawEntry[]} one entry per hostname the feed names (#643): still listed (addedAt kept), new
  *   (addedAt = builtAt), or gone (removedAt = builtAt, kept for KEEP_REMOVED_MS so incremental clients see it).
  */
 export function trackFirstSeen(previous, hosts, builtAt) {

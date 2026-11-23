@@ -38,18 +38,13 @@ export function toRegistrable(raw) {
 }
 
 /**
- * Institution suffixes (#290, lead decision 8 Nov 2026): feeds list one hacked page of a campus, school, government, army
- * or village site, so publishing its registrable domain blocked the whole institution (`itb.ac.id`). Under these the feed's
- * full hostname is published instead; the extension matches a host and its parents, so only the hacked host is blocked.
- */
-export const HOSTNAME_SUFFIXES = Object.freeze(["ac.id", "sch.id", "go.id", "mil.id", "desa.id"]);
-
-/**
- * The name a feed entry is published as: the full hostname under HOSTNAME_SUFFIXES, else the registrable domain.
- * @returns {string | null} e.g. "biotek.fsm.kampus.ac.id" -> itself, "login.bca-x.co.id" -> "bca-x.co.id"; null for junk
+ * The name a feed entry is published as: the feed's full hostname (#643, generalising #290). The feed says which HOST is
+ * bad, not whether its parent is: publishing the registrable domain blocked a whole site (`teachable.com`, `mit.edu`,
+ * `sslip.io`) for one bad subdomain. The extension matches a host and its parents down to the registrable domain
+ * (ios/ShooExtension/Resources/lists.js candidates()), so a listed host and everything under it match, while its parent
+ * and siblings do not. An apex is only published when the feed lists the apex itself.
+ * @returns {string | null} e.g. "login.bca-x.co.id" -> itself, "bca-x.co.id" -> itself; null for suffixes, IPs and junk
  */
 export function toListed(raw) {
-    const reg = toRegistrable(raw);
-    if (!reg) return null;
-    return HOSTNAME_SUFFIXES.some((s) => reg.endsWith(`.${s}`)) ? hostOf(raw) : reg;
+    return toRegistrable(raw) ? hostOf(raw) : null;
 }

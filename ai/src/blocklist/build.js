@@ -1,9 +1,8 @@
-// Raw feed entries -> the published list: registrable domains (full hostnames under institution suffixes, #290),
-// allowlist applied, one entry per name.
-import { toListed } from "./domains.js";
+// Raw feed entries -> the published list: the feed's full hostnames (#643), allowlist applied, one entry per name.
+import { toListed, toRegistrable } from "./domains.js";
 import { OFFICIAL, POPULAR, SHARED_HOSTS } from "./allowlist.js";
 
-/** True when `domain` (a registrable domain) is official, popular or a shared platform apex. */
+/** True when `domain` (a registrable domain or a hostname) is, or sits under, an official or popular name, or is a shared platform apex. */
 export function isAllowlisted(domain) {
     if (POPULAR.has(domain) || SHARED_HOSTS.has(domain)) return true;
     const labels = domain.split(".");
@@ -12,6 +11,17 @@ export function isAllowlisted(domain) {
         if (OFFICIAL.has(tail) || POPULAR.has(tail)) return true; // shared hosts match only as the exact apex (checked above)
     }
     return false;
+}
+
+/**
+ * The allowlist for a published hostname: the host itself and its parents (isAllowlisted), and its registrable domain as
+ * well, so a host on a shared platform that is not on the Public Suffix List (`x.sharepoint.com`, `x.weebly.com`) stays
+ * off the list as it did when the registrable domain was published. Platforms on the PSL (`x.github.io`, `x.vercel.app`)
+ * are their own registrable domains, so their customer sites are still published one by one.
+ */
+export function isListedAllowlisted(host) {
+    const reg = toRegistrable(host);
+    return isAllowlisted(host) || (reg !== null && reg !== host && isAllowlisted(reg));
 }
 
 const MIN_MS = Date.UTC(2000, 0, 1);
@@ -36,7 +46,7 @@ export function buildList(raw, { maxDomains, now = Date.now() }) {
         if (!e || typeof e !== "object") continue;
         const domain = toListed(e.host);
         const addedAt = iso(e.addedAt);
-        if (!domain || !addedAt || isAllowlisted(domain)) continue;
+        if (!domain || !addedAt || isListedAllowlisted(domain)) continue;
         const removedAt = e.removedAt == null ? null : iso(e.removedAt);
         if (e.removedAt != null && !removedAt) continue;
         const cur = byDomain.get(domain);
@@ -45,7 +55,7 @@ export function buildList(raw, { maxDomains, now = Date.now() }) {
             continue;
         }
         if (addedAt < cur.addedAt) cur.addedAt = addedAt;
-        // One live entry under the same registrable domain keeps it on the list.
+        // One live entry for the same name keeps it on the list.
         if (!removedAt) cur.removedAt = null;
         else if (cur.removedAt && removedAt > cur.removedAt) cur.removedAt = removedAt;
     }
