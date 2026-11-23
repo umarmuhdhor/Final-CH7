@@ -139,7 +139,7 @@ test("cache stores only domain and registration date; age follows the clock", as
     assert.equal(await c2.lookupAgeDays("example.com"), 5);
 });
 
-test("failed lookup is cached briefly (10 min) then retried; success lasts 24 h", async () => {
+test("a failed lookup is never cached (23 Nov 2026): every visit asks again; a success lasts 24 h", async () => {
     let t = NOW;
     const cache = createMemoryCache({ now: () => t });
     let fail = true;
@@ -147,17 +147,16 @@ test("failed lookup is cached briefly (10 min) then retried; success lasts 24 h"
     const c = createRdapClient({ fetch: f, cache, now: () => t });
     assert.equal(await c.lookupAgeDays("example.com"), null);
     assert.equal(await c.lookupAgeDays("example.com"), null);
-    assert.equal(f.rdapCalls().length, 1, "failure cached");
-    t += 11 * 60_000;
+    assert.equal(f.rdapCalls().length, 2, "a failure is not cached");
     fail = false;
-    assert.equal(await c.lookupAgeDays("example.com"), 3);
-    assert.equal(f.rdapCalls().length, 2, "retried after 10 min");
+    assert.equal(await c.lookupAgeDays("example.com"), 3, "the next visit gets the age at once");
+    assert.equal(f.rdapCalls().length, 3);
     t += 23 * 3_600_000;
     await c.lookupAgeDays("example.com");
-    assert.equal(f.rdapCalls().length, 2, "success still cached at 23 h");
+    assert.equal(f.rdapCalls().length, 3, "success still cached at 23 h");
     t += 2 * 3_600_000;
     await c.lookupAgeDays("example.com");
-    assert.equal(f.rdapCalls().length, 3, "expired after 24 h");
+    assert.equal(f.rdapCalls().length, 4, "expired after 24 h");
 });
 
 test("a timed-out lookup is not cached: the next visit asks RDAP again (jnex.cc, 23 Nov 2026)", async () => {
@@ -176,20 +175,24 @@ test("a timed-out lookup is not cached: the next visit asks RDAP again (jnex.cc,
     assert.equal(f.rdapCalls().length, 2);
 });
 
-test("a network error is not cached either; a real answer without a date still is", async () => {
-    const cache = createMemoryCache({ now: () => NOW });
+test("no failure is cached: network error, 404, 429, 5xx, an answer without a date, a TLD without RDAP", async () => {
     let broken = true;
     const f = mockFetch({ rdap: () => { if (broken) throw new TypeError("fetch failed"); return json({ events: [{ eventAction: "registration", eventDate: iso(3) }] }); } });
-    const c = createRdapClient({ fetch: f, cache, now: () => NOW });
+    const c = createRdapClient({ fetch: f, cache: createMemoryCache({ now: () => NOW }), now: () => NOW });
     assert.equal(await c.lookupAgeDays("example.com"), null);
     broken = false;
     assert.equal(await c.lookupAgeDays("example.com"), 3, "retried after a network error");
 
-    const noDate = mockFetch({ rdap: () => json({ events: [] }) });
-    const c2 = createRdapClient({ fetch: noDate, cache: createMemoryCache({ now: () => NOW }), now: () => NOW });
-    await c2.lookupAgeDays("example.com");
-    await c2.lookupAgeDays("example.com");
-    assert.equal(noDate.rdapCalls().length, 1, "an answer with no registration date is cached (10 min)");
+    for (const [name, answer] of [["404", () => json({}, 404)], ["429", () => json({}, 429)], ["503", () => json({}, 503)], ["no date", () => json({ events: [] })]]) {
+        const g = mockFetch({ rdap: answer });
+        const c2 = createRdapClient({ fetch: g, cache: createMemoryCache({ now: () => NOW }), now: () => NOW });
+        await c2.lookupAgeDays("example.com");
+        await c2.lookupAgeDays("example.com");
+        assert.equal(g.rdapCalls().length, 2, `${name}: asked again`);
+    }
+    const cache = createMemoryCache({ now: () => NOW });
+    await createRdapClient({ fetch: mockFetch(), cache, now: () => NOW }).lookupAgeDays("example.org"); // .org has no RDAP server in BOOTSTRAP
+    assert.equal(await cache.get("example.org"), null, "nothing stored for a TLD without RDAP");
 });
 
 // ---- background lookup (23 Nov 2026): the answer waits 3 s, the lookup itself may run on to 15 s -----------------

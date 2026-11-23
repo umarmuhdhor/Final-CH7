@@ -5,7 +5,7 @@
 //  - redirects are not followed; every failure (network, status, shape, timeout) means "no signal";
 //  - nothing is logged.
 import { registrableDomain, isPublicHostname } from "./domain.js";
-import { SUCCESS_TTL_MS, FAIL_TTL_MS } from "./cache.js";
+import { SUCCESS_TTL_MS } from "./cache.js";
 
 export const BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json";
 /**
@@ -128,20 +128,12 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
         return text ? parseBootstrap(JSON.parse(text)) : null;
     }
 
-    /**
-     * `state.answered` tells the caller whether a null is about this domain (cacheable: the TLD has no RDAP server, or the
-     * registry replied without a usable date) or just bad luck (no bootstrap, network error, timeout: ask again next visit).
-     */
-    async function fetchRegistration(domain, signal, state) {
+    async function fetchRegistration(domain, signal) {
         const servers = await getServers();
-        if (!servers) return null; // no bootstrap: says nothing about this domain
+        if (!servers) return null; // no bootstrap
         const server = servers.get(domain.slice(domain.lastIndexOf(".") + 1));
-        if (!server) {
-            state.answered = true; // no RDAP server for this TLD: asking again will not help
-            return null;
-        }
+        if (!server) return null; // no RDAP server for this TLD (no network call)
         const res = await doFetch(`${server}domain/${domain}`, { method: "GET", headers: { accept: "application/rdap+json, application/json" }, redirect: "manual", signal });
-        state.answered = true; // the registry replied; its status or body is about this domain
         if (res.status !== 200) {
             res.body?.cancel().catch(() => {});
             return null;
@@ -152,25 +144,21 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
 
     /**
      * One network lookup with a hard stop at `hardMs`, even if fetch ignores the abort signal.
-     * @returns {Promise<{ registeredAt: number|null, cacheable: boolean }>} never rejects
+     * @returns {Promise<{ registeredAt: number|null }>} never rejects
      */
     function runLookup(domain, hardMs) {
         const controller = new AbortController();
-        const state = { answered: false, timedOut: false };
         let timer;
         const hardStop = new Promise((resolve) => {
             timer = setTimeout(() => {
-                state.timedOut = true; // set before the abort, so a reply cut off mid-body is never cached as "no date"
                 controller.abort();
                 resolve(null);
             }, hardMs);
         });
-        const work = fetchRegistration(domain, controller.signal, state).catch(() => null);
+        const work = fetchRegistration(domain, controller.signal).catch(() => null);
         return Promise.race([work, hardStop]).then((registeredAt) => {
             clearTimeout(timer);
-            // Cached only when the registry (or the bootstrap) really answered. A timeout or a network error is not cached:
-            // before 23 Nov 2026 it was, for 10 min, so a slow first lookup kept a new scam domain at no signal.
-            return { registeredAt, cacheable: state.answered && !state.timedOut };
+            return { registeredAt };
         });
     }
 
@@ -180,9 +168,12 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
     function startLookup(domain, hardMs, requestCache) {
         const pending = runLookup(domain, hardMs)
             .then(async (fresh) => {
-                if (fresh.cacheable) {
+                // Only a registration date is cached. No failure is (timeout, network, 404/429/5xx, no date, no RDAP for the
+                // TLD): before 23 Nov 2026 they were, for 10 min, so one slow first lookup kept a new scam domain at no signal
+                // and hid the date already in KV (memory is read first). Asking again costs one registry call per visit.
+                if (fresh.registeredAt !== null) {
                     try {
-                        await requestCache.set(domain, { registeredAt: fresh.registeredAt }, fresh.registeredAt === null ? FAIL_TTL_MS : SUCCESS_TTL_MS);
+                        await requestCache.set(domain, { registeredAt: fresh.registeredAt }, SUCCESS_TTL_MS);
                     } catch {
                         /* ignore */
                     }

@@ -85,7 +85,7 @@ Done on the server so a phone never tells a third party where its user browses. 
 - The answer waits at most 3 s for bootstrap + lookup (`TIMEOUT_MS`; was 1 s under D-imelda-47, raised on 23 Nov 2026 because layer 4 is off and about 30% of lookups took over 1 s). A lookup still running then goes on in the background through the Worker's `waitUntil`, up to 15 s in total (`BACKGROUND_MS`), and caches its result, so the next check of the page or the next page on the domain gets `new_domain`. Concurrent requests for one domain share one lookup. Any failure (network, status, shape, timeout, too big) gives no signal and a normal 200.
 - Official domains are not looked up.
 - Weight by age: under 7 days 30, 7-30 days 20, 31-90 days 10, older none. Label "Domain age N days" / "Umur domain N hari"; `evidence` is N as a string.
-- Cache (`src/rdap/cache.js`): domain -> registration date only, in memory per Worker isolate, 24 h for a success, 10 min for an answer without a date (a timeout or network error is not cached, so the next visit asks again), at most 1000 entries (oldest dropped). With the `RDAP_KV` binding, Workers KV is a second tier shared by all isolates (next section).
+- Cache (`src/rdap/cache.js`): domain -> registration date only, in memory per Worker isolate, 24 h for a success; no failure is cached (timeout, network error, 404/429/5xx, no date: the next visit asks again), at most 1000 entries (oldest dropped). With the `RDAP_KV` binding, Workers KV is a second tier shared by all isolates (next section).
 - `createApp()` without `fetch` has `new_domain` off; `src/index.js` passes the real `fetch`. Tests pass a mock.
 
 ### RDAP cache in Workers KV (D-imelda-40)
@@ -94,7 +94,7 @@ Namespace `shoo-rdap-cache`, binding `RDAP_KV` in `wrangler.toml` (separate from
 
 - Key `rdap:<registrable domain>`, value `{"registeredAt": <epoch ms>}`. Nothing else from the page; nothing is logged.
 - Order per lookup: memory -> KV -> RDAP. A KV hit is copied into memory and never written back.
-- Only a **successful** lookup is written, with `expirationTtl` 7 days (a registration date does not change, so a domain seen every day costs one write a week). Failures stay 10 min in memory only.
+- Only a **successful** lookup is written, with `expirationTtl` 7 days (a registration date does not change, so a domain seen every day costs one write a week). Failures are not cached anywhere.
 - The write runs in the background (`executionCtx.waitUntil`): the answer never waits for it.
 - A KV read gets at most 200 ms, taken out of the same 3 s RDAP deadline. Any KV error, a slow read or junk in KV is a miss and the lookup goes on to RDAP: never a 5xx, never a slower answer.
 - Budget per isolate per UTC day: 2,000 reads, 100 writes. After a failed write (quota, the 1 write/s per key limit, outage) the isolate stops writing for 10 min.

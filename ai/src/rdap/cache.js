@@ -115,7 +115,7 @@ export function createKvBudget({ readsPerDay = KV_READS_PER_DAY, writesPerDay = 
 
 /**
  * Memory first, then KV, for one request. A KV hit is copied into memory. Only a successful lookup is written to KV
- * (a failure stays 10 min in memory), in the background through `waitUntil`, so the answer never waits for a write.
+ * (a failure is not cached at all), in the background through `waitUntil`, so the answer never waits for a write.
  * A KV error or a read slower than `readTimeoutMs` is a miss; nothing here throws because of KV.
  * @param {{ memory: { get: Function, set: Function }, kv: { get: Function, set: Function }, budget: ReturnType<typeof createKvBudget>, waitUntil?: (p: Promise<unknown>) => void, readTimeoutMs?: number }} deps
  */
