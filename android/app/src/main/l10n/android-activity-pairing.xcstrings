@@ -1,0 +1,41 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Firefox add-on on" : {
+      "comment" : "Activity empty state pill (Android): the Shoo add-on in Firefox is running. iOS: 'Safari extension on'.",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Firefox add-on on" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Add-on Firefox aktif" } }
+      }
+    },
+    "Scanning isn't available on this phone. Enter the code instead." : {
+      "comment" : "Connect · Scan QR (Android): the phone has no camera. iOS says 'iPhone'.",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scanning isn't available on this phone. Enter the code instead." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pemindaian tidak tersedia di HP ini. Masukkan kodenya saja." } }
+      }
+    },
+    "Shoo's Firefox add-on is off, so the sites you open aren't checked." : {
+      "comment" : "Activity empty state 'Protection is off' (Android). iOS: the Safari extension.",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shoo's Firefox add-on is off, so the sites you open aren't checked." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Add-on Shoo di Firefox tidak aktif, jadi situs yang Anda buka tidak diperiksa." } }
+      }
+    },
+    "Suspicious sites found while you browse in Firefox will show up here." : {
+      "comment" : "Activity empty state 'All' (Android). iOS: browsing in Safari.",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Suspicious sites found while you browse in Firefox will show up here." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Situs mencurigakan yang terdeteksi saat Anda menjelajah di Firefox akan muncul di sini." } }
+      }
+    },
+    "Turn on add-on" : {
+      "comment" : "Activity empty state 'Protection is off' button (Android). iOS: 'Turn on extension'.",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Turn on add-on" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Aktifkan add-on" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}
