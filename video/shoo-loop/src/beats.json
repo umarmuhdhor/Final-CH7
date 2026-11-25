@@ -1,0 +1,38 @@
+{
+  "_doc": "One beat map for the picture (src/timing.ts) and the music (scripts/make-music.py). Times are in beats from the loop start.",
+  "bpm": 120,
+  "beats": 40,
+  "scenes": {
+    "dots":   { "in": 0,  "out": 8 },
+    "link":   { "in": 8,  "out": 16 },
+    "layers": { "in": 16, "out": 28 },
+    "phone":  { "in": 28, "out": 34 },
+    "end":    { "in": 34, "out": 38 }
+  },
+  "music": {
+    "drop": 8,
+    "groove_end": 36,
+    "dropout": [25.5, 26]
+  },
+  "events": {
+    "logo": 3,
+    "wordmark": 4.5,
+    "tagline": 6,
+    "type_start": 9,
+    "type_end": 11.75,
+    "enter": 12,
+    "scan_end": 14,
+    "layer_title": 16,
+    "layers": [18, 20, 22, 24],
+    "blocked": 26,
+    "phone_slam": 28,
+    "phone_line1": 29,
+    "phone_line2": 30,
+    "push": 31.5,
+    "end_mascot": 34,
+    "end_logo": 34.5,
+    "end_word": 35,
+    "end_line": 36,
+    "end_badge": 37
+  }
+}
